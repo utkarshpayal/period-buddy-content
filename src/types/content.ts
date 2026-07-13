@@ -1,4 +1,4 @@
-export type ContentType = "blog" | "question" | "answer" | "video" | "guide" | "tip";
+export type ContentType = "blog" | "qa" | "video" | "guide" | "tip";
 export type ContentStatus = "draft" | "review" | "published" | "archived";
 export type Audience = "All users" | "Teens" | "Adults" | "Parents" | "Partners";
 export type CycleStage =
@@ -21,9 +21,13 @@ export type ContentItem = {
   body: string;
   question: string;
   answer: string;
+  isSensitive: boolean;
+  medicallyReviewed: boolean;
   videoUrl: string;
   tags: string[];
   author: string;
+  reviewedBy: string;
+  sourceLinks: string[];
   updatedAt: string;
   reviewRequired: boolean;
 };

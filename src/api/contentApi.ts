@@ -58,12 +58,22 @@ const storageKey = "period-buddy-content-items";
 
 const isApiConfigured = Boolean(apiBaseUrl);
 
+const backendCategoryByStage: Record<ContentItem["stage"], string> = {
+  Emergency: "health",
+  General: "general",
+  Ovulation: "fertility",
+  Period: "periods",
+  PMS: "symptoms",
+  Tracking: "tracking",
+  Wellness: "health"
+};
+
 function endpoint(path = "") {
   return `${contentEndpoint}${path}`;
 }
 
 function backendTypeFor(type: ContentType) {
-  if (type === "question" || type === "answer") {
+  if (type === "qa") {
     return "question-answer";
   }
 
@@ -106,7 +116,9 @@ function readLocalContent() {
       return starterContent;
     }
 
-    return parsed as ContentItem[];
+    const normalized = parsed.map(normalizeLocalItem);
+    localStorage.setItem(storageKey, JSON.stringify(normalized));
+    return normalized;
   } catch {
     localStorage.setItem(storageKey, JSON.stringify(starterContent));
     return starterContent;
@@ -138,19 +150,44 @@ function normalizeStatus(item: BackendContentItem) {
 }
 
 function normalizeType(type: BackendContentItem["type"]): ContentType {
-  if (type === "question-answer") {
-    return "question";
+  if (type === "question-answer" || type === "question" || type === "answer" || type === "qa") {
+    return "qa";
   }
 
   if (type === "wellbeing" || type === "health-issue") {
     return "guide";
   }
 
-  if (type === "blog" || type === "video" || type === "tip" || type === "answer" || type === "question") {
+  if (type === "blog" || type === "video" || type === "tip") {
     return type;
   }
 
   return "blog";
+}
+
+function normalizeLocalItem(item: ContentItem & { type?: string }): ContentItem {
+  return {
+    ...item,
+    id: item.id || crypto.randomUUID(),
+    type: normalizeType(item.type),
+    title: item.title || item.question || "Untitled content",
+    status: item.status ?? "draft",
+    audience: item.audience ?? "All users",
+    stage: item.stage ?? "General",
+    summary: item.summary ?? "",
+    body: item.body ?? "",
+    question: item.question ?? "",
+    answer: item.answer ?? "",
+    isSensitive: item.isSensitive ?? false,
+    medicallyReviewed: item.medicallyReviewed ?? false,
+    videoUrl: item.videoUrl ?? "",
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    author: item.author ?? "Content Team",
+    reviewedBy: item.reviewedBy ?? "",
+    sourceLinks: Array.isArray(item.sourceLinks) ? item.sourceLinks : [],
+    updatedAt: item.updatedAt ?? new Date().toISOString(),
+    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed
+  };
 }
 
 function normalizeItem(item: BackendContentItem): ContentItem {
@@ -167,11 +204,15 @@ function normalizeItem(item: BackendContentItem): ContentItem {
     body: item.body ?? item.content ?? item.guide ?? "",
     question: item.question ?? "",
     answer: item.answer ?? "",
+    isSensitive: item.isSensitive ?? false,
+    medicallyReviewed: item.medicallyReviewed ?? false,
     videoUrl: item.videoUrl ?? item.directMp4Url ?? "",
     tags: Array.isArray(item.tags) ? item.tags : [],
     author: item.author ?? "Period Buddy Team",
+    reviewedBy: item.reviewedBy ?? "",
+    sourceLinks: Array.isArray(item.sourceLinks) ? item.sourceLinks : [],
     updatedAt: item.updatedAt ?? item.createdAt ?? new Date().toISOString(),
-    reviewRequired: item.reviewRequired ?? true
+    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed
   };
 }
 
@@ -221,6 +262,27 @@ function parseItem(response: ContentResponse) {
 
 function toBackendPayload(item: ContentItem) {
   const content = item.body || item.answer || item.summary || item.title;
+  const isPublished = item.status === "published";
+
+  if (item.type === "qa") {
+    const question = item.question || item.title;
+    const answer = item.answer || item.body;
+
+    return {
+      ...item,
+      answer,
+      category: backendCategoryByStage[item.stage] ?? "general",
+      content: answer,
+      isPublished,
+      isSensitive: item.isSensitive,
+      medicallyReviewed: item.medicallyReviewed,
+      question,
+      reviewedBy: item.reviewedBy,
+      shortAnswer: item.summary,
+      sourceLinks: item.sourceLinks,
+      title: question
+    };
+  }
 
   return {
     ...item,
@@ -228,9 +290,9 @@ function toBackendPayload(item: ContentItem) {
     excerpt: item.summary,
     category: item.stage || "General",
     directMp4Url: item.videoUrl,
-    isActive: item.status === "published",
-    isPublished: item.status === "published",
-    resourceType: item.stage || "general",
+    isActive: isPublished,
+    isPublished,
+    resourceType: item.type === "tip" ? "sexual_wellbeing" : "hygiene",
     thumbnailUrl: item.videoUrl ? "https://placehold.co/640x360?text=Period+Buddy" : undefined
   };
 }

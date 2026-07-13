@@ -14,7 +14,6 @@ import {
   Loader2,
   LogIn,
   LogOut,
-  MessageSquareText,
   PencilLine,
   Plus,
   RefreshCw,
@@ -40,8 +39,7 @@ const contentTypes: Array<{
   icon: typeof FileText;
 }> = [
   { id: "blog", label: "Blogs", icon: FileText },
-  { id: "question", label: "Questions", icon: FileQuestion },
-  { id: "answer", label: "Answers", icon: MessageSquareText },
+  { id: "qa", label: "Q&A", icon: FileQuestion },
   { id: "video", label: "Videos", icon: Film },
   { id: "guide", label: "Guides", icon: BookOpen },
   { id: "tip", label: "Tips", icon: Sparkles }
@@ -70,9 +68,13 @@ const emptyItem = (): ContentItem => ({
   body: "",
   question: "",
   answer: "",
+  isSensitive: false,
+  medicallyReviewed: false,
   videoUrl: "",
   tags: [],
   author: "Content Team",
+  reviewedBy: "",
+  sourceLinks: [],
   updatedAt: new Date().toISOString(),
   reviewRequired: true
 });
@@ -88,6 +90,12 @@ const normalizeTags = (value: string) =>
   value
     .split(",")
     .map((tag) => tag.trim())
+    .filter(Boolean);
+
+const normalizeSourceLinks = (value: string) =>
+  value
+    .split(/[\n,]/)
+    .map((link) => link.trim())
     .filter(Boolean);
 
 const titleForType = (type: ContentType) => contentTypes.find((entry) => entry.id === type)?.label ?? type;
@@ -158,14 +166,14 @@ export default function App() {
 
   const metrics = useMemo(() => {
     const published = items.filter((item) => item.status === "published").length;
-    const review = items.filter((item) => item.status === "review").length;
+    const qaEntries = items.filter((item) => item.type === "qa").length;
     const medical = items.filter((item) => item.reviewRequired).length;
 
     return [
       { label: "Total entries", value: items.length, icon: Layers3 },
       { label: "Published", value: published, icon: CheckCircle2 },
-      { label: "In review", value: review, icon: ClipboardList },
-      { label: "Medical checks", value: medical, icon: Gauge }
+      { label: "Q&A entries", value: qaEntries, icon: ClipboardList },
+      { label: "Review needed", value: medical, icon: Gauge }
     ];
   }, [items]);
 
@@ -182,6 +190,8 @@ export default function App() {
         item.question,
         item.answer,
         item.author,
+        item.reviewedBy,
+        ...item.sourceLinks,
         item.stage,
         item.audience,
         ...item.tags
@@ -214,6 +224,14 @@ export default function App() {
 
   function updateDraft<K extends keyof ContentItem>(key: K, value: ContentItem[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateMedicalReview(isReviewed: boolean) {
+    setDraft((current) => ({
+      ...current,
+      medicallyReviewed: isReviewed,
+      reviewRequired: !isReviewed
+    }));
   }
 
   function resetForm(type: ContentType = draft.type) {
@@ -265,19 +283,51 @@ export default function App() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const question = draft.question.trim() || (draft.type === "qa" ? draft.title.trim() : "");
+    const answer = draft.answer.trim() || (draft.type === "qa" ? draft.body.trim() : "");
     const nextItem: ContentItem = {
       ...draft,
-      title: draft.title.trim(),
+      title: draft.type === "qa" ? draft.title.trim() || question : draft.title.trim(),
       summary: draft.summary.trim(),
       body: draft.body.trim(),
-      question: draft.question.trim(),
-      answer: draft.answer.trim(),
+      question,
+      answer,
+      isSensitive: draft.isSensitive,
+      medicallyReviewed: draft.medicallyReviewed,
       videoUrl: draft.videoUrl.trim(),
       author: draft.author.trim() || "Content Team",
+      reviewedBy: draft.reviewedBy.trim(),
+      sourceLinks: draft.sourceLinks.map((link) => link.trim()).filter(Boolean),
       updatedAt: new Date().toISOString()
     };
 
     if (!nextItem.title) {
+      setApiMessage("Add a title before saving this entry.");
+      return;
+    }
+
+    if (nextItem.type === "qa" && (!nextItem.question || !nextItem.answer)) {
+      setApiMessage("Q&A entries need both a user question and an approved answer before saving.");
+      return;
+    }
+
+    if (nextItem.type === "qa" && nextItem.medicallyReviewed && !nextItem.reviewedBy) {
+      setApiMessage("Add the reviewer name before marking a Q&A entry medically reviewed.");
+      return;
+    }
+
+    if (nextItem.type === "blog" && !nextItem.body) {
+      setApiMessage("Blog entries need body content before saving.");
+      return;
+    }
+
+    if (nextItem.type === "video" && !nextItem.videoUrl) {
+      setApiMessage("Video entries need a video URL before saving.");
+      return;
+    }
+
+    if ((nextItem.type === "guide" || nextItem.type === "tip") && !nextItem.summary) {
+      setApiMessage("Guides and tips need a short summary before saving.");
       return;
     }
 
@@ -373,7 +423,7 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
-          <p>Ready for app CMS, FAQ, learning cards, and video scripts.</p>
+          <p>Ready for app CMS, companion Q&A, learning cards, and video scripts.</p>
         </div>
       </aside>
 
@@ -478,7 +528,7 @@ export default function App() {
                 <input
                   aria-label="Search content"
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search title, tags, author"
+                  placeholder="Search title, question, tags"
                   value={query}
                 />
               </label>
@@ -605,8 +655,8 @@ export default function App() {
                 Title
                 <input
                   onChange={(event) => updateDraft("title", event.target.value)}
-                  placeholder="Content title"
-                  required
+                  placeholder={draft.type === "qa" ? "Optional internal title" : "Content title"}
+                  required={draft.type !== "qa"}
                   value={draft.title}
                 />
               </label>
@@ -649,29 +699,66 @@ export default function App() {
                 />
               </label>
 
-              {(draft.type === "question" || draft.type === "answer") && (
+              {draft.type === "qa" && (
                 <>
                   <label className="wide-field">
-                    Question
+                    User question
                     <textarea
                       onChange={(event) => updateDraft("question", event.target.value)}
-                      placeholder="User question"
+                      placeholder="Is brown period blood normal?"
                       rows={3}
                       value={draft.question}
                     />
                   </label>
 
-                  <label className="wide-field">
-                    Answer
-                    <textarea
+	                  <label className="wide-field">
+	                    Approved answer
+	                    <textarea
                       onChange={(event) => updateDraft("answer", event.target.value)}
-                      placeholder="Clear, medically safe answer"
+                      placeholder="Clear, medically safe answer for Nura Companion"
                       rows={5}
-                      value={draft.answer}
+	                      value={draft.answer}
+	                    />
+	                  </label>
+
+                  <label>
+                    Reviewed by
+                    <input
+                      onChange={(event) => updateDraft("reviewedBy", event.target.value)}
+                      placeholder="Clinician or reviewer name"
+                      value={draft.reviewedBy}
                     />
                   </label>
-                </>
-              )}
+
+                  <label className="review-toggle">
+                    <input
+                      checked={draft.medicallyReviewed}
+                      onChange={(event) => updateMedicalReview(event.target.checked)}
+                      type="checkbox"
+                    />
+                    Medically reviewed
+                  </label>
+
+                  <label className="review-toggle wide-field">
+                    <input
+                      checked={draft.isSensitive}
+                      onChange={(event) => updateDraft("isSensitive", event.target.checked)}
+                      type="checkbox"
+                    />
+                    Sensitive Q&A
+                  </label>
+
+                  <label className="wide-field">
+                    Source links
+                    <textarea
+                      onChange={(event) => updateDraft("sourceLinks", normalizeSourceLinks(event.target.value))}
+                      placeholder="https://example.org/source"
+                      rows={3}
+                      value={draft.sourceLinks.join("\n")}
+                    />
+                  </label>
+	                </>
+	              )}
 
               {draft.type === "video" && (
                 <label className="wide-field">
@@ -714,14 +801,21 @@ export default function App() {
               </label>
             </div>
 
-            <label className="review-toggle">
-              <input
-                checked={draft.reviewRequired}
-                onChange={(event) => updateDraft("reviewRequired", event.target.checked)}
-                type="checkbox"
-              />
-              Medical review required
-            </label>
+	            <label className="review-toggle">
+	              <input
+	                checked={draft.reviewRequired}
+                onChange={(event) => {
+                  if (draft.type === "qa") {
+                    updateMedicalReview(!event.target.checked);
+                    return;
+                  }
+
+                  updateDraft("reviewRequired", event.target.checked);
+                }}
+	                type="checkbox"
+	              />
+              {draft.type === "qa" ? "Needs medical review" : "Medical review required"}
+	            </label>
 
             <aside className="preview-pane">
               <div className="preview-heading">
