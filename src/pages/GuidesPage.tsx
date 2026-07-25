@@ -332,16 +332,6 @@ export const GuidesPage: React.FC = () => {
               />
             </label>
 
-            <label>
-              Estimated Read Time (Mins)
-              <input
-                min={0}
-                onChange={(e) => updateDraft("estimatedReadTime", Number(e.target.value) || 0)}
-                type="number"
-                value={draft.estimatedReadTime !== undefined ? draft.estimatedReadTime : 3}
-              />
-            </label>
-
             <label className="wide-field">
               Brief Summary *
               <textarea

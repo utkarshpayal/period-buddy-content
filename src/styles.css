@@ -336,13 +336,31 @@ h3 {
   background: #fff;
   border: 1px solid #e6ded6;
   border-radius: 8px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  height: 740px;
   padding: 18px;
+}
+
+.library-panel {
+  overflow: hidden;
+}
+
+.editor-panel {
+  overflow-y: auto;
 }
 
 .panel-heading {
   gap: 14px;
+}
+
+.editor-panel .panel-heading {
+  background: #fff;
+  padding-bottom: 4px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .panel-heading > span {
@@ -397,8 +415,9 @@ textarea {
 
 .entry-list {
   display: grid;
+  flex: 1;
   gap: 10px;
-  max-height: 740px;
+  min-height: 0;
   overflow: auto;
   padding-right: 4px;
 }
@@ -449,6 +468,7 @@ textarea {
   display: -webkit-box;
   font-size: 0.92rem;
   line-height: 1.45;
+  line-clamp: 2;
   margin-bottom: 10px;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -623,8 +643,13 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .library-panel,
+  .editor-panel {
+    height: auto;
+  }
+
   .entry-list {
-    max-height: none;
+    overflow: visible;
   }
 }
 

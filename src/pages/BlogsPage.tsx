@@ -301,16 +301,6 @@ export const BlogsPage: React.FC = () => {
               </select>
             </label>
 
-            <label>
-              Reading Time (Minutes)
-              <input
-                min={1}
-                onChange={(e) => updateDraft("readTimeMinutes", Number(e.target.value) || 1)}
-                type="number"
-                value={draft.readTimeMinutes || 5}
-              />
-            </label>
-
             <label className="wide-field">
               Excerpt / Brief Summary *
               <textarea
