@@ -6,7 +6,7 @@ export const ApiBanner: React.FC = () => {
   const { apiSource, apiMessage, isLoading, refreshContent } = useAppContext();
 
   return (
-    <section className={`api-banner ${apiSource}`} aria-live="polite">
+    <section className={`api-banner ${apiSource} `} aria-live="polite">
       <div>
         <Database size={18} />
         <strong>

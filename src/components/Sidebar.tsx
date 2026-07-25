@@ -18,7 +18,7 @@ export const Sidebar: React.FC = () => {
   const { authSession, logout } = useAppContext();
   
   const userFullName = [authSession?.user?.firstName, authSession?.user?.lastName].filter(Boolean).join(" ");
-  const signedInLabel = authSession?.user?.email || userFullName || authSession?.user?.name;
+  const signedInLabel =  userFullName || authSession?.user?.name;
 
   return (
     <aside className="sidebar">
