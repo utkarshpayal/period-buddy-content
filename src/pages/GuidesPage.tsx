@@ -5,6 +5,7 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage, ContentType } from "../types/content";
 
 const emptyGuide = (): ContentItem => ({
@@ -372,25 +373,25 @@ export const GuidesPage: React.FC = () => {
               <h4>Audio & Video Companion (Optional)</h4>
             </div>
 
-            <label>
-              Audio Guide URL
-              <input
-                onChange={(e) => updateDraft("audioUrl", e.target.value)}
-                placeholder="https://..."
-                type="url"
+            <div>
+              <MediaUploadField
+                folder="audio"
+                kind="audio"
+                label="Audio Guide"
+                onChange={(url) => updateDraft("audioUrl", url)}
                 value={draft.audioUrl || ""}
               />
-            </label>
+            </div>
 
-            <label>
-              Video Companion URL
-              <input
-                onChange={(e) => updateDraft("videoUrl", e.target.value)}
-                placeholder="https://..."
-                type="url"
+            <div>
+              <MediaUploadField
+                folder="reels"
+                kind="video"
+                label="Video Companion"
+                onChange={(url) => updateDraft("videoUrl", url)}
                 value={draft.videoUrl || ""}
               />
-            </label>
+            </div>
           </div>
 
           <aside className="preview-pane" style={{ borderLeft: `5px solid ${draft.color}` }}>

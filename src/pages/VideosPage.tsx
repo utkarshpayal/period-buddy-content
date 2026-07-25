@@ -5,6 +5,7 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 
 const emptyVideo = (): ContentItem => ({
@@ -279,26 +280,26 @@ export const VideosPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Direct Mp4/Video URL *
-              <input
-                onChange={(e) => updateDraft("videoUrl", e.target.value)}
-                placeholder="https://commondatastorage.googleapis.com/..."
+            <div className="wide-field">
+              <MediaUploadField
+                folder="reels"
+                kind="video"
+                label="Reel Video"
+                onChange={(url) => updateDraft("videoUrl", url)}
                 required
-                type="url"
                 value={draft.videoUrl}
               />
-            </label>
+            </div>
 
-            <label className="wide-field">
-              Thumbnail Image URL
-              <input
-                onChange={(e) => updateDraft("imageUrl", e.target.value)}
-                placeholder="https://... (defaults to a stock thumbnail if left blank)"
-                type="url"
+            <div className="wide-field">
+              <MediaUploadField
+                folder="thumbnails"
+                kind="image"
+                label="Thumbnail Image"
+                onChange={(url) => updateDraft("imageUrl", url)}
                 value={draft.imageUrl || ""}
               />
-            </label>
+            </div>
 
             <label>
               Status

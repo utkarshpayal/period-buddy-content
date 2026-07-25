@@ -5,6 +5,7 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 
 const emptyBlog = (): ContentItem => ({
@@ -332,15 +333,15 @@ export const BlogsPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Cover Image URL
-              <input
-                onChange={(e) => updateDraft("imageUrl", e.target.value)}
-                placeholder="https://..."
-                type="url"
+            <div className="wide-field">
+              <MediaUploadField
+                folder="thumbnails"
+                kind="image"
+                label="Cover Image"
+                onChange={(url) => updateDraft("imageUrl", url)}
                 value={draft.imageUrl || ""}
               />
-            </label>
+            </div>
 
             <label>
               Tags (comma-separated)

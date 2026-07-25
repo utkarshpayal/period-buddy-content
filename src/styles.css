@@ -1130,6 +1130,148 @@ textarea {
   gap: 4px;
 }
 
+/* Media upload field (reel video / guide audio) */
+.media-upload-field {
+  display: grid;
+  gap: 8px;
+}
+
+.media-upload-label-row {
+  align-items: center;
+  color: #5f554d;
+  display: flex;
+  font-size: 0.86rem;
+  font-weight: 700;
+  justify-content: space-between;
+}
+
+.media-upload-toggle {
+  align-items: center;
+  background: none;
+  border: none;
+  color: #1f6f78;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 600;
+  gap: 4px;
+  padding: 0;
+}
+
+.media-upload-toggle:hover {
+  text-decoration: underline;
+}
+
+.media-upload-manual-input {
+  width: 100%;
+}
+
+.media-upload-dropzone,
+.media-upload-editor {
+  background: #faf6f0;
+  border: 1px dashed #d8cec4;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.media-upload-empty {
+  color: #8a8078;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.media-upload-preview {
+  background: #000;
+  border-radius: 6px;
+  max-height: 220px;
+  width: 100%;
+}
+
+audio.media-upload-preview {
+  background: none;
+  max-height: none;
+}
+
+img.media-upload-preview {
+  object-fit: contain;
+}
+
+.media-upload-choose-btn {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d8cec4;
+  border-radius: 6px;
+  color: #2e2a27;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 600;
+  gap: 6px;
+  justify-self: start;
+  padding: 8px 12px;
+}
+
+.media-upload-choose-btn:hover {
+  border-color: #1f6f78;
+  color: #1f6f78;
+}
+
+.media-trim-row {
+  align-items: center;
+  color: #76695f;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.media-trim-row label {
+  align-items: center;
+  color: #5f554d;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.media-trim-row input[type="range"] {
+  min-height: auto;
+  width: 130px;
+}
+
+.media-trim-row span {
+  color: #8a8078;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.media-upload-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.media-upload-actions .btn-remove-opt {
+  align-items: center;
+  border: 1px solid #efb8ad;
+  display: flex;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.media-upload-status {
+  align-items: center;
+  border-radius: 6px;
+  display: flex;
+  font-size: 0.8rem;
+  gap: 6px;
+  padding: 6px 10px;
+}
+
+.media-upload-status.error {
+  background: #fff0ed;
+  color: #8a2e20;
+}
+
 /* Preview list styling */
 .preview-extended-list, .preview-symptoms-list {
   margin-top: 10px;

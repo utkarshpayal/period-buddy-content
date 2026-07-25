@@ -5,6 +5,7 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 
 const emptyCondition = (): ContentItem => ({
@@ -328,15 +329,15 @@ export const ConditionsPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Cover Image URL
-              <input
-                onChange={(e) => updateDraft("imageUrl", e.target.value)}
-                placeholder="https://... (defaults to a stock photo if left blank)"
-                type="url"
+            <div className="wide-field">
+              <MediaUploadField
+                folder="thumbnails"
+                kind="image"
+                label="Cover Image"
+                onChange={(url) => updateDraft("imageUrl", url)}
                 value={draft.imageUrl || ""}
               />
-            </label>
+            </div>
 
             <label className="wide-field">
               Short Description *
