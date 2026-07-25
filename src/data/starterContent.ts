@@ -20,7 +20,11 @@ export const starterContent: ContentItem[] = [
     reviewedBy: "",
     sourceLinks: [],
     updatedAt: "2026-07-05T10:30:00.000Z",
-    reviewRequired: true
+    reviewRequired: true,
+    readTimeMinutes: 3,
+    keywords: ["period tracking", "symptom log", "cycle wellness"],
+    seoTitle: "How to Track Period Symptoms | Period Buddy Guide",
+    seoDescription: "Learn how to log cramps, mood, flow, and energy in a healthy, stress-free way with our simple guide."
   },
   {
     id: "pb-qa-1",
@@ -41,7 +45,10 @@ export const starterContent: ContentItem[] = [
     reviewedBy: "",
     sourceLinks: [],
     updatedAt: "2026-07-09T15:40:00.000Z",
-    reviewRequired: true
+    reviewRequired: true,
+    keywords: ["late period", "cycle variation", "teen health answers"],
+    seoTitle: "Is a Late Period Normal? | Teen Q&A Guide",
+    seoDescription: "Get the facts about late periods, cycle variation, stress factors, and when to consult an OBGYN."
   },
   {
     id: "pb-video-1",
@@ -62,6 +69,9 @@ export const starterContent: ContentItem[] = [
     reviewedBy: "",
     sourceLinks: [],
     updatedAt: "2026-07-10T12:10:00.000Z",
-    reviewRequired: false
+    reviewRequired: false,
+    keywords: ["pms relief", "breathing exercise", "mood reset"],
+    seoTitle: "2-Min PMS Breathing Reset | Wellness Video",
+    seoDescription: "Relax your mind and body during PMS with this simple, guided 2-minute breathing exercise."
   }
 ];

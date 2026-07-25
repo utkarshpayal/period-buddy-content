@@ -1,5 +1,5 @@
 import { starterContent } from "../data/starterContent";
-import { ContentItem, ContentType } from "../types/content";
+import { ContentItem, ContentType, CycleStage } from "../types/content";
 import { getApiToken } from "./authApi";
 
 export type ApiSource = "api" | "blocked" | "local";
@@ -15,30 +15,62 @@ type BackendContentItem = Omit<Partial<ContentItem>, "status" | "type"> & {
   question?: string;
   shortAnswer?: string;
   directMp4Url?: string;
+  imageUrl?: string;
+  coverImageUrl?: string;
+  thumbnailUrl?: string;
   status?: string;
   type?: string;
+  // Production counter names
+  viewCount?: number;
+  likeCount?: number;
+  keywords?: string[];
+  version?: number;
+  authorId?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  
+  // Custom wellbeing and health issue fields
+  color?: string;
+  icon?: string;
+  order?: number;
+  items?: number;
+  estimatedReadTime?: number;
+  audioUrl?: string;
+  extendedGuide?: string[];
+  resourceType?: string;
+  symptoms?: string[];
+  causes?: string[];
+  treatment?: string;
+  prevention?: string;
+  whenToSeeDoctor?: string;
+  category?: string;
 };
+
+// Grouped-by-type shape returned by GET /api/content: each content type is
+// kept in its own bucket instead of being interleaved into one array, so
+// one type's recent activity can never crowd another type out.
+type GroupedContent = Record<string, BackendContentItem[]>;
 
 type ContentCollectionResponse =
   | BackendContentItem[]
   | {
-      data?:
-        | BackendContentItem[]
-        | {
-            content?: BackendContentItem[];
-            data?: BackendContentItem[];
-            items?: BackendContentItem[];
-            results?: BackendContentItem[];
-          };
+    data?:
+    | BackendContentItem[]
+    | {
+      content?: BackendContentItem[] | GroupedContent;
+      data?: BackendContentItem[];
       items?: BackendContentItem[];
       results?: BackendContentItem[];
     };
+    items?: BackendContentItem[];
+    results?: BackendContentItem[];
+  };
 type ContentResponse =
   | BackendContentItem
   | {
-      data?: BackendContentItem;
-      item?: BackendContentItem;
-    };
+    data?: BackendContentItem;
+    item?: BackendContentItem;
+  };
 
 type LoadResult = {
   items: ContentItem[];
@@ -79,6 +111,10 @@ function backendTypeFor(type: ContentType) {
 
   if (type === "guide" || type === "tip") {
     return "wellbeing";
+  }
+  
+  if (type === "issue") {
+    return "health-issue";
   }
 
   return type;
@@ -130,11 +166,11 @@ function writeLocalContent(items: ContentItem[]) {
 }
 
 function normalizeStatus(item: BackendContentItem) {
-  if (item.status === "active") {
+  if (item.status === "active" || item.isActive === true) {
     return "published";
   }
 
-  if (item.status === "inactive") {
+  if (item.status === "inactive" || item.isActive === false) {
     return "draft";
   }
 
@@ -154,12 +190,16 @@ function normalizeType(type: BackendContentItem["type"]): ContentType {
     return "qa";
   }
 
-  if (type === "wellbeing" || type === "health-issue") {
+  if (type === "wellbeing" || type === "wellbeing_resource" || type === "sexual_wellbeing" || type === "hygiene") {
     return "guide";
+  }
+  
+  if (type === "health-issue" || type === "health_issue" || type === "issue") {
+    return "issue";
   }
 
   if (type === "blog" || type === "video" || type === "tip") {
-    return type;
+    return type as ContentType;
   }
 
   return "blog";
@@ -181,17 +221,42 @@ function normalizeLocalItem(item: ContentItem & { type?: string }): ContentItem 
     isSensitive: item.isSensitive ?? false,
     medicallyReviewed: item.medicallyReviewed ?? false,
     videoUrl: item.videoUrl ?? "",
+    imageUrl: item.imageUrl ?? "",
     tags: Array.isArray(item.tags) ? item.tags : [],
     author: item.author ?? "Content Team",
     reviewedBy: item.reviewedBy ?? "",
     sourceLinks: Array.isArray(item.sourceLinks) ? item.sourceLinks : [],
     updatedAt: item.updatedAt ?? new Date().toISOString(),
-    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed
+    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed,
+    readTimeMinutes: typeof item.readTimeMinutes === "number" ? item.readTimeMinutes : 0,
+    seoTitle: item.seoTitle ?? "",
+    seoDescription: item.seoDescription ?? "",
+    keywords: Array.isArray(item.keywords) ? item.keywords : []
   };
 }
 
 function normalizeItem(item: BackendContentItem): ContentItem {
-  const type = normalizeType(item.type);
+  let type = normalizeType(item.type);
+  
+  if (type === "guide" && (item.resourceType === "sexual_wellbeing" || item.type === "sexual_wellbeing")) {
+    type = "tip";
+  }
+
+  const stageByCategory: Record<string, CycleStage> = {
+    periods: "Period",
+    symptoms: "PMS",
+    fertility: "Ovulation",
+    tracking: "Tracking",
+    health: "Wellness",
+    general: "General"
+  };
+
+  const blogStageByCategory: Record<string, CycleStage> = {
+    general: "General",
+    health: "Wellness",
+    lifestyle: "Wellness",
+    beauty: "Wellness"
+  };
 
   return {
     id: String(item.id ?? item._id ?? crypto.randomUUID()),
@@ -199,20 +264,51 @@ function normalizeItem(item: BackendContentItem): ContentItem {
     title: item.title ?? item.question ?? "Untitled content",
     status: normalizeStatus(item) as ContentItem["status"],
     audience: item.audience ?? "All users",
-    stage: item.stage ?? "General",
+    stage: item.stage ?? (
+      type === "qa" ? (stageByCategory[item.category || ""] ?? "General") :
+      type === "blog" ? (blogStageByCategory[item.category || ""] ?? "General") :
+      (item.category ? (item.category as CycleStage) : "General")
+    ),
     summary: item.summary ?? item.excerpt ?? item.shortAnswer ?? "",
-    body: item.body ?? item.content ?? item.guide ?? "",
+    body: item.body ?? item.content ?? item.guide ?? (Array.isArray(item.extendedGuide) ? item.extendedGuide.join("\n") : ""),
     question: item.question ?? "",
     answer: item.answer ?? "",
     isSensitive: item.isSensitive ?? false,
     medicallyReviewed: item.medicallyReviewed ?? false,
     videoUrl: item.videoUrl ?? item.directMp4Url ?? "",
+    imageUrl: item.imageUrl ?? item.coverImageUrl ?? item.thumbnailUrl ?? "",
     tags: Array.isArray(item.tags) ? item.tags : [],
     author: item.author ?? "Period Buddy Team",
     reviewedBy: item.reviewedBy ?? "",
     sourceLinks: Array.isArray(item.sourceLinks) ? item.sourceLinks : [],
     updatedAt: item.updatedAt ?? item.createdAt ?? new Date().toISOString(),
-    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed
+    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed,
+    readTimeMinutes: typeof item.readTimeMinutes === "number" ? item.readTimeMinutes : (typeof item.estimatedReadTime === "number" ? item.estimatedReadTime : 0),
+    seoTitle: item.seoTitle ?? "",
+    seoDescription: item.seoDescription ?? "",
+    keywords: Array.isArray(item.keywords) ? item.keywords : [],
+    
+    // Wellbeing & Health Issue fields
+    color: item.color ?? "",
+    icon: item.icon ?? "",
+    order: typeof item.order === "number" ? item.order : 0,
+    
+    // WellbeingResource specific
+    itemsCount: typeof item.items === "number" ? item.items : 0,
+    estimatedReadTime: typeof item.estimatedReadTime === "number" ? item.estimatedReadTime : 0,
+    audioUrl: item.audioUrl ?? "",
+    extendedGuide: Array.isArray(item.extendedGuide) ? item.extendedGuide : [],
+    
+    // HealthIssue specific
+    symptoms: Array.isArray(item.symptoms) ? item.symptoms : [],
+    causes: Array.isArray(item.causes) ? item.causes : [],
+    treatment: item.treatment ?? "",
+    prevention: item.prevention ?? "",
+    whenToSeeDoctor: item.whenToSeeDoctor ?? "",
+    
+    // Video Reel Poll specific
+    pollQuestion: item.pollQuestion ?? "",
+    pollOptions: Array.isArray(item.pollOptions) ? item.pollOptions : []
   };
 }
 
@@ -233,7 +329,15 @@ function extractItems(response: ContentCollectionResponse) {
     return response.data;
   }
 
-  return response.data?.items ?? response.data?.content ?? response.data?.results ?? response.data?.data ?? [];
+  const content = response.data?.content;
+
+  if (content && !Array.isArray(content)) {
+    // Grouped-by-type: { blog: [...], video: [...], ... } — flatten for the
+    // admin's local search/filter, which slices this back apart by `type`.
+    return Object.values(content).flat();
+  }
+
+  return response.data?.items ?? content ?? response.data?.results ?? response.data?.data ?? [];
 }
 
 function parseItems(response: ContentCollectionResponse) {
@@ -284,16 +388,81 @@ function toBackendPayload(item: ContentItem) {
     };
   }
 
+  if (item.type === "issue") {
+    return {
+      title: item.title,
+      category: item.stage || "General",
+      icon: item.icon || "alert-circle-outline",
+      color: item.color || "#ef4444",
+      summary: item.summary,
+      guide: item.body || item.summary,
+      imageUrl: item.imageUrl || "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=600&auto=format&fit=crop",
+      symptoms: item.symptoms || [],
+      causes: item.causes || [],
+      treatment: item.treatment || "",
+      prevention: item.prevention || "",
+      whenToSeeDoctor: item.whenToSeeDoctor || "",
+      order: Number(item.order) || 0,
+      isActive: isPublished,
+      isPublished
+    };
+  }
+
+  if (item.type === "video") {
+    return {
+      title: item.title,
+      creatorId: "pb_creator_admin",
+      creatorName: item.author || "Period Buddy Expert",
+      creatorAvatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=150&auto=format&fit=crop",
+      duration: "0:30",
+      category: item.stage || "Wellness",
+      verified: true,
+      imageUrl: item.imageUrl || "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=600&auto=format&fit=crop",
+      directMp4Url: item.videoUrl,
+      pollQuestion: item.pollQuestion || "",
+      pollOptions: item.pollOptions || [],
+      isActive: isPublished,
+      isPublished
+    };
+  }
+
+  if (item.type === "guide" || item.type === "tip") {
+    return {
+      type: item.type === "tip" ? "sexual_wellbeing" : "hygiene",
+      title: item.title,
+      icon: item.icon || (item.type === "tip" ? "heart-outline" : "water-outline"),
+      color: item.color || (item.type === "tip" ? "#d946a6" : "#0ea5e9"),
+      summary: item.summary,
+      extendedGuide: item.extendedGuide || (item.body ? item.body.split("\n").filter(Boolean) : []),
+      items: Number(item.itemsCount) || 0,
+      estimatedReadTime: Number(item.estimatedReadTime) || Number(item.readTimeMinutes) || 0,
+      videoUrl: item.videoUrl || "",
+      audioUrl: item.audioUrl || "",
+      order: Number(item.order) || 0,
+      isActive: isPublished,
+      isPublished
+    };
+  }
+
+  // Map stage to backend blogCategory enum values
+  const blogCategoryByStage: Record<string, string> = {
+    Emergency: "health",
+    General: "general",
+    Ovulation: "health",
+    Period: "health",
+    PMS: "health",
+    Tracking: "general",
+    Wellness: "lifestyle"
+  };
+
   return {
     ...item,
     content,
     excerpt: item.summary,
-    category: item.stage || "General",
-    directMp4Url: item.videoUrl,
+    category: blogCategoryByStage[item.stage] ?? "general",
+    imageUrl: item.imageUrl || undefined,
     isActive: isPublished,
-    isPublished,
-    resourceType: item.type === "tip" ? "sexual_wellbeing" : "hygiene",
-    thumbnailUrl: item.videoUrl ? "https://placehold.co/640x360?text=Period+Buddy" : undefined
+    isPublished
   };
 }
 

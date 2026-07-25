@@ -104,7 +104,15 @@ function parseAuthResponse(response: AuthResponse | undefined, payload: LoginPay
     response?.data?.accessToken ??
     response?.data?.access_token ??
     response?.data?.jwt;
-  const user = response?.user ?? response?.data?.user ?? { email: payload.email };
+  // The backend's sendResponse(res, status, message, data, token) puts the
+  // user record directly at response.data (not response.data.user) and the
+  // token at the top level — only fall back to response.data.user for APIs
+  // that nest it explicitly.
+  const user =
+    response?.user ??
+    response?.data?.user ??
+    (response?.data as AuthUser | undefined) ??
+    { email: payload.email };
   const session: AuthSession = { token, user };
 
   saveAuthSession(session);
