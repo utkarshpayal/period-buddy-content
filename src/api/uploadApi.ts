@@ -17,6 +17,20 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 const contentEndpoint = import.meta.env.VITE_CONTENT_ENDPOINT ?? "/api/content";
 const isApiConfigured = Boolean(apiBaseUrl);
 
+// The admin media upload is admin-only; a signed-in gynecologist (role
+// "doctor") must use the doctor-scoped endpoint instead, or the server
+// returns 403. Pick the path from the stored session role.
+function mediaUploadPath() {
+  try {
+    const stored = localStorage.getItem("period-buddy-auth-user");
+    const role = stored ? (JSON.parse(stored) as { role?: string }).role : undefined;
+    if (role === "doctor") return "/api/doctor/media/upload";
+  } catch {
+    // fall through to the content endpoint
+  }
+  return `${contentEndpoint}/media/upload`;
+}
+
 export function isUploadConfigured() {
   return isApiConfigured;
 }
@@ -43,7 +57,7 @@ export async function uploadMediaFile(
     headers.set("Authorization", `Bearer ${apiToken}`);
   }
 
-  const response = await fetch(`${apiBaseUrl}${contentEndpoint}/media/upload`, {
+  const response = await fetch(`${apiBaseUrl}${mediaUploadPath()}`, {
     body: formData,
     credentials: "include",
     headers,

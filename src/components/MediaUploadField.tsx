@@ -12,6 +12,9 @@ type MediaUploadFieldProps = {
   onChange: (url: string) => void;
   folder: MediaFolder;
   required?: boolean;
+  /** Emits the effective clip length (seconds) once metadata loads and again
+   * after a (possibly trimmed) upload. Used to auto-fill reel duration. */
+  onDurationChange?: (seconds: number) => void;
 };
 
 function formatSeconds(seconds: number) {
@@ -27,7 +30,8 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
   value,
   onChange,
   folder,
-  required
+  required,
+  onDurationChange
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -76,6 +80,7 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
     setDuration(el.duration);
     setTrimStart(0);
     setTrimEnd(el.duration);
+    onDurationChange?.(el.duration);
   };
 
   const handleUpload = async () => {
@@ -100,6 +105,10 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
 
       const result = await uploadMediaFile(payload, folder, filename);
       onChange(result.url);
+      if (kind !== "image") {
+        const effective = isTrimmed ? Math.max(0, trimEnd - trimStart) : duration;
+        if (effective > 0) onDurationChange?.(effective);
+      }
       resetStagedFile();
       setStatus("idle");
     } catch (err) {

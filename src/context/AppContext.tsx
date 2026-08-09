@@ -16,6 +16,7 @@ import { ContentItem, ContentType } from "../types/content";
 
 interface AppContextType {
   authSession: AuthSession | null;
+  role: string | null;
   items: ContentItem[];
   apiSource: ApiSource;
   apiMessage: string;
@@ -39,6 +40,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(() => getStoredAuthSession());
+  const role = authSession?.user?.role ?? null;
 
   const fetchContent = async () => {
     setIsLoading(true);
@@ -134,6 +136,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         authSession,
+        role,
         items,
         apiSource,
         apiMessage,
