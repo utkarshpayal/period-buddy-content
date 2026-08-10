@@ -1,6 +1,6 @@
 import { starterContent } from "../data/starterContent";
 import { ContentItem, ContentType, CycleStage } from "../types/content";
-import { getApiToken } from "./authApi";
+import { getApiToken, handleUnauthorized } from "./authApi";
 
 export type ApiSource = "api" | "blocked" | "local";
 
@@ -496,7 +496,9 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
     }
 
     if (response.status === 401) {
-      message = `${message}. Login with email and password, or check your auth endpoints.`;
+      // Token missing/expired/invalid — drop the session and bounce to login.
+      handleUnauthorized();
+      message = "Your session has expired. Please sign in again.";
     }
 
     if (response.status === 403) {

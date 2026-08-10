@@ -8,14 +8,21 @@ import {
   CheckCircle2,
   XCircle,
   Phone,
-  X
+  X,
+  User as UserIcon,
+  Activity,
+  Droplet,
+  CalendarDays,
+  ClipboardList
 } from "lucide-react";
 import {
   Consultation,
   ConsultationMessage,
   ConsultationStatus,
+  PatientOverview,
   getConsultations,
   getConsultationMessages,
+  getConsultationPatient,
   sendConsultationMessage,
   startVideoCall,
   setPrescription,
@@ -47,6 +54,10 @@ export const GynacBookings: React.FC = () => {
   const [sending, setSending] = useState(false);
 
   const [callLink, setCallLink] = useState<string | null>(null);
+  const [showPatient, setShowPatient] = useState(false);
+  const [patient, setPatient] = useState<PatientOverview | null>(null);
+  const [patientLoading, setPatientLoading] = useState(false);
+  const [patientError, setPatientError] = useState<string | null>(null);
   const [showRx, setShowRx] = useState(false);
   const [rxText, setRxText] = useState("");
   const [rxSaving, setRxSaving] = useState(false);
@@ -74,6 +85,10 @@ export const GynacBookings: React.FC = () => {
   const openChat = async (booking: Consultation) => {
     setSelected(booking);
     setRxText(booking.prescription ?? "");
+    // Reset the patient panel for the newly-selected booking.
+    setPatient(null);
+    setPatientError(null);
+    setShowPatient(false);
     setMsgLoading(true);
     try {
       setMessages(await getConsultationMessages(booking._id));
@@ -107,6 +122,23 @@ export const GynacBookings: React.FC = () => {
       setError(err instanceof Error ? err.message : "Could not send message.");
     } finally {
       setSending(false);
+    }
+  };
+
+  const openPatient = async () => {
+    if (!selected) return;
+    setShowPatient(true);
+    if (patient || patientLoading) return; // already loaded / loading
+    setPatientLoading(true);
+    setPatientError(null);
+    try {
+      setPatient(await getConsultationPatient(selected._id));
+    } catch (err) {
+      setPatientError(
+        err instanceof Error ? err.message : "Could not load patient records."
+      );
+    } finally {
+      setPatientLoading(false);
     }
   };
 
@@ -159,6 +191,7 @@ export const GynacBookings: React.FC = () => {
   };
 
   const isLive = selected && ["paid", "active"].includes(selected.status);
+  const isConnected = selected && ["paid", "active", "completed"].includes(selected.status);
 
   return (
     <div className="workspace-page">
@@ -233,6 +266,11 @@ export const GynacBookings: React.FC = () => {
                   <em className={`gy-pill gy-status-${selected.status}`}>{selected.status}</em>
                 </div>
                 <div className="gy-chat-actions">
+                  {isConnected && (
+                    <button className="gy-btn gy-btn-ghost" type="button" onClick={openPatient}>
+                      <UserIcon size={15} /> Patient records
+                    </button>
+                  )}
                   <button className="gy-btn gy-btn-primary" type="button" onClick={beginCall} disabled={!isLive}>
                     <Video size={15} /> Video call
                   </button>
@@ -315,6 +353,123 @@ export const GynacBookings: React.FC = () => {
               <a href={callLink} target="_blank" rel="noreferrer">{callLink}</a>
             </p>
           </div>
+        </div>
+      )}
+
+      {showPatient && selected && (
+        <div className="gy-modal-overlay" onClick={() => setShowPatient(false)}>
+          <aside className="gy-patient-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="gy-modal-head">
+              <span><UserIcon size={16} /> Patient records</span>
+              <button className="gy-icon-btn" type="button" onClick={() => setShowPatient(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {patientLoading ? (
+              <div className="gy-empty">
+                <Loader2 className="spin-icon" size={20} />
+                <p>Loading patient records…</p>
+              </div>
+            ) : patientError ? (
+              <div className="gy-alert gy-alert-error">
+                <AlertCircle size={16} />
+                <span>{patientError}</span>
+              </div>
+            ) : patient ? (
+              <div className="gy-patient-body">
+                <div className="gy-patient-id">
+                  <span className="gy-patient-avatar" aria-hidden>
+                    {patient.profile.name.trim().charAt(0).toUpperCase() || "P"}
+                  </span>
+                  <div>
+                    <h4>{patient.profile.name}</h4>
+                    <p className="gy-muted">{patient.profile.email}</p>
+                    <div className="gy-patient-tags">
+                      {patient.profile.age != null && <span className="gy-tag">{patient.profile.age} yrs</span>}
+                      {patient.profile.gender && <span className="gy-tag">{patient.profile.gender}</span>}
+                      {patient.profile.country && <span className="gy-tag">{patient.profile.country}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <section className="gy-patient-section">
+                  <h5><Activity size={14} /> Cycle overview</h5>
+                  {patient.cycle ? (
+                    <div className="gy-patient-metrics">
+                      <div className="gy-metric">
+                        <span className="gy-metric-value">{patient.cycle.cycleLength ?? "—"}</span>
+                        <span className="gy-metric-label">Cycle length (days)</span>
+                      </div>
+                      <div className="gy-metric">
+                        <span className="gy-metric-value">{patient.cycle.periodLength ?? "—"}</span>
+                        <span className="gy-metric-label">Period length (days)</span>
+                      </div>
+                      <div className="gy-metric">
+                        <span className="gy-metric-value">
+                          {patient.cycle.lastPeriodStartDate
+                            ? new Date(patient.cycle.lastPeriodStartDate).toLocaleDateString()
+                            : "—"}
+                        </span>
+                        <span className="gy-metric-label">Last period start</span>
+                      </div>
+                      {patient.cycle.pregnancyMode && (
+                        <div className="gy-metric">
+                          <span className="gy-metric-value">Yes</span>
+                          <span className="gy-metric-label">Pregnancy mode</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="gy-muted">No cycle data shared.</p>
+                  )}
+                </section>
+
+                <section className="gy-patient-section">
+                  <h5><Droplet size={14} /> Recent logs</h5>
+                  {patient.recentLogs.length === 0 ? (
+                    <p className="gy-muted">No recent logs.</p>
+                  ) : (
+                    <div className="gy-log-list">
+                      {patient.recentLogs.map((log) => (
+                        <div className="gy-log-row" key={log._id}>
+                          <span className="gy-log-date">
+                            <CalendarDays size={12} />
+                            {log.date ? new Date(log.date).toLocaleDateString() : log.dateKey}
+                          </span>
+                          <div className="gy-log-tags">
+                            {log.flow && log.flow !== "none" && <span className={`gy-tag gy-flow-${log.flow}`}>{log.flow}</span>}
+                            {log.phase && <span className="gy-tag">{log.phase}</span>}
+                            {log.mood && <span className="gy-tag">{log.mood}</span>}
+                            {(log.symptoms ?? []).slice(0, 3).map((s) => (
+                              <span className="gy-tag gy-tag-symptom" key={s}>{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {patient.screenings.length > 0 && (
+                  <section className="gy-patient-section">
+                    <h5><ClipboardList size={14} /> Screening assessments</h5>
+                    <div className="gy-screen-list">
+                      {patient.screenings.map((s) => (
+                        <div className={`gy-screen-card gy-risk-${s.riskLevel}`} key={s._id}>
+                          <div className="gy-screen-head">
+                            <strong>{s.condition.toUpperCase()}</strong>
+                            <span className="gy-risk-badge">{s.riskLevel} risk · {s.score}</span>
+                          </div>
+                          <p className="gy-muted">{s.doctorDiscussionSummary || s.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            ) : null}
+          </aside>
         </div>
       )}
 

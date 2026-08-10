@@ -1,18 +1,28 @@
-import React, { useState } from "react";
-import { LogIn, Loader2, AlertCircle, KeyRound, Check } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { LogIn, Loader2, AlertCircle, KeyRound, Check, Clock } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
-import { Header } from "../components/Header";
 
 export const LoginPage: React.FC = () => {
-  const { login, apiMessage, authSession } = useAppContext();
+  const { login, apiMessage, authSession, sessionExpired, clearSessionExpired } = useAppContext();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Once a fresh session exists, leave the login screen for the studio.
+  useEffect(() => {
+    if (authSession?.token) {
+      const t = setTimeout(() => navigate("/", { replace: true }), 600);
+      return () => clearTimeout(t);
+    }
+  }, [authSession?.token, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    clearSessionExpired();
 
     if (!email.trim() || !password) {
       setErrorMsg("Please enter both email and password.");
@@ -54,6 +64,13 @@ export const LoginPage: React.FC = () => {
               <KeyRound size={18} />
               <span>Admin Authentication</span>
             </div>
+
+            {sessionExpired && !errorMsg && (
+              <div className="login-info-alert">
+                <Clock size={16} />
+                <span>Your session expired. Please sign in again to continue.</span>
+              </div>
+            )}
 
             {errorMsg && (
               <div className="login-error-alert">
@@ -102,9 +119,11 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
 
-            <div className="login-help-text">
-              <p>For development use: utkarsh12march2004@gmail.com / password123</p>
-            </div>
+            {import.meta.env.DEV && (
+              <div className="login-help-text">
+                <p>Dev login: utkarsh12march2004@gmail.com / password123</p>
+              </div>
+            )}
           </form>
         )}
       </div>

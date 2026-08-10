@@ -9,6 +9,7 @@ import {
   Heart,
   Settings,
   LogOut,
+  LogIn,
   UserCheck,
   Stethoscope,
   Menu,
@@ -101,7 +102,7 @@ export const Sidebar: React.FC = () => {
           </NavLink>
         </nav>
 
-        {authSession && (
+        {authSession ? (
           <div className="sidebar-user-card">
             <div className="user-info">
               <UserCheck size={16} className="user-icon" />
@@ -113,6 +114,14 @@ export const Sidebar: React.FC = () => {
               <LogOut size={14} />
               Logout
             </button>
+          </div>
+        ) : (
+          <div className="sidebar-user-card sidebar-login-card">
+            <p className="sidebar-login-hint">You&apos;re browsing as a guest.</p>
+            <NavLink to="/login" className="login-cta-btn" onClick={close}>
+              <LogIn size={14} />
+              Sign in
+            </NavLink>
           </div>
         )}
 

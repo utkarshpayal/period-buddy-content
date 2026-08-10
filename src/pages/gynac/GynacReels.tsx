@@ -156,7 +156,14 @@ export const GynacReels: React.FC = () => {
     <div className="workspace-page">
       <GynacHead
         title="Reels & Content"
-        subtitle="Publish short educational videos for the Period Buddy community."
+        subtitle={
+          reels.length > 0
+            ? `${reels.filter((r) => r.isActive).length} live · ${reels.length} total · ${reels.reduce(
+                (s, r) => s + (r.viewCount ?? 0),
+                0
+              )} views. Publish short educational videos for the community.`
+            : "Publish short educational videos for the Period Buddy community."
+        }
         actions={
           <button className="gy-btn gy-btn-primary" type="button" onClick={() => setShowForm((s) => !s)}>
             <Plus size={16} /> New reel

@@ -45,8 +45,59 @@ const envApiToken = import.meta.env.VITE_API_TOKEN;
 const tokenStorageKey = "period-buddy-api-token";
 const userStorageKey = "period-buddy-auth-user";
 
+/* ------------------------- JWT expiry handling -------------------------- */
+
+/** Decode the payload of a JWT without verifying it (verification is the
+ * server's job). Returns null for opaque/local tokens or malformed input. */
+function decodeJwtPayload(token: string): { exp?: number } | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+/** True when a JWT carries an `exp` claim that is already in the past.
+ * Non-JWT / expiry-less tokens are treated as valid (server will 401 if not). */
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return false;
+  // 10s skew so we don't send a token that expires mid-flight.
+  return Date.now() >= payload.exp * 1000 - 10_000;
+}
+
+/* --------------------- Unauthorized (401) subscribers ------------------- */
+
+type UnauthorizedListener = () => void;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+/** Register a callback fired whenever the session becomes invalid (expiry or
+ * a 401 from the API). Returns an unsubscribe function. */
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.add(listener);
+  return () => unauthorizedListeners.delete(listener);
+}
+
+/** Clear the session and notify listeners so the app can redirect to login.
+ * Call this from API layers on a 401 response. */
+export function handleUnauthorized() {
+  clearAuthSession();
+  unauthorizedListeners.forEach((fn) => fn());
+}
+
 export function getApiToken() {
-  return localStorage.getItem(tokenStorageKey) ?? envApiToken ?? "";
+  const stored = localStorage.getItem(tokenStorageKey);
+  if (stored) {
+    if (isTokenExpired(stored)) {
+      handleUnauthorized();
+      return "";
+    }
+    return stored;
+  }
+  return envApiToken ?? "";
 }
 
 export function getStoredAuthSession(): AuthSession | null {

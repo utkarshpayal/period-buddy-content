@@ -22,7 +22,7 @@ import { GynacProfile } from "./pages/gynac/GynacProfile";
 
 function AdminApp() {
   return (
-    <div className="app-shell">
+    <div className="app-shell admin-shell">
       <Sidebar />
       <main className="workspace-main-content">
         <Routes>
@@ -63,11 +63,23 @@ function GynacApp() {
 }
 
 function AppContent() {
-  const { role } = useAppContext();
+  const { isAuthenticated, role } = useAppContext();
 
+  // Signed out: the only reachable screens are the login page and the public
+  // invite (set-password) flow. Every other path bounces to /login.
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Signed in: full role-based access to the studio / clinician portal.
   return (
     <Routes>
-      {/* Public — accept a clinician invite regardless of session state. */}
       <Route path="/set-password" element={<SetPasswordPage />} />
       <Route
         path="*"

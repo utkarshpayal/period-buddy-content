@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { 
-  getStoredAuthSession, 
-  loginWithEmail, 
-  clearAuthSession, 
-  AuthSession 
+import {
+  getStoredAuthSession,
+  loginWithEmail,
+  clearAuthSession,
+  onUnauthorized,
+  AuthSession
 } from "../api/authApi";
 import { 
   loadContent, 
@@ -16,7 +17,10 @@ import { ContentItem, ContentType } from "../types/content";
 
 interface AppContextType {
   authSession: AuthSession | null;
+  isAuthenticated: boolean;
   role: string | null;
+  sessionExpired: boolean;
+  clearSessionExpired: () => void;
   items: ContentItem[];
   apiSource: ApiSource;
   apiMessage: string;
@@ -40,7 +44,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(() => getStoredAuthSession());
+  const [sessionExpired, setSessionExpired] = useState(false);
   const role = authSession?.user?.role ?? null;
+  const isAuthenticated = Boolean(authSession?.token);
+  const clearSessionExpired = () => setSessionExpired(false);
+
+  // Auto sign-out when a token expires or the API returns 401/403. The API
+  // layer has already cleared storage; here we sync React state + flag it so
+  // the login screen can explain why the user landed there.
+  useEffect(() => {
+    return onUnauthorized(() => {
+      setAuthSession((prev) => {
+        if (prev) setSessionExpired(true);
+        return null;
+      });
+    });
+  }, []);
 
   const fetchContent = async () => {
     setIsLoading(true);
@@ -116,6 +135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const result = await loginWithEmail(credentials);
       setAuthSession(result.session);
+      setSessionExpired(false);
       setApiMessage(`${result.message} Refreshing API content...`);
       await fetchContent();
       return true;
@@ -136,7 +156,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider
       value={{
         authSession,
+        isAuthenticated,
         role,
+        sessionExpired,
+        clearSessionExpired,
         items,
         apiSource,
         apiMessage,

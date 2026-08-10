@@ -44,6 +44,14 @@ export const GynacAvailability: React.FC = () => {
     [week]
   );
 
+  const weeklySlots = useMemo(
+    () =>
+      Object.values(week)
+        .flat()
+        .reduce((sum, r) => sum + (Number(r.maxSlots) || 0), 0),
+    [week]
+  );
+
   const toggleDay = (day: number) => {
     setWeek((prev) => {
       const next = { ...prev };
@@ -133,7 +141,7 @@ export const GynacAvailability: React.FC = () => {
         title="Weekly Availability"
         subtitle={`Set the recurring hours when patients can book you. ${enabledDays} day${
           enabledDays === 1 ? "" : "s"
-        } active.`}
+        } active · ${weeklySlots} bookable slot${weeklySlots === 1 ? "" : "s"} / week.`}
         actions={
           <button className="gy-btn gy-btn-primary" type="button" onClick={save} disabled={saving}>
             {saving ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}

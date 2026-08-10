@@ -1,4 +1,4 @@
-import { getApiToken } from "./authApi";
+import { getApiToken, handleUnauthorized } from "./authApi";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -65,6 +65,57 @@ export type DoctorProfile = {
   education?: string[];
   isAvailable?: boolean;
   totalConsultations?: number;
+};
+
+export type PatientCycleLog = {
+  _id: string;
+  date?: string;
+  dateKey?: string;
+  flow?: string;
+  mood?: string;
+  energy?: string;
+  symptoms?: string[];
+  phase?: string;
+  cycleDay?: number;
+  note?: string;
+};
+
+export type PatientScreening = {
+  _id: string;
+  condition: string;
+  score: number;
+  riskLevel: "low" | "moderate" | "high";
+  summary: string;
+  doctorDiscussionSummary?: string;
+  createdAt?: string;
+};
+
+export type PatientOverview = {
+  profile: {
+    id: string;
+    name: string;
+    email?: string;
+    profilePicture?: string;
+    gender?: string;
+    age?: number | null;
+    dateOfBirth?: string;
+    country?: string;
+  };
+  cycle: {
+    lastPeriodStartDate?: string;
+    cycleLength?: number;
+    periodLength?: number;
+    pregnancyMode?: boolean;
+    trackingGoal?: string;
+  } | null;
+  recentLogs: PatientCycleLog[];
+  screenings: PatientScreening[];
+  consultation: {
+    id: string;
+    status: ConsultationStatus;
+    prescription?: string;
+    startedAt?: string;
+  };
 };
 
 export type DashboardData = {
@@ -173,6 +224,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     body = undefined;
   }
 
+  if (response.status === 401 || response.status === 403) {
+    handleUnauthorized();
+    throw new Error(body?.message ?? "Your session has expired. Please sign in again.");
+  }
+
   if (!response.ok) {
     throw new Error(
       body?.message ?? `Request failed with ${response.status} ${response.statusText}`
@@ -225,6 +281,9 @@ export const getConsultations = (status?: ConsultationStatus) =>
   request<Consultation[]>(
     `/api/doctor/consultations${status ? `?status=${status}` : ""}`
   );
+
+export const getConsultationPatient = (id: string) =>
+  request<PatientOverview>(`/api/doctor/consultations/${id}/patient`);
 
 export const getConsultationMessages = (id: string) =>
   request<ConsultationMessage[]>(`/api/doctor/consultations/${id}/messages`);

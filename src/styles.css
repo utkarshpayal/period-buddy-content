@@ -1287,6 +1287,7 @@ img.media-upload-preview {
 /* Elegant Login Page */
 .login-page-container {
   display: flex;
+  height: full;
   align-items: center;
   justify-content: center;
   flex: 1;
@@ -2578,4 +2579,463 @@ body {
   .workspace-main-content { padding: 0; }
   .gynac-shell .workspace-page,
   .workspace-page { padding: 20px 16px 40px; }
+}
+
+/* =========================================================================
+ * Professional polish — auth, sidebar login CTA, focus/interaction states
+ * Appended so these rules win the cascade over earlier same-specificity ones.
+ * ========================================================================= */
+
+/* ---- Sidebar: guest / login CTA ---- */
+.sidebar-login-card {
+  gap: 10px;
+  text-align: center;
+}
+.sidebar-login-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #7c6f66;
+  line-height: 1.4;
+}
+.login-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #9f4864;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+.login-cta-btn:hover {
+  background: #853750;
+  transform: translateY(-1px);
+}
+.gynac-shell .login-cta-btn {
+  background: linear-gradient(140deg, var(--pb-berry) 0%, var(--pb-plum) 100%);
+}
+
+/* ---- Login: session-expired info banner ---- */
+.login-info-alert {
+  background: #fff7e8;
+  border: 1px solid #f0d29a;
+  color: #8a5a12;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---- Login card: a touch more depth + accent bar ---- */
+.login-card {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -24px rgba(127, 46, 75, 0.28), 0 6px 18px -8px rgba(127, 46, 75, 0.14);
+}
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, #9f4864, #6d4b73 55%, #1f7a83);
+}
+
+/* ---- Inputs: consistent, accessible focus rings ---- */
+.input-group input,
+.gy-field input,
+.gy-field select,
+.gy-field textarea {
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.input-group input:focus,
+.input-group input:focus-visible {
+  outline: none;
+  border-color: #9f4864;
+  box-shadow: 0 0 0 3px rgba(159, 72, 100, 0.16);
+}
+.gy-field input:focus,
+.gy-field select:focus,
+.gy-field textarea:focus {
+  outline: none;
+  border-color: var(--pb-berry);
+  box-shadow: 0 0 0 3px rgba(176, 58, 99, 0.15);
+}
+
+/* ---- Primary buttons: subtle hover lift ---- */
+.btn-login-submit,
+.gy-btn-primary {
+  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.btn-login-submit:not(:disabled):hover,
+.gy-btn-primary:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -8px rgba(127, 46, 75, 0.5);
+}
+
+/* ---- Keyboard focus visibility across interactive elements ---- */
+a:focus-visible,
+button:focus-visible,
+.type-button:focus-visible {
+  outline: 2px solid #9f4864;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---- Gynac cards: gentle hover elevation for a more polished feel ---- */
+.gy-stat-card,
+.gy-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.gy-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pb-shadow);
+}
+
+/* =========================================================================
+ * Admin studio adopts the clinician (gynac) design system so both portals
+ * read as one professional product. Mirrors the .gynac-shell chrome rules
+ * onto .admin-shell, reusing the same tokens, fonts, and soft-shadow cards.
+ * ========================================================================= */
+.admin-shell {
+  --pb-berry: #b03a63;
+  --pb-berry-strong: #8f2d50;
+  --pb-berry-soft: #fbeef2;
+  --pb-petal: #f6d9e2;
+  --pb-plum: #6d4b73;
+  --pb-teal: #1f7a83;
+  --pb-ink: #2a2230;
+  --pb-muted: #8c7f8a;
+  --pb-line: #efe2e7;
+  --pb-surface: #ffffff;
+  --pb-surface-2: #fbf6f4;
+  --pb-radius: 16px;
+  --pb-shadow-sm: 0 1px 2px rgba(80, 30, 50, 0.05), 0 2px 8px rgba(80, 30, 50, 0.04);
+  --pb-shadow: 0 6px 20px rgba(90, 35, 60, 0.08), 0 2px 6px rgba(90, 35, 60, 0.05);
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 480px at 100% -10%, #fbe9ef 0%, rgba(251, 233, 239, 0) 55%),
+    linear-gradient(180deg, #f8f1f2 0%, #f5edee 100%);
+}
+
+/* Sidebar */
+.admin-shell .sidebar {
+  background: linear-gradient(185deg, #ffffff 0%, #fdf7f8 100%);
+  border-right: 1px solid var(--pb-line);
+  gap: 22px;
+  padding: 26px 16px;
+}
+.admin-shell .brand-lockup { padding: 0 6px 4px; gap: 13px; }
+.admin-shell .brand-mark {
+  background: linear-gradient(140deg, var(--pb-berry) 0%, var(--pb-plum) 100%);
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(176, 58, 99, 0.32);
+  height: 46px;
+  width: 46px;
+  color: #fff;
+}
+.admin-shell .brand-lockup h1 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.18rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 2px 0 0;
+  color: var(--pb-ink);
+}
+.admin-shell .eyebrow {
+  color: var(--pb-berry);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Nav items */
+.admin-shell .type-nav { gap: 3px; }
+.admin-shell .type-button {
+  border-radius: 12px;
+  color: #59505c;
+  font-size: 0.92rem;
+  font-weight: 600;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 13px;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.admin-shell .type-button:hover { background: var(--pb-berry-soft); color: var(--pb-berry-strong); }
+.admin-shell .type-button svg { color: var(--pb-muted); transition: color 0.16s ease; }
+.admin-shell .type-button:hover svg { color: var(--pb-berry); }
+.admin-shell .type-button.active {
+  background: linear-gradient(135deg, var(--pb-berry) 0%, var(--pb-plum) 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(176, 58, 99, 0.28);
+}
+.admin-shell .type-button.active svg { color: #fff; }
+
+/* Sidebar user / logout */
+.admin-shell .sidebar-user-card {
+  background: var(--pb-surface);
+  border: 1px solid var(--pb-line);
+  border-radius: 14px;
+  box-shadow: var(--pb-shadow-sm);
+  gap: 12px;
+  padding: 13px;
+}
+.admin-shell .user-icon { color: var(--pb-berry); }
+.admin-shell .logout-btn {
+  background: var(--pb-surface-2);
+  border: 1px solid var(--pb-line);
+  border-radius: 10px;
+  color: #6a5f68;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.admin-shell .logout-btn:hover {
+  background: var(--pb-berry-soft);
+  border-color: var(--pb-petal);
+  color: var(--pb-berry-strong);
+}
+
+/* Topbar / page heads */
+.admin-shell .topbar .eyebrow { color: var(--pb-berry); }
+.admin-shell .topbar h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 2px 0 0;
+  color: var(--pb-ink);
+}
+.admin-shell .subtitle-text { color: var(--pb-muted); font-size: 0.92rem; margin: 6px 0 0; max-width: 60ch; }
+
+/* Content cards adopt the rounded, soft-shadow surface treatment */
+.admin-shell .metric-card,
+.admin-shell .dashboard-section,
+.admin-shell .settings-card {
+  border-radius: 18px;
+  border: 1px solid var(--pb-line);
+  box-shadow: var(--pb-shadow-sm);
+  transition: transform 0.14s ease, box-shadow 0.16s ease;
+}
+.admin-shell .metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pb-shadow);
+}
+.admin-shell .section-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Standalone login (signed-out): fill viewport, brand-consistent bg ---- */
+.login-page-container {
+  min-height: 100vh;
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 480px at 100% -10%, #fbe9ef 0%, rgba(251, 233, 239, 0) 55%),
+    linear-gradient(180deg, #f8f1f2 0%, #f4edee 100%);
+}
+.login-brand h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.login-logo {
+  background: linear-gradient(140deg, #b03a63 0%, #6d4b73 100%);
+  border-radius: 16px;
+}
+
+/* =========================================================================
+ * Patient records drawer (connected-user data for gynecologists)
+ * ========================================================================= */
+.gy-patient-drawer {
+  margin-left: auto;
+  align-self: stretch;
+  height: 100%;
+  width: 100%;
+  max-width: 440px;
+  background: var(--pb-surface, #fff);
+  border-radius: 20px 0 0 20px;
+  box-shadow: var(--pb-shadow-lg, 0 18px 44px rgba(80, 30, 55, 0.16));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: gy-drawer-in 0.22s ease;
+}
+@keyframes gy-drawer-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.gy-patient-body {
+  overflow-y: auto;
+  padding: 18px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.gy-patient-id { display: flex; gap: 14px; align-items: flex-start; }
+.gy-patient-id h4 {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--pb-ink, #2a2230);
+}
+.gy-patient-avatar {
+  flex: 0 0 auto;
+  height: 48px;
+  width: 48px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, var(--pb-berry, #b03a63) 0%, var(--pb-plum, #6d4b73) 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gy-patient-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.gy-tag {
+  background: var(--pb-berry-soft, #fbeef2);
+  color: var(--pb-berry-strong, #8f2d50);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  text-transform: capitalize;
+}
+.gy-tag-symptom { background: #eef2f7; color: #4a5568; }
+.gy-flow-spotting, .gy-flow-light { background: #fde8ef; color: #b03a63; }
+.gy-flow-medium { background: #fbd7e2; color: #93254a; }
+.gy-flow-heavy { background: #f6c2d1; color: #7d1d3d; }
+
+.gy-patient-section h5 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pb-muted, #8c7f8a);
+}
+.gy-patient-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gy-metric {
+  background: var(--pb-surface-2, #fbf6f4);
+  border: 1px solid var(--pb-line, #efe2e7);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 3px;
+}
+.gy-metric-value { font-size: 1.05rem; font-weight: 700; color: var(--pb-ink, #2a2230); }
+.gy-metric-label { font-size: 0.7rem; color: var(--pb-muted, #8c7f8a); }
+
+.gy-log-list { display: flex; flex-direction: column; gap: 8px; }
+.gy-log-row {
+  border: 1px solid var(--pb-line, #efe2e7);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gy-log-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--pb-ink, #2a2230);
+}
+.gy-log-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.gy-screen-list { display: flex; flex-direction: column; gap: 10px; }
+.gy-screen-card {
+  border: 1px solid var(--pb-line, #efe2e7);
+  border-left: 3px solid var(--pb-muted, #8c7f8a);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.gy-screen-card p { margin: 4px 0 0; font-size: 0.82rem; }
+.gy-screen-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.gy-risk-badge { font-size: 0.68rem; font-weight: 800; text-transform: capitalize; }
+.gy-risk-low { border-left-color: #10794f; }
+.gy-risk-low .gy-risk-badge { color: #10794f; }
+.gy-risk-moderate { border-left-color: #96711a; }
+.gy-risk-moderate .gy-risk-badge { color: #96711a; }
+.gy-risk-high { border-left-color: #b23a26; }
+.gy-risk-high .gy-risk-badge { color: #b23a26; }
+
+@media (max-width: 640px) {
+  .gy-patient-drawer { max-width: 100%; border-radius: 0; }
+}
+
+/* =========================================================================
+ * Admin content pages (Blogs / Q&A / Guides / Conditions / Videos) —
+ * align the library + editor surfaces with the clinician design system.
+ * ========================================================================= */
+.admin-shell .library-panel,
+.admin-shell .editor-panel,
+.admin-shell .preview-pane {
+  border-radius: 18px;
+  border: 1px solid var(--pb-line);
+  box-shadow: var(--pb-shadow-sm);
+}
+.admin-shell .panel-heading,
+.admin-shell .preview-heading {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.admin-shell .entry-card-main,
+.admin-shell .entry-list > * {
+  border-radius: 14px;
+  transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.admin-shell .entry-card-main:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--pb-shadow);
+  border-color: var(--pb-petal);
+}
+.admin-shell .search-field input,
+.admin-shell .form-grid input,
+.admin-shell .form-grid select,
+.admin-shell .form-grid textarea,
+.admin-shell .wide-field input,
+.admin-shell .wide-field textarea {
+  border-radius: 11px;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.admin-shell .search-field input:focus,
+.admin-shell .form-grid input:focus,
+.admin-shell .form-grid select:focus,
+.admin-shell .form-grid textarea:focus,
+.admin-shell .wide-field input:focus,
+.admin-shell .wide-field textarea:focus {
+  outline: none;
+  border-color: var(--pb-berry);
+  box-shadow: 0 0 0 3px rgba(176, 58, 99, 0.14);
+}
+.admin-shell .save-button,
+.admin-shell .primary-action {
+  border-radius: 11px;
+  transition: transform 0.1s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.admin-shell .save-button:not(:disabled):hover,
+.admin-shell .primary-action:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(176, 58, 99, 0.26);
+}
+.admin-shell .filter-row .filter-chip,
+.admin-shell .filter-row button {
+  border-radius: 999px;
 }
