@@ -12,6 +12,8 @@ import { ConditionsPage } from "./pages/ConditionsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { DoctorsPage } from "./pages/DoctorsPage";
+import { SchemesPage } from "./pages/SchemesPage";
+import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { GynacDashboard } from "./pages/gynac/GynacDashboard";
 import { GynacBookings } from "./pages/gynac/GynacBookings";
@@ -33,6 +35,8 @@ function AdminApp() {
           <Route path="/guides" element={<GuidesPage />} />
           <Route path="/conditions" element={<ConditionsPage />} />
           <Route path="/gynecologists" element={<DoctorsPage />} />
+          <Route path="/schemes" element={<SchemesPage />} />
+          <Route path="/scheme-applications" element={<SchemeApplicationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
