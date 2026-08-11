@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { 
-  BookOpen, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Leaf, Sparkles, Heart
+  BookOpen, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Leaf, Sparkles, Heart, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
@@ -45,6 +45,7 @@ export const GuidesPage: React.FC = () => {
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyGuide());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -83,6 +84,20 @@ export const GuidesPage: React.FC = () => {
     });
     setEditingId(guide.id);
     setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleNew = () => {
+    setDraft(emptyGuide());
+    setEditingId(null);
+    setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setEditingId(null);
+    setFormError(null);
   };
 
   const handleDelete = async (guide: ContentItem) => {
@@ -100,6 +115,7 @@ export const GuidesPage: React.FC = () => {
     setDraft(emptyGuide());
     setEditingId(null);
     setFormError(null);
+    setIsEditorOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,7 +162,7 @@ export const GuidesPage: React.FC = () => {
         title="Wellbeing & Hygiene Guides" 
         subtitle="Manage wellness guides, preventive tips, contraception matrices, and hygiene habits."
         actions={
-          <button className="primary-action" onClick={handleReset} type="button">
+          <button className="primary-action" onClick={handleNew} type="button">
             <Plus size={18} />
             New Guide
           </button>
@@ -155,7 +171,7 @@ export const GuidesPage: React.FC = () => {
       
       <ApiBanner />
 
-      <div className="content-layout">
+      <div className="content-layout list-only">
         {/* Left list panel */}
         <div className="library-panel">
           <div className="panel-heading">
@@ -240,14 +256,16 @@ export const GuidesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right editor panel */}
-        <form className="editor-panel" onSubmit={handleSubmit}>
+      </div>
+
+      {isEditorOpen && (
+        <div className="modal-overlay" onClick={closeEditor}>
+        <form className="editor-panel modal-panel" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+          <button aria-label="Close" className="modal-close" onClick={closeEditor} type="button">
+            <X size={18} />
+          </button>
           <div className="panel-heading">
             <h3>{editingId ? "Edit Resource" : "Create Resource"}</h3>
-            <button className="save-button" disabled={isSaving} type="submit">
-              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
-              {isSaving ? "Saving" : "Save Guide"}
-            </button>
           </div>
 
           {formError && (
@@ -413,8 +431,19 @@ export const GuidesPage: React.FC = () => {
               </ul>
             </div>
           </aside>
+
+          <div className="modal-footer">
+            <button className="modal-cancel" onClick={closeEditor} type="button">
+              Cancel
+            </button>
+            <button className="save-button" disabled={isSaving} type="submit">
+              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
+              {isSaving ? "Saving" : "Save Guide"}
+            </button>
+          </div>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

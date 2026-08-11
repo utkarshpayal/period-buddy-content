@@ -15,7 +15,8 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
-  FileText
+  FileText,
+  MoreHorizontal
 } from "lucide-react";
 import {
   SchemeApplication,
@@ -101,6 +102,21 @@ export const SchemeApplicationsPage: React.FC = () => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(null);
+
+  const openMenu = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    if (menu?.id === id) {
+      setMenu(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = 168;
+    setMenu({
+      id,
+      top: rect.bottom + 6,
+      left: Math.max(12, rect.right - width)
+    });
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -363,7 +379,8 @@ export const SchemeApplicationsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Status tabs with counts */}
+      {/* Filter toolbar — tabs + filters in one cohesive panel */}
+      <div className="app-toolbar">
       <div className="scheme-filter-chips scheme-status-tabs">
         {STATUS_FILTERS.map((f) => {
           const count = statusCount(f.key);
@@ -455,6 +472,7 @@ export const SchemeApplicationsPage: React.FC = () => {
           </button>
         )}
       </div>
+      </div>
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
@@ -491,17 +509,6 @@ export const SchemeApplicationsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Result meta row */}
-      {!loading && applications.length > 0 && (
-        <div className="app-result-row">
-          <label className="app-selectall">
-            <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-            <span>Select all on page</span>
-          </label>
-          <span className="app-range">{rangeLabel}</span>
-        </div>
-      )}
-
       {loading ? (
         <div className="gy-empty">
           <Loader2 size={20} className="spin" />
@@ -518,146 +525,144 @@ export const SchemeApplicationsPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="scheme-app-list">
-          {applications.map((app) => {
-            const pill = STATUS_PILL[app.status];
-            const email = applicantEmail(app);
-            const phone = applicantPhone(app);
-            const state = applicantState(app);
-            const busy = actingId === app._id;
-            const level = schemeLevelLabel(app);
-            const isOpen = expanded.has(app._id);
-            const docs = app.documents ?? [];
-            const formEntries = Object.entries(app.formData ?? {});
-            return (
-              <div key={app._id} className="gy-card scheme-app-card">
-                <div className="scheme-app-main">
-                  <label className="app-row-check">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(app._id)}
-                      onChange={() => toggleRow(app._id)}
-                    />
-                  </label>
-
-                  <div className="scheme-app-info">
-                    <div className="scheme-app-title-row">
-                      <h3>{schemeName(app)}</h3>
-                      {level && <span className="gy-pill gy-pill-muted">{level}</span>}
-                      <span className={`gy-pill ${pill.cls}`}>{pill.label}</span>
-                    </div>
-
-                    <p className="scheme-app-meta">
-                      <strong>{applicantName(app)}</strong>
-                      {state && (
-                        <>
-                          {" "}
-                          <span className="app-inline-tag">
+        <div className="app-table-wrap" onScroll={() => menu && setMenu(null)}>
+          <table className="app-table">
+            <thead>
+              <tr>
+                <th className="app-th-check">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+                </th>
+                <th>Scheme</th>
+                <th>Applicant</th>
+                <th>Contact</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th className="app-th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applications.map((app) => {
+                const pill = STATUS_PILL[app.status];
+                const email = applicantEmail(app);
+                const phone = applicantPhone(app);
+                const state = applicantState(app);
+                const busy = actingId === app._id;
+                const level = schemeLevelLabel(app);
+                const isOpen = expanded.has(app._id);
+                const docs = app.documents ?? [];
+                const formEntries = Object.entries(app.formData ?? {});
+                const hasDetails = formEntries.length > 0 || docs.length > 0;
+                return (
+                  <React.Fragment key={app._id}>
+                    <tr className={`app-tr status-${app.status} ${selected.has(app._id) ? "is-selected" : ""}`}>
+                      <td className="app-td-check">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(app._id)}
+                          onChange={() => toggleRow(app._id)}
+                        />
+                      </td>
+                      <td className="app-td-scheme">
+                        <span className="app-scheme-name">{schemeName(app)}</span>
+                        <span className="app-scheme-tags">
+                          {level && <span className="gy-pill gy-pill-muted">{level}</span>}
+                          {hasDetails && (
+                            <button type="button" className="app-details-toggle" onClick={() => toggleExpand(app._id)}>
+                              {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                              {isOpen ? "Hide" : "Details"}
+                            </button>
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="app-cell-strong">{applicantName(app)}</span>
+                        {state && (
+                          <span className="app-cell-sub app-inline-tag">
                             <MapPin size={12} /> {state}
                           </span>
-                        </>
-                      )}
-                      {" · "}Submitted {fmtDate(app.createdAt)}
-                    </p>
-
-                    <p className="scheme-app-contact">
-                      {email && (
-                        <button
-                          type="button"
-                          className="app-copy-link"
-                          title="Copy email"
-                          onClick={() => {
-                            navigator.clipboard?.writeText(email);
-                            setNotice(`Copied ${email}`);
-                          }}
-                        >
-                          {email} <Copy size={12} />
-                        </button>
-                      )}
-                      {phone && (
-                        <span className="app-inline-tag">
-                          <Phone size={12} /> {phone}
-                        </span>
-                      )}
-                    </p>
-
-                    {app.reviewNote && <p className="scheme-app-note">Note: {app.reviewNote}</p>}
-
-                    {(formEntries.length > 0 || docs.length > 0) && (
-                      <button type="button" className="app-details-toggle" onClick={() => toggleExpand(app._id)}>
-                        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {isOpen ? "Hide details" : "View details"}
-                      </button>
-                    )}
-
+                        )}
+                      </td>
+                      <td>
+                        {email && (
+                          <button
+                            type="button"
+                            className="app-copy-link"
+                            title="Copy email"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(email);
+                              setNotice(`Copied ${email}`);
+                            }}
+                          >
+                            {email} <Copy size={12} />
+                          </button>
+                        )}
+                        {phone && (
+                          <span className="app-cell-sub app-inline-tag">
+                            <Phone size={12} /> {phone}
+                          </span>
+                        )}
+                      </td>
+                      <td className="app-cell-sub">{fmtDate(app.createdAt)}</td>
+                      <td>
+                        <span className={`gy-pill ${pill.cls}`}>{pill.label}</span>
+                      </td>
+                      <td className="app-td-actions">
+                        {busy ? (
+                          <Loader2 size={18} className="spin" />
+                        ) : (
+                          <button
+                            type="button"
+                            className={`app-kebab ${menu?.id === app._id ? "is-open" : ""}`}
+                            onClick={(e) => openMenu(e, app._id)}
+                            aria-label="Actions"
+                            aria-haspopup="menu"
+                            aria-expanded={menu?.id === app._id}
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
                     {isOpen && (
-                      <div className="app-details">
-                        {formEntries.length > 0 && (
-                          <dl className="app-detail-grid">
-                            {formEntries.map(([k, v]) => (
-                              <React.Fragment key={k}>
-                                <dt>{k}</dt>
-                                <dd>{v == null ? "—" : String(v)}</dd>
-                              </React.Fragment>
-                            ))}
-                          </dl>
-                        )}
-                        {docs.length > 0 && (
-                          <div className="app-doc-list">
-                            {docs.map((d, i) => (
-                              <a
-                                key={i}
-                                className="gy-pill gy-pill-info"
-                                href={d.url}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <FileText size={12} /> {d.name || `Document ${i + 1}`}
-                              </a>
-                            ))}
+                      <tr className="app-detail-row">
+                        <td />
+                        <td colSpan={6}>
+                          <div className="app-details">
+                            {app.reviewNote && <p className="scheme-app-note">Note: {app.reviewNote}</p>}
+                            {formEntries.length > 0 && (
+                              <dl className="app-detail-grid">
+                                {formEntries.map(([k, v]) => (
+                                  <React.Fragment key={k}>
+                                    <dt>{k}</dt>
+                                    <dd>{v == null ? "—" : String(v)}</dd>
+                                  </React.Fragment>
+                                ))}
+                              </dl>
+                            )}
+                            {docs.length > 0 && (
+                              <div className="app-doc-list">
+                                {docs.map((d, i) => (
+                                  <a
+                                    key={i}
+                                    className="gy-pill gy-pill-info"
+                                    href={d.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <FileText size={12} /> {d.name || `Document ${i + 1}`}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </td>
+                      </tr>
                     )}
-                  </div>
-
-                  <div className="scheme-app-actions">
-                    {busy ? (
-                      <Loader2 size={18} className="spin" />
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="gy-btn gy-btn-ok"
-                          onClick={() => review(app, "approved")}
-                          disabled={app.status === "approved"}
-                        >
-                          <CheckCircle size={15} /> Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="gy-btn gy-btn-ghost"
-                          onClick={() => review(app, "in_review")}
-                          disabled={app.status === "in_review"}
-                          title="Mark as in review"
-                        >
-                          <Clock size={15} /> Review
-                        </button>
-                        <button
-                          type="button"
-                          className="gy-btn gy-btn-danger"
-                          onClick={() => review(app, "rejected")}
-                          disabled={app.status === "rejected"}
-                        >
-                          <XCircle size={15} /> Decline
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -683,7 +688,7 @@ export const SchemeApplicationsPage: React.FC = () => {
             Previous
           </button>
           <span className="scheme-page-indicator">
-            Page {page} of {pages}
+            {rangeLabel} · Page {page} of {pages}
           </span>
           <button
             type="button"
@@ -695,6 +700,50 @@ export const SchemeApplicationsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Row action popover */}
+      {menu && (() => {
+        const app = applications.find((a) => a._id === menu.id);
+        if (!app) return null;
+        const run = (status: "approved" | "rejected" | "in_review") => {
+          setMenu(null);
+          review(app, status);
+        };
+        return (
+          <>
+            <div className="app-menu-backdrop" onClick={() => setMenu(null)} />
+            <div className="app-menu-pop" role="menu" style={{ top: menu.top, left: menu.left }}>
+              <button
+                type="button"
+                role="menuitem"
+                className="app-menu-item ok"
+                onClick={() => run("approved")}
+                disabled={app.status === "approved"}
+              >
+                <CheckCircle size={15} /> Approve
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="app-menu-item"
+                onClick={() => run("in_review")}
+                disabled={app.status === "in_review"}
+              >
+                <Clock size={15} /> Review
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="app-menu-item danger"
+                onClick={() => run("rejected")}
+                disabled={app.status === "rejected"}
+              >
+                <XCircle size={15} /> Decline
+              </button>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 };

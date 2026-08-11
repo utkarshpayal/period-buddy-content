@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { 
-  Heart, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Sparkles, Activity
+  Heart, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Sparkles, Activity, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
@@ -47,6 +47,7 @@ export const ConditionsPage: React.FC = () => {
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyCondition());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -80,6 +81,20 @@ export const ConditionsPage: React.FC = () => {
     });
     setEditingId(condition.id);
     setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleNew = () => {
+    setDraft(emptyCondition());
+    setEditingId(null);
+    setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setEditingId(null);
+    setFormError(null);
   };
 
   const handleDelete = async (condition: ContentItem) => {
@@ -97,6 +112,7 @@ export const ConditionsPage: React.FC = () => {
     setDraft(emptyCondition());
     setEditingId(null);
     setFormError(null);
+    setIsEditorOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +155,7 @@ export const ConditionsPage: React.FC = () => {
         title="Health Conditions Directory" 
         subtitle="Manage detailed medical profiles, causes, treatments, and clinical advice for gynecological issues."
         actions={
-          <button className="primary-action" onClick={handleReset} type="button">
+          <button className="primary-action" onClick={handleNew} type="button">
             <Plus size={18} />
             New Condition
           </button>
@@ -148,7 +164,7 @@ export const ConditionsPage: React.FC = () => {
       
       <ApiBanner />
 
-      <div className="content-layout">
+      <div className="content-layout list-only">
         {/* Left list panel */}
         <div className="library-panel">
           <div className="panel-heading">
@@ -232,14 +248,16 @@ export const ConditionsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right editor panel */}
-        <form className="editor-panel" onSubmit={handleSubmit}>
+      </div>
+
+      {isEditorOpen && (
+        <div className="modal-overlay" onClick={closeEditor}>
+        <form className="editor-panel modal-panel" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+          <button aria-label="Close" className="modal-close" onClick={closeEditor} type="button">
+            <X size={18} />
+          </button>
           <div className="panel-heading">
             <h3>{editingId ? "Edit Condition Details" : "Create Condition"}</h3>
-            <button className="save-button" disabled={isSaving} type="submit">
-              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
-              {isSaving ? "Saving" : "Save Condition"}
-            </button>
           </div>
 
           {formError && (
@@ -441,8 +459,19 @@ export const ConditionsPage: React.FC = () => {
               </div>
             )}
           </aside>
+
+          <div className="modal-footer">
+            <button className="modal-cancel" onClick={closeEditor} type="button">
+              Cancel
+            </button>
+            <button className="save-button" disabled={isSaving} type="submit">
+              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
+              {isSaving ? "Saving" : "Save Condition"}
+            </button>
+          </div>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -34,10 +34,10 @@ export const Sidebar: React.FC = () => {
     <>
       <div className="mobile-navbar">
         <div className="brand-lockup">
-          <div className="brand-mark">PB</div>
+          <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
           <div>
-            <p className="eyebrow">Period Buddy</p>
-            <h1>Content Studio</h1>
+            <p className="eyebrow">The Nura Care</p>
+            <h1>Admin Portal</h1>
           </div>
         </div>
         <button
@@ -55,10 +55,10 @@ export const Sidebar: React.FC = () => {
 
       <aside className={`sidebar ${open ? "open" : ""}`}>
         <div className="brand-lockup">
-          <div className="brand-mark">PB</div>
+          <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
           <div>
-            <p className="eyebrow">Period Buddy</p>
-            <h1>Content Studio</h1>
+            <p className="eyebrow">The Nura Care</p>
+            <h1>Admin Portal</h1>
           </div>
         </div>
 
@@ -123,8 +123,8 @@ export const Sidebar: React.FC = () => {
               </span>
             </div>
             <button onClick={() => { close(); logout(); }} className="logout-btn" type="button">
-              <LogOut size={14} />
-              Logout
+              <LogOut size={16} />
+              Log out
             </button>
           </div>
         ) : (
@@ -136,10 +136,6 @@ export const Sidebar: React.FC = () => {
             </NavLink>
           </div>
         )}
-
-        <div className="sidebar-footer">
-          <p>Ready for app CMS, companion Q&A, learning cards, and video scripts.</p>
-        </div>
       </aside>
     </>
   );

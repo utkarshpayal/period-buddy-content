@@ -291,7 +291,8 @@ export const SchemesPage: React.FC = () => {
 
       {/* Editor */}
       {showForm && (
-        <section className="gy-card gy-form-card">
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+        <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
           <div className="gy-card-head">
             <h3>{formTitle}</h3>
             <button className="gy-icon-btn" onClick={() => setShowForm(false)} type="button">
@@ -504,6 +505,7 @@ export const SchemesPage: React.FC = () => {
             </div>
           </form>
         </section>
+        </div>
       )}
 
       {/* Search */}

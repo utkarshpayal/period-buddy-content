@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { 
-  Film, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, PlayCircle, BarChart3
+  Film, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, PlayCircle, BarChart3, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
@@ -39,6 +39,7 @@ export const VideosPage: React.FC = () => {
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyVideo());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -75,6 +76,21 @@ export const VideosPage: React.FC = () => {
     });
     setEditingId(video.id);
     setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleNew = () => {
+    setDraft(emptyVideo());
+    setEditingId(null);
+    setFormError(null);
+    setNewOptionTopic("");
+    setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setEditingId(null);
+    setFormError(null);
   };
 
   const handleDelete = async (video: ContentItem) => {
@@ -93,6 +109,7 @@ export const VideosPage: React.FC = () => {
     setEditingId(null);
     setFormError(null);
     setNewOptionTopic("");
+    setIsEditorOpen(false);
   };
 
   const addPollOption = () => {
@@ -154,7 +171,7 @@ export const VideosPage: React.FC = () => {
         title="Video Reels Studio" 
         subtitle="Manage vertical wellness video clips and interactive viewer polls."
         actions={
-          <button className="primary-action" onClick={handleReset} type="button">
+          <button className="primary-action" onClick={handleNew} type="button">
             <Plus size={18} />
             New Video
           </button>
@@ -163,7 +180,7 @@ export const VideosPage: React.FC = () => {
       
       <ApiBanner />
 
-      <div className="content-layout">
+      <div className="content-layout list-only">
         {/* Left list panel */}
         <div className="library-panel">
           <div className="panel-heading">
@@ -252,14 +269,16 @@ export const VideosPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right editor panel */}
-        <form className="editor-panel" onSubmit={handleSubmit}>
+      </div>
+
+      {isEditorOpen && (
+        <div className="modal-overlay" onClick={closeEditor}>
+        <form className="editor-panel modal-panel" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+          <button aria-label="Close" className="modal-close" onClick={closeEditor} type="button">
+            <X size={18} />
+          </button>
           <div className="panel-heading">
             <h3>{editingId ? "Edit Video Reel" : "Create Video Reel"}</h3>
-            <button className="save-button" disabled={isSaving} type="submit">
-              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
-              {isSaving ? "Saving" : "Save Reel"}
-            </button>
           </div>
 
           {formError && (
@@ -450,8 +469,19 @@ export const VideosPage: React.FC = () => {
               </div>
             )}
           </aside>
+
+          <div className="modal-footer">
+            <button className="modal-cancel" onClick={closeEditor} type="button">
+              Cancel
+            </button>
+            <button className="save-button" disabled={isSaving} type="submit">
+              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
+              {isSaving ? "Saving" : "Save Reel"}
+            </button>
+          </div>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

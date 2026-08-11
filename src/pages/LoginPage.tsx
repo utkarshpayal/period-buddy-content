@@ -42,9 +42,10 @@ export const LoginPage: React.FC = () => {
     <div className="login-page-container">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-logo">PB</div>
-          <h2>Period Buddy</h2>
-          <p className="subtitle">Content & CMS Studio</p>
+          <img className="login-logo-img" src="/assets/logo.png" alt="Nura Care Logo" />
+
+          <h2>The Nura Care</h2>
+          <p className="subtitle">Admin Portal</p>
         </div>
 
         {authSession ? (
@@ -118,12 +119,6 @@ export const LoginPage: React.FC = () => {
                 </>
               )}
             </button>
-
-            {import.meta.env.DEV && (
-              <div className="login-help-text">
-                <p>Dev login: utkarsh12march2004@gmail.com / password123</p>
-              </div>
-            )}
           </form>
         )}
       </div>

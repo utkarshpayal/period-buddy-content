@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { 
-  FileText, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, BookOpen, AlertCircle
+  FileText, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, BookOpen, AlertCircle, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
@@ -40,6 +40,7 @@ export const BlogsPage: React.FC = () => {
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyBlog());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -70,6 +71,20 @@ export const BlogsPage: React.FC = () => {
     setDraft({ ...blog });
     setEditingId(blog.id);
     setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleNew = () => {
+    setDraft(emptyBlog());
+    setEditingId(null);
+    setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setEditingId(null);
+    setFormError(null);
   };
 
   const handleDelete = async (blog: ContentItem) => {
@@ -87,6 +102,7 @@ export const BlogsPage: React.FC = () => {
     setDraft(emptyBlog());
     setEditingId(null);
     setFormError(null);
+    setIsEditorOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +149,7 @@ export const BlogsPage: React.FC = () => {
         title="Manage Blogs & Articles" 
         subtitle="Publish educational and lifestyle contents for the core user feed."
         actions={
-          <button className="primary-action" onClick={handleReset} type="button">
+          <button className="primary-action" onClick={handleNew} type="button">
             <Plus size={18} />
             New Blog
           </button>
@@ -142,8 +158,8 @@ export const BlogsPage: React.FC = () => {
       
       <ApiBanner />
 
-      <div className="content-layout">
-        {/* Left list panel */}
+      <div className="content-layout list-only">
+        {/* Full-width list panel */}
         <div className="library-panel">
           <div className="panel-heading">
             <h3>Blog Archive</h3>
@@ -231,14 +247,16 @@ export const BlogsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right editor panel */}
-        <form className="editor-panel" onSubmit={handleSubmit}>
+      </div>
+
+      {isEditorOpen && (
+        <div className="modal-overlay" onClick={closeEditor}>
+        <form className="editor-panel modal-panel" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+          <button aria-label="Close" className="modal-close" onClick={closeEditor} type="button">
+            <X size={18} />
+          </button>
           <div className="panel-heading">
             <h3>{editingId ? "Edit Blog Post" : "Create Blog Post"}</h3>
-            <button className="save-button" disabled={isSaving} type="submit">
-              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
-              {isSaving ? "Saving" : "Save Blog"}
-            </button>
           </div>
 
           {formError && (
@@ -399,8 +417,19 @@ export const BlogsPage: React.FC = () => {
               {draft.body || "Start typing in the editor to see live updates."}
             </div>
           </aside>
+
+          <div className="modal-footer">
+            <button className="modal-cancel" onClick={closeEditor} type="button">
+              Cancel
+            </button>
+            <button className="save-button" disabled={isSaving} type="submit">
+              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
+              {isSaving ? "Saving" : "Save Blog"}
+            </button>
+          </div>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -194,7 +194,8 @@ export const DoctorsPage: React.FC = () => {
       )}
 
       {showForm && (
-        <section className="gy-card gy-form-card">
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+        <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
           <div className="gy-card-head">
             <h3>Invite a new gynecologist</h3>
             <button className="gy-icon-btn" onClick={() => setShowForm(false)} type="button">
@@ -295,6 +296,7 @@ export const DoctorsPage: React.FC = () => {
             </div>
           </form>
         </section>
+        </div>
       )}
 
       {loading ? (

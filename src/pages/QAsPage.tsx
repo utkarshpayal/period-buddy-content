@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { 
-  FileQuestion, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, CheckCircle, ShieldAlert
+  FileQuestion, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, CheckCircle, ShieldAlert, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
@@ -35,6 +35,7 @@ export const QAsPage: React.FC = () => {
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyQA());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -65,6 +66,20 @@ export const QAsPage: React.FC = () => {
     setDraft({ ...qa });
     setEditingId(qa.id);
     setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleNew = () => {
+    setDraft(emptyQA());
+    setEditingId(null);
+    setFormError(null);
+    setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setEditingId(null);
+    setFormError(null);
   };
 
   const handleDelete = async (qa: ContentItem) => {
@@ -82,6 +97,7 @@ export const QAsPage: React.FC = () => {
     setDraft(emptyQA());
     setEditingId(null);
     setFormError(null);
+    setIsEditorOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,7 +152,7 @@ export const QAsPage: React.FC = () => {
         title="Q&A Forum Management" 
         subtitle="Approve community questions and write verified clinical answers."
         actions={
-          <button className="primary-action" onClick={handleReset} type="button">
+          <button className="primary-action" onClick={handleNew} type="button">
             <Plus size={18} />
             New Q&A
           </button>
@@ -145,7 +161,7 @@ export const QAsPage: React.FC = () => {
       
       <ApiBanner />
 
-      <div className="content-layout">
+      <div className="content-layout list-only">
         {/* Left list panel */}
         <div className="library-panel">
           <div className="panel-heading">
@@ -241,14 +257,16 @@ export const QAsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right editor panel */}
-        <form className="editor-panel" onSubmit={handleSubmit}>
+      </div>
+
+      {isEditorOpen && (
+        <div className="modal-overlay" onClick={closeEditor}>
+        <form className="editor-panel modal-panel" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+          <button aria-label="Close" className="modal-close" onClick={closeEditor} type="button">
+            <X size={18} />
+          </button>
           <div className="panel-heading">
             <h3>{editingId ? "Edit Q&A Entry" : "Create Q&A Entry"}</h3>
-            <button className="save-button" disabled={isSaving} type="submit">
-              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
-              {isSaving ? "Saving" : "Save Q&A"}
-            </button>
           </div>
 
           {formError && (
@@ -399,8 +417,19 @@ export const QAsPage: React.FC = () => {
               )}
             </div>
           </aside>
+
+          <div className="modal-footer">
+            <button className="modal-cancel" onClick={closeEditor} type="button">
+              Cancel
+            </button>
+            <button className="save-button" disabled={isSaving} type="submit">
+              {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
+              {isSaving ? "Saving" : "Save Q&A"}
+            </button>
+          </div>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

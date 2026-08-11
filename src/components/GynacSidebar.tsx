@@ -8,7 +8,6 @@ import {
   Clock,
   UserCog,
   LogOut,
-  Stethoscope,
   Menu,
   X
 } from "lucide-react";
@@ -39,10 +38,10 @@ export const GynacSidebar: React.FC = () => {
     <>
       <div className="mobile-navbar">
         <div className="brand-lockup">
-          <div className="brand-mark"><Stethoscope size={18} /></div>
+          <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
           <div>
-            <p className="eyebrow">Period Buddy</p>
-            <h1>Clinician Portal</h1>
+            <p className="eyebrow">The Nura Care</p>
+            <h1>Gynac Portal</h1>
           </div>
         </div>
         <button
@@ -60,12 +59,10 @@ export const GynacSidebar: React.FC = () => {
 
       <aside className={`sidebar ${open ? "open" : ""}`}>
       <div className="brand-lockup">
-        <div className="brand-mark">
-          <Stethoscope size={22} />
-        </div>
+        <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
         <div>
-          <p className="eyebrow">Period Buddy</p>
-          <h1>Clinician Portal</h1>
+          <p className="eyebrow">The Nura Care</p>
+          <h1>Gynac Portal</h1>
         </div>
       </div>
 
@@ -113,8 +110,8 @@ export const GynacSidebar: React.FC = () => {
             </div>
           </div>
           <button onClick={() => { close(); logout(); }} className="logout-btn" type="button">
-            <LogOut size={14} />
-            Sign out
+            <LogOut size={16} />
+            Log out
           </button>
         </div>
       )}

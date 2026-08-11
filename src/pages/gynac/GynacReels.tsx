@@ -179,7 +179,8 @@ export const GynacReels: React.FC = () => {
       )}
 
       {showForm && (
-        <section className="gy-card gy-form-card">
+        <div className="modal-overlay" onClick={closeForm}>
+        <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
           <div className="gy-card-head">
             <h3>Publish a reel</h3>
             <button className="gy-icon-btn" type="button" onClick={closeForm}>
@@ -261,6 +262,7 @@ export const GynacReels: React.FC = () => {
             </div>
           </form>
         </section>
+        </div>
       )}
 
       {loading ? (
