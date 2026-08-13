@@ -299,6 +299,17 @@ export const startVideoCall = (id: string) =>
     method: "POST"
   });
 
+/**
+ * WebSocket URL for live consultation chat + WebRTC call signaling. Derived
+ * from VITE_API_BASE_URL (http→ws) with the auth token as a query param, the
+ * same scheme the patient app uses so both sides share the consultation room.
+ */
+export function getWebSocketUrl(): string {
+  const wsBase = apiBaseUrl.replace(/^http/, "ws");
+  const token = getApiToken();
+  return `${wsBase}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+}
+
 export const setPrescription = (id: string, prescription: string) =>
   request<Consultation>(`/api/doctor/consultations/${id}/prescription`, {
     method: "PATCH",

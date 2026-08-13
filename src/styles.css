@@ -2098,6 +2098,270 @@ img.media-upload-preview {
 }
 .gy-call-hint { margin: 0; padding: 10px 16px; font-size: 0.78rem; }
 .gy-call-hint a { color: #9f4864; }
+
+/* ---- WebRTC video consultation ---- */
+.gy-vc-overlay { background: rgba(12, 8, 12, 0.94); padding: 0; z-index: 80; }
+.gy-vc-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.gy-vc-remote {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #0c080c;
+}
+.gy-vc-local {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 132px;
+  height: 180px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  transform: scaleX(-1);
+  background: #1a141a;
+  z-index: 2;
+}
+.gy-vc-preview {
+  width: 150px;
+  height: 200px;
+  border-radius: 18px;
+  object-fit: cover;
+  transform: scaleX(-1);
+  margin-bottom: 20px;
+  background: #1a141a;
+}
+.gy-vc-controls {
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  z-index: 3;
+}
+.gy-vc-answer-row { display: flex; align-items: center; justify-content: center; gap: 28px; margin-top: 12px; }
+.gy-vc-ctrl {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.gy-vc-ctrl:hover { transform: translateY(-1px); }
+.gy-vc-ctrl.danger { background: #d1495b; }
+.gy-vc-ctrl.end { width: 64px; height: 64px; background: #d1495b; }
+.gy-vc-ctrl.ok { background: #1f9d64; }
+.gy-vc-center {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+}
+.gy-vc-center h3 { margin: 4px 0; font-size: 1.15rem; font-weight: 800; }
+.gy-vc-sub { margin: 0 0 22px; color: rgba(255, 255, 255, 0.72); font-size: 0.85rem; }
+.gy-vc-ring {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.gy-vc-ring.pulse { animation: gy-vc-pulse 1.4s ease-in-out infinite; }
+@keyframes gy-vc-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35); }
+  50% { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); }
+}
+
+/* Default avatar (shown whenever a camera is off) */
+.gy-vc-avatar {
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+}
+.gy-vc-avatar.lg { width: 112px; height: 112px; font-size: 2rem; margin-bottom: 14px; }
+
+/* Local picture-in-picture wrapper (holds video, camera-off avatar, mic badge) */
+.gy-vc-local-wrap {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 132px;
+  height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: #1a141a;
+  z-index: 2;
+}
+.gy-vc-local-wrap video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+/* Larger self-preview while waiting/connecting */
+.gy-vc-preview-wrap {
+  position: relative;
+  width: 150px;
+  height: 200px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #1a141a;
+  margin-bottom: 20px;
+}
+.gy-vc-preview-wrap video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+/* Camera-off filler inside a PIP/preview */
+.gy-vc-pip-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  background: #1a141a;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.gy-vc-mic-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #d1495b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+/* Peer name + muted indicator pill */
+.gy-vc-name-pill {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Unread badge on the in-call chat button */
+.gy-vc-unread {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #d1495b;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* In-call chat drawer */
+.gy-vc-chat {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(380px, 92%);
+  background: #fff;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.3);
+}
+.gy-vc-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #efe2e7;
+  color: #2e2a27;
+  font-weight: 800;
+}
+.gy-vc-chat-head button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #2e2a27;
+  display: inline-flex;
+}
+.gy-vc-chat-msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gy-vc-chat-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #efe2e7;
+}
+.gy-vc-chat-form input {
+  flex: 1;
+  border: 1px solid #e3d5da;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+.gy-vc-chat-form input:focus { outline: none; border-color: #9f4864; }
+.gy-vc-chat-send {
+  border: none;
+  background: #9f4864;
+  color: #fff;
+  width: 42px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.gy-vc-chat-send:disabled { opacity: 0.5; cursor: default; }
 .gy-rx-modal { max-width: 560px; width: 100%; margin-bottom: 0; }
 .gy-rx-modal textarea { width: 100%; margin-bottom: 14px; }
 

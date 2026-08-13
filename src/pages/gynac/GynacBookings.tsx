@@ -7,7 +7,6 @@ import {
   FileText,
   CheckCircle2,
   XCircle,
-  Phone,
   X,
   User as UserIcon,
   Activity,
@@ -24,14 +23,15 @@ import {
   getConsultationMessages,
   getConsultationPatient,
   sendConsultationMessage,
-  startVideoCall,
   setPrescription,
   completeConsultation,
   cancelConsultation,
   patientName,
-  formatMoney
+  formatMoney,
+  getWebSocketUrl
 } from "../../api/doctorApi";
 import { GynacHead } from "./GynacHead";
+import { ConsultationCall, ConsultationCallHandle } from "./ConsultationCall";
 
 const FILTERS: { key: ConsultationStatus | "all"; label: string }[] = [
   { key: "all", label: "All" },
@@ -40,6 +40,24 @@ const FILTERS: { key: ConsultationStatus | "all"; label: string }[] = [
   { key: "completed", label: "Completed" },
   { key: "cancelled", label: "Cancelled" }
 ];
+
+/**
+ * Collapses a message list so the same message never renders twice. The load,
+ * WebSocket broadcast, and send response can all carry overlapping messages, so
+ * without this an echoed message shows up multiple times. Messages with an `_id`
+ * dedupe on it; any without one dedupe on sender+text.
+ */
+function dedupeMessages(messages: ConsultationMessage[]): ConsultationMessage[] {
+  const seen = new Set<string>();
+  const out: ConsultationMessage[] = [];
+  for (const msg of messages) {
+    const key = msg._id ? `id:${msg._id}` : `tmp:${msg.sender}:${msg.text}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(msg);
+  }
+  return out;
+}
 
 export const GynacBookings: React.FC = () => {
   const [filter, setFilter] = useState<ConsultationStatus | "all">("all");
@@ -53,7 +71,6 @@ export const GynacBookings: React.FC = () => {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
-  const [callLink, setCallLink] = useState<string | null>(null);
   const [showPatient, setShowPatient] = useState(false);
   const [patient, setPatient] = useState<PatientOverview | null>(null);
   const [patientLoading, setPatientLoading] = useState(false);
@@ -63,6 +80,8 @@ export const GynacBookings: React.FC = () => {
   const [rxSaving, setRxSaving] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const callRef = useRef<ConsultationCallHandle | null>(null);
 
   const loadBookings = async () => {
     setLoading(true);
@@ -91,7 +110,7 @@ export const GynacBookings: React.FC = () => {
     setShowPatient(false);
     setMsgLoading(true);
     try {
-      setMessages(await getConsultationMessages(booking._id));
+      setMessages(dedupeMessages(await getConsultationMessages(booking._id)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load messages.");
     } finally {
@@ -103,14 +122,63 @@ export const GynacBookings: React.FC = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
-  const send = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selected || !draft.trim()) return;
+  // Live consultation socket: while a booking is open we join its shared room
+  // (`consultation_<id>`) for live chat and to send/receive WebRTC call
+  // signaling — the same room the patient app joins, so an inbound call from
+  // the patient surfaces right here (ConsultationCall handles `call_request`).
+  useEffect(() => {
+    if (!selected) return;
+    const roomId = `consultation_${selected._id}`;
+    let closed = false;
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(getWebSocketUrl());
+    } catch {
+      return;
+    }
+    socketRef.current = socket;
+
+    socket.onopen = () => {
+      if (closed) return;
+      socket.send(JSON.stringify({ type: "join", room: roomId }));
+    };
+
+    socket.onmessage = (event) => {
+      let data: any;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (data?.type === "message" && data.room === roomId && Array.isArray(data.messages)) {
+        // Merge in any new messages we don't already have (dedupe by _id).
+        setMessages((prev) => dedupeMessages([...prev, ...data.messages]));
+      } else if (data?.type && data.room === roomId) {
+        // Everything else on this room is call signaling — hand it to the call UI.
+        callRef.current?.handleSignal(data);
+      }
+    };
+
+    return () => {
+      closed = true;
+      try {
+        socket.send(JSON.stringify({ type: "leave", room: roomId }));
+      } catch {
+        /* socket may not be open yet */
+      }
+      socket.close();
+      if (socketRef.current === socket) socketRef.current = null;
+    };
+  }, [selected?._id]);
+
+  // Core send used by both the chat sheet form and the in-call chat panel.
+  const sendMessageText = async (text: string) => {
+    const body = text.trim();
+    if (!selected || !body || sending) return;
     setSending(true);
     try {
-      const msg = await sendConsultationMessage(selected._id, draft.trim());
-      setMessages((prev) => [...prev, msg]);
-      setDraft("");
+      const msg = await sendConsultationMessage(selected._id, body);
+      setMessages((prev) => dedupeMessages([...prev, msg]));
       // A reply moves a 'paid' booking to 'active'.
       if (selected.status === "paid") {
         setSelected({ ...selected, status: "active" });
@@ -123,6 +191,14 @@ export const GynacBookings: React.FC = () => {
     } finally {
       setSending(false);
     }
+  };
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.trim()) return;
+    const text = draft;
+    setDraft("");
+    await sendMessageText(text);
   };
 
   const openPatient = async () => {
@@ -142,14 +218,13 @@ export const GynacBookings: React.FC = () => {
     }
   };
 
-  const beginCall = async () => {
+  const beginCall = () => {
     if (!selected) return;
-    try {
-      const { meetingLink } = await startVideoCall(selected._id);
-      setCallLink(meetingLink);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start the call.");
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setError("Still connecting to the consultation room. Try again in a moment.");
+      return;
     }
+    callRef.current?.startCall();
   };
 
   const saveRx = async () => {
@@ -333,27 +408,16 @@ export const GynacBookings: React.FC = () => {
         </div>
       </div>
 
-      {callLink && (
-        <div className="gy-modal-overlay" onClick={() => setCallLink(null)}>
-          <div className="gy-call-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="gy-modal-head">
-              <span><Phone size={16} /> Video consultation</span>
-              <button className="gy-icon-btn" type="button" onClick={() => setCallLink(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <iframe
-              title="Video consultation"
-              src={`${callLink}#config.prejoinPageEnabled=false`}
-              allow="camera; microphone; fullscreen; display-capture; autoplay"
-              className="gy-call-frame"
-            />
-            <p className="gy-muted gy-call-hint">
-              The same secure room link is available to your patient. Share it if needed:{" "}
-              <a href={callLink} target="_blank" rel="noreferrer">{callLink}</a>
-            </p>
-          </div>
-        </div>
+      {selected && (
+        <ConsultationCall
+          key={selected._id}
+          ref={callRef}
+          roomId={`consultation_${selected._id}`}
+          peerName={patientName(selected.userId)}
+          socketRef={socketRef}
+          messages={messages}
+          onSendMessage={sendMessageText}
+        />
       )}
 
       {showPatient && selected && (
