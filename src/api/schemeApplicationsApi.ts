@@ -1,4 +1,5 @@
 import { getApiToken, handleUnauthorized } from "./authApi";
+import { fetchWithTimeout } from "./http";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -91,7 +92,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getApiToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetchWithTimeout(`${apiBaseUrl}${path}`, {
     ...options,
     credentials: "include",
     headers

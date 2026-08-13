@@ -11,6 +11,9 @@ import {
   LogOut,
   LogIn,
   UserCheck,
+  Users,
+  BarChart3,
+  ScrollText,
   Stethoscope,
   ClipboardCheck,
   Landmark,
@@ -66,6 +69,21 @@ export const Sidebar: React.FC = () => {
           <NavLink to="/" className={link} onClick={close}>
             <LayoutGrid size={18} />
             Dashboard
+          </NavLink>
+
+          <NavLink to="/analytics" className={link} onClick={close}>
+            <BarChart3 size={18} />
+            Analytics
+          </NavLink>
+
+          <NavLink to="/users" className={link} onClick={close}>
+            <Users size={18} />
+            Users
+          </NavLink>
+
+          <NavLink to="/audit-logs" className={link} onClick={close}>
+            <ScrollText size={18} />
+            Audit Logs
           </NavLink>
 
           <NavLink to="/blogs" className={link} onClick={close}>

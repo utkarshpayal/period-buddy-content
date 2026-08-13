@@ -41,7 +41,10 @@ type AuthResult = {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 const loginEndpoint = import.meta.env.VITE_LOGIN_ENDPOINT ?? "/api/auth/login";
-const envApiToken = import.meta.env.VITE_API_TOKEN;
+// Only honour a build-time API token in local development. In a production
+// build any VITE_* value is embedded in the shipped JS and readable by anyone,
+// so a real token must never be baked in — production auth is the login JWT.
+const envApiToken = import.meta.env.DEV ? import.meta.env.VITE_API_TOKEN : undefined;
 const tokenStorageKey = "period-buddy-api-token";
 const userStorageKey = "period-buddy-auth-user";
 

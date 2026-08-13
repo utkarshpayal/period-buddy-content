@@ -479,11 +479,27 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
     headers.set("Authorization", `Bearer ${apiToken}`);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    credentials: "include",
-    headers
-  });
+  // Abort a hung request after 20s so the UI can surface an error instead of
+  // spinning forever (matches the backend request timeout).
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      credentials: "include",
+      headers,
+      signal: options.signal ?? controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("The request timed out. Check your connection and try again.");
+    }
+    throw error instanceof Error ? error : new Error("Network request failed.");
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     let message = `API request failed with ${response.status} ${response.statusText}`;

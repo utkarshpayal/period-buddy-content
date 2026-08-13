@@ -12,6 +12,9 @@ import { ConditionsPage } from "./pages/ConditionsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { DoctorsPage } from "./pages/DoctorsPage";
+import { UsersPage } from "./pages/UsersPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { SchemesPage } from "./pages/SchemesPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
@@ -29,6 +32,9 @@ function AdminApp() {
       <main className="workspace-main-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/audit-logs" element={<AuditLogsPage />} />
           <Route path="/blogs" element={<BlogsPage />} />
           <Route path="/qa" element={<QAsPage />} />
           <Route path="/videos" element={<VideosPage />} />

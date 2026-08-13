@@ -1,4 +1,5 @@
 import { getApiToken } from "./authApi";
+import { fetchWithTimeout } from "./http";
 
 export type MediaFolder = "reels" | "audio" | "thumbnails";
 
@@ -57,12 +58,17 @@ export async function uploadMediaFile(
     headers.set("Authorization", `Bearer ${apiToken}`);
   }
 
-  const response = await fetch(`${apiBaseUrl}${mediaUploadPath()}`, {
-    body: formData,
-    credentials: "include",
-    headers,
-    method: "POST"
-  });
+  const response = await fetchWithTimeout(
+    `${apiBaseUrl}${mediaUploadPath()}`,
+    {
+      body: formData,
+      credentials: "include",
+      headers,
+      method: "POST"
+    },
+    // Media files can be large — allow more time than a JSON request.
+    120_000
+  );
 
   let body: UploadResponse | undefined;
 
