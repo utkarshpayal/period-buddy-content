@@ -266,7 +266,10 @@ export const GynacBookings: React.FC = () => {
   };
 
   const isLive = selected && ["paid", "active"].includes(selected.status);
-  const isConnected = selected && ["paid", "active", "completed"].includes(selected.status);
+  // Patient records (and the prescription editor) should only be reachable
+  // while the session is actually live — once a booking is completed or
+  // cancelled, both close back down rather than staying open indefinitely.
+  const isConnected = isLive;
 
   return (
     <div className="workspace-page">
@@ -349,7 +352,12 @@ export const GynacBookings: React.FC = () => {
                   <button className="gy-btn gy-btn-primary" type="button" onClick={beginCall} disabled={!isLive}>
                     <Video size={15} /> Video call
                   </button>
-                  <button className="gy-btn gy-btn-ghost" type="button" onClick={() => setShowRx(true)}>
+                  <button
+                    className="gy-btn gy-btn-ghost"
+                    type="button"
+                    onClick={() => setShowRx(true)}
+                    disabled={!isLive}
+                  >
                     <FileText size={15} /> Prescription
                   </button>
                   {isLive && (
