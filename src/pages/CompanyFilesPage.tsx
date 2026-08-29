@@ -18,6 +18,11 @@ import {
   Globe,
   LayoutGrid,
   List,
+  Folder,
+  FolderPlus,
+  Home,
+  ChevronRight,
+  Move,
   Image as ImageIcon,
   Film,
   FileText,
@@ -41,6 +46,14 @@ import {
   formatFileSize,
   uploaderLabel
 } from "../api/companyAssetsApi";
+import {
+  CompanyFolder,
+  FolderCrumb,
+  listCompanyFolders,
+  createCompanyFolder,
+  updateCompanyFolder,
+  deleteCompanyFolder
+} from "../api/companyFoldersApi";
 import { useAppContext } from "../context/AppContext";
 
 const PAGE_SIZE = 24;
@@ -159,6 +172,32 @@ export const CompanyFilesPage: React.FC = () => {
   const [deletingAsset, setDeletingAsset] = useState<CompanyAsset | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Folder navigation — null id = library root.
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState<FolderCrumb[]>([]);
+  const [folders, setFolders] = useState<CompanyFolder[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(true);
+
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creatingFolder, setCreatingFolder] = useState(false);
+
+  const [renamingFolder, setRenamingFolder] = useState<CompanyFolder | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
+
+  const [deletingFolder, setDeletingFolder] = useState<CompanyFolder | null>(null);
+  const [deletingFolderBusy, setDeletingFolderBusy] = useState(false);
+
+  const [movingAsset, setMovingAsset] = useState<CompanyAsset | null>(null);
+  const [moveFolderId, setMoveFolderId] = useState<string | null>(null);
+  const [movePath, setMovePath] = useState<FolderCrumb[]>([]);
+  const [moveFolders, setMoveFolders] = useState<CompanyFolder[]>([]);
+  const [moveLoading, setMoveLoading] = useState(false);
+  const [movingBusy, setMovingBusy] = useState(false);
+
+  const isSearching = Boolean(debouncedSearch);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => clearTimeout(t);
@@ -180,6 +219,9 @@ export const CompanyFilesPage: React.FC = () => {
         search: debouncedSearch || undefined,
         category: category === "all" ? undefined : category,
         isPublic: visibility === "all" ? undefined : visibility === "public",
+        // Omit folderId while searching so results span every folder;
+        // otherwise scope strictly to the folder being browsed.
+        folderId: debouncedSearch ? undefined : currentFolderId ?? "root",
         page: targetPage,
         limit: PAGE_SIZE
       });
@@ -194,10 +236,26 @@ export const CompanyFilesPage: React.FC = () => {
     }
   };
 
+  const loadFolders = async () => {
+    setFoldersLoading(true);
+    try {
+      const res = await listCompanyFolders(currentFolderId);
+      setFolders(res.folders);
+      setFolderPath(res.path);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load folders.");
+    } finally {
+      setFoldersLoading(false);
+    }
+  };
+
   useEffect(() => {
     load(1);
+    // Folders aren't searchable — a search means "everywhere", so the
+    // folder browser has nothing meaningful to show until it's cleared.
+    if (!debouncedSearch) loadFolders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, category, visibility]);
+  }, [debouncedSearch, category, visibility, currentFolderId]);
 
   const openAdd = (mode: AddMode) => {
     setAddMode(mode);
@@ -205,6 +263,140 @@ export const CompanyFilesPage: React.FC = () => {
     setShowAdd(true);
     setNotice(null);
     setError(null);
+  };
+
+  const enterFolder = (folder: CompanyFolder) => {
+    setSearch("");
+    setCurrentFolderId(folder._id);
+  };
+
+  const goToBreadcrumb = (index: number) => {
+    // index -1 = root (before the first crumb)
+    setSearch("");
+    setCurrentFolderId(index < 0 ? null : folderPath[index]._id);
+  };
+
+  const openNewFolder = () => {
+    setNewFolderName("");
+    setShowNewFolder(true);
+    setNotice(null);
+    setError(null);
+  };
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newFolderName.trim();
+    if (!name) return setError("A folder name is required.");
+
+    setCreatingFolder(true);
+    setError(null);
+    try {
+      await createCompanyFolder(name, currentFolderId);
+      setNotice(`Created "${name}".`);
+      setShowNewFolder(false);
+      loadFolders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create this folder.");
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const openRenameFolder = (folder: CompanyFolder) => {
+    setRenamingFolder(folder);
+    setRenameValue(folder.name);
+    setNotice(null);
+    setError(null);
+  };
+
+  const handleRenameFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renamingFolder) return;
+    const name = renameValue.trim();
+    if (!name) return setError("Folder name cannot be empty.");
+
+    setSavingRename(true);
+    setError(null);
+    try {
+      await updateCompanyFolder(renamingFolder._id, { name });
+      setNotice(`Renamed to "${name}".`);
+      setRenamingFolder(null);
+      loadFolders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not rename this folder.");
+    } finally {
+      setSavingRename(false);
+    }
+  };
+
+  const confirmDeleteFolder = (folder: CompanyFolder) => {
+    setDeletingFolder(folder);
+    setNotice(null);
+    setError(null);
+  };
+
+  const handleDeleteFolder = async () => {
+    const folder = deletingFolder;
+    if (!folder) return;
+    setDeletingFolderBusy(true);
+    setError(null);
+    try {
+      const res = await deleteCompanyFolder(folder._id);
+      setNotice(
+        `Deleted "${folder.name}"${
+          res.deletedAssets ? ` and ${res.deletedAssets} item(s) inside it` : ""
+        }.`
+      );
+      setDeletingFolder(null);
+      loadFolders();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete this folder.");
+    } finally {
+      setDeletingFolderBusy(false);
+    }
+  };
+
+  // "Move to..." — its own small folder browser, independent of the page's
+  // current browsing location.
+  const openMove = (a: CompanyAsset) => {
+    setMovingAsset(a);
+    setMoveFolderId(a.folderId ?? null);
+    setNotice(null);
+    setError(null);
+  };
+
+  const loadMoveFolders = async (folderId: string | null) => {
+    setMoveLoading(true);
+    try {
+      const res = await listCompanyFolders(folderId);
+      setMoveFolders(res.folders);
+      setMovePath(res.path);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load folders.");
+    } finally {
+      setMoveLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (movingAsset) loadMoveFolders(moveFolderId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movingAsset, moveFolderId]);
+
+  const handleMoveHere = async () => {
+    if (!movingAsset) return;
+    setMovingBusy(true);
+    setError(null);
+    try {
+      const res = await updateCompanyAsset(movingAsset._id, { folderId: moveFolderId });
+      setNotice(`Moved "${res.asset.title}".`);
+      setMovingAsset(null);
+      load(page);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not move this file.");
+    } finally {
+      setMovingBusy(false);
+    }
   };
 
   const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,7 +425,8 @@ export const CompanyFilesPage: React.FC = () => {
           title: addForm.title.trim(),
           description: addForm.description.trim(),
           category: addForm.category,
-          isPublic: addForm.isPublic
+          isPublic: addForm.isPublic,
+          folderId: currentFolderId
         });
         setAssets((prev) => [res.asset, ...prev]);
         setTotal((t) => t + 1);
@@ -245,7 +438,8 @@ export const CompanyFilesPage: React.FC = () => {
           title: addForm.title.trim(),
           description: addForm.description.trim(),
           category: addForm.category,
-          isPublic: addForm.isPublic
+          isPublic: addForm.isPublic,
+          folderId: currentFolderId
         });
         setAssets((prev) => [res.asset, ...prev]);
         setTotal((t) => t + 1);
@@ -416,6 +610,9 @@ export const CompanyFilesPage: React.FC = () => {
             {downloadingId === a._id ? <Loader2 size={15} className="spin" /> : <Download size={15} />}
           </button>
         )}
+        <button className="gy-icon-btn" onClick={() => openMove(a)} type="button" title="Move to folder">
+          <Move size={15} />
+        </button>
         <button className="gy-icon-btn" onClick={() => openEdit(a)} type="button" title="Edit">
           <Pencil size={15} />
         </button>
@@ -445,6 +642,9 @@ export const CompanyFilesPage: React.FC = () => {
           <span className="gy-pill gy-pill-muted">
             <Files size={14} /> {total} total
           </span>
+          <button className="gy-btn gy-btn-ghost" onClick={openNewFolder} type="button">
+            <FolderPlus size={16} /> New Folder
+          </button>
           <button className="gy-btn gy-btn-ghost" onClick={() => openAdd("link")} type="button">
             <Link2 size={16} /> Add Link
           </button>
@@ -770,6 +970,206 @@ export const CompanyFilesPage: React.FC = () => {
         </div>
       )}
 
+      {/* New Folder modal */}
+      {showNewFolder && (
+        <div className="modal-overlay" onClick={() => !creatingFolder && setShowNewFolder(false)}>
+          <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="gy-card-head">
+              <h3>New folder</h3>
+              <button className="gy-icon-btn" onClick={() => setShowNewFolder(false)} type="button" disabled={creatingFolder}>
+                <X size={18} />
+              </button>
+            </div>
+            <form className="gy-form-grid" onSubmit={handleCreateFolder}>
+              <label className="gy-field gy-field-full">
+                <span>Name *</span>
+                <input
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Investor Docs"
+                  autoFocus
+                  required
+                />
+              </label>
+              <div className="gy-form-actions gy-field-full">
+                <button className="gy-btn gy-btn-ghost" type="button" onClick={() => setShowNewFolder(false)} disabled={creatingFolder}>
+                  Cancel
+                </button>
+                <button className="gy-btn gy-btn-primary" type="submit" disabled={creatingFolder}>
+                  {creatingFolder ? <Loader2 className="spin-icon" size={16} /> : <FolderPlus size={16} />}
+                  {creatingFolder ? "Creating…" : "Create folder"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {/* Rename Folder modal */}
+      {renamingFolder && (
+        <div className="modal-overlay" onClick={() => !savingRename && setRenamingFolder(null)}>
+          <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="gy-card-head">
+              <h3>Rename folder</h3>
+              <button className="gy-icon-btn" onClick={() => setRenamingFolder(null)} type="button" disabled={savingRename}>
+                <X size={18} />
+              </button>
+            </div>
+            <form className="gy-form-grid" onSubmit={handleRenameFolder}>
+              <label className="gy-field gy-field-full">
+                <span>Name *</span>
+                <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} autoFocus required />
+              </label>
+              <div className="gy-form-actions gy-field-full">
+                <button className="gy-btn gy-btn-ghost" type="button" onClick={() => setRenamingFolder(null)} disabled={savingRename}>
+                  Cancel
+                </button>
+                <button className="gy-btn gy-btn-primary" type="submit" disabled={savingRename}>
+                  {savingRename ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}
+                  Save
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {/* Delete Folder confirmation modal */}
+      {deletingFolder && (
+        <div className="modal-overlay" onClick={() => !deletingFolderBusy && setDeletingFolder(null)}>
+          <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="gy-card-head">
+              <h3>Delete folder</h3>
+              <button
+                className="gy-icon-btn"
+                onClick={() => setDeletingFolder(null)}
+                type="button"
+                disabled={deletingFolderBusy}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="file-delete-body">
+              <AlertTriangle size={22} className="file-delete-icon" />
+              <p>
+                Delete <strong>"{deletingFolder.name}"</strong>?{" "}
+                {(deletingFolder.subfolderCount || 0) + (deletingFolder.assetCount || 0) > 0
+                  ? `This also deletes ${deletingFolder.subfolderCount ? `${deletingFolder.subfolderCount} subfolder(s) and ` : ""}${
+                      deletingFolder.assetCount || 0
+                    } item(s) inside it — files are removed from S3 too. This can't be undone.`
+                  : "This can't be undone."}
+              </p>
+            </div>
+
+            <div className="gy-form-actions">
+              <button
+                className="gy-btn gy-btn-ghost"
+                type="button"
+                onClick={() => setDeletingFolder(null)}
+                disabled={deletingFolderBusy}
+              >
+                Cancel
+              </button>
+              <button className="gy-btn gy-btn-danger" type="button" onClick={handleDeleteFolder} disabled={deletingFolderBusy}>
+                {deletingFolderBusy ? <Loader2 className="spin-icon" size={16} /> : <Trash2 size={16} />}
+                {deletingFolderBusy ? "Deleting…" : "Delete folder"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Move to folder modal — its own mini folder browser */}
+      {movingAsset && (
+        <div className="modal-overlay" onClick={() => !movingBusy && setMovingAsset(null)}>
+          <section className="gy-card gy-form-card gy-modal-panel file-move-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="gy-card-head">
+              <h3 title={movingAsset.title}>Move "{movingAsset.title}"</h3>
+              <button className="gy-icon-btn" onClick={() => setMovingAsset(null)} type="button" disabled={movingBusy}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <nav className="file-breadcrumb" aria-label="Destination folder path">
+              <button type="button" onClick={() => setMoveFolderId(null)} className={moveFolderId ? "" : "active"}>
+                <Home size={13} /> Company Files
+              </button>
+              {movePath.map((crumb, i) => (
+                <React.Fragment key={crumb._id}>
+                  <ChevronRight size={13} className="file-breadcrumb-sep" />
+                  <button
+                    type="button"
+                    onClick={() => setMoveFolderId(crumb._id)}
+                    className={i === movePath.length - 1 ? "active" : ""}
+                  >
+                    {crumb.name}
+                  </button>
+                </React.Fragment>
+              ))}
+            </nav>
+
+            <div className="file-move-list">
+              {moveLoading ? (
+                <div className="gy-empty">
+                  <Loader2 size={18} className="spin" />
+                </div>
+              ) : moveFolders.length === 0 ? (
+                <p className="file-move-empty">No subfolders here.</p>
+              ) : (
+                moveFolders.map((f) => (
+                  <button
+                    key={f._id}
+                    type="button"
+                    className="file-move-item"
+                    onClick={() => setMoveFolderId(f._id)}
+                    disabled={f._id === movingAsset.folderId}
+                  >
+                    <Folder size={16} /> {f.name}
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="gy-form-actions">
+              <button className="gy-btn gy-btn-ghost" type="button" onClick={() => setMovingAsset(null)} disabled={movingBusy}>
+                Cancel
+              </button>
+              <button
+                className="gy-btn gy-btn-primary"
+                type="button"
+                onClick={handleMoveHere}
+                disabled={movingBusy || moveFolderId === (movingAsset.folderId ?? null)}
+              >
+                {movingBusy ? <Loader2 className="spin-icon" size={16} /> : <Move size={16} />}
+                {movingBusy ? "Moving…" : "Move here"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Breadcrumb — hidden while searching, since results span every folder. */}
+      {!isSearching && (
+        <nav className="file-breadcrumb" aria-label="Folder path">
+          <button type="button" onClick={() => goToBreadcrumb(-1)} className={currentFolderId ? "" : "active"}>
+            <Home size={13} /> Company Files
+          </button>
+          {folderPath.map((crumb, i) => (
+            <React.Fragment key={crumb._id}>
+              <ChevronRight size={13} className="file-breadcrumb-sep" />
+              <button
+                type="button"
+                onClick={() => goToBreadcrumb(i)}
+                className={i === folderPath.length - 1 ? "active" : ""}
+              >
+                {crumb.name}
+              </button>
+            </React.Fragment>
+          ))}
+        </nav>
+      )}
+
       {/* Filter bar — type/visibility dropdowns on the left, search + view
           toggle grouped on the right. */}
       <div className="app-filter-bar">
@@ -827,18 +1227,59 @@ export const CompanyFilesPage: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
+      {loading || (!isSearching && foldersLoading) ? (
         <div className="gy-empty">
           <Loader2 size={20} className="spin" />
-          <span>Loading files…</span>
+          <span>Loading…</span>
         </div>
-      ) : assets.length === 0 ? (
+      ) : assets.length === 0 && (isSearching || folders.length === 0) ? (
         <div className="gy-empty">
           <Files size={22} />
-          <span>Nothing here yet. Upload a file or add a link to get started.</span>
+          <span>
+            {isSearching
+              ? "No files, links, or folders match your search."
+              : "Nothing here yet. Create a folder, upload a file, or add a link to get started."}
+          </span>
         </div>
       ) : viewMode === "grid" ? (
         <div className="file-grid">
+          {!isSearching &&
+            folders.map((f) => (
+              <div key={f._id} className="gy-card file-card file-card-folder" onDoubleClick={() => enterFolder(f)}>
+                <button className="file-card-preview file-card-folder-open" onClick={() => enterFolder(f)} type="button">
+                  <Folder size={30} />
+                </button>
+
+                <div className="file-card-body">
+                  <div className="file-card-title-row">
+                    <h3 title={f.name}>{f.name}</h3>
+                  </div>
+                  <p className="file-card-meta">
+                    {(f.subfolderCount || 0) + (f.assetCount || 0)} item
+                    {(f.subfolderCount || 0) + (f.assetCount || 0) === 1 ? "" : "s"}
+                  </p>
+                </div>
+
+                <div className="file-card-actions file-card-folder-actions">
+                  <button className="gy-btn gy-btn-ghost" type="button" onClick={() => enterFolder(f)}>
+                    Open
+                  </button>
+                  <div className="file-card-buttons">
+                    <button className="gy-icon-btn" onClick={() => openRenameFolder(f)} type="button" title="Rename">
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      className="gy-icon-btn gy-icon-btn-danger"
+                      onClick={() => confirmDeleteFolder(f)}
+                      type="button"
+                      title="Delete"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           {assets.map((a) => {
             const preview = a.assetType === "file" ? previewKind(a.mimeType) : null;
             const Icon = assetIcon(a);
@@ -896,6 +1337,41 @@ export const CompanyFilesPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
+              {!isSearching &&
+                folders.map((f) => (
+                  <tr key={f._id} className="file-list-folder-row" onClick={() => enterFolder(f)}>
+                    <td>
+                      <div className="file-list-title">
+                        <Folder size={17} className="file-list-icon" />
+                        <div>
+                          <div className="admin-user-name">{f.name}</div>
+                          <div className="admin-user-sub">
+                            {(f.subfolderCount || 0) + (f.assetCount || 0)} item
+                            {(f.subfolderCount || 0) + (f.assetCount || 0) === 1 ? "" : "s"}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td colSpan={3} className="admin-user-sub">
+                      Folder
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="admin-cell-actions">
+                        <button className="gy-icon-btn" onClick={() => openRenameFolder(f)} type="button" title="Rename">
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          className="gy-icon-btn gy-icon-btn-danger"
+                          onClick={() => confirmDeleteFolder(f)}
+                          type="button"
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               {assets.map((a) => {
                 const Icon = assetIcon(a);
                 return (

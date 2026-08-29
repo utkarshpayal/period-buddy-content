@@ -4459,3 +4459,75 @@ button:focus-visible,
 @media (max-width: 780px) {
   .app-filter-bar .app-filter-search { flex: 1 1 100%; margin-left: 0; }
 }
+
+/* ---- Company Files: folders ---- */
+.file-breadcrumb {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 14px;
+}
+.file-breadcrumb button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #8a7c70;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 5px;
+  padding: 5px 8px;
+}
+.file-breadcrumb button:hover { background: #f0e9e1; color: #5f554d; }
+.file-breadcrumb button.active { color: #2a2320; cursor: default; }
+.file-breadcrumb button.active:hover { background: transparent; }
+.file-breadcrumb-sep { color: #c9bcae; flex: none; }
+
+/* Folder tile — a file-card with a clickable icon area instead of a preview */
+.file-card-folder-open {
+  background: #faf6f0;
+  border: 0;
+  cursor: pointer;
+  color: #c9a86a;
+  width: 100%;
+}
+.file-card-folder-open:hover { background: #f3ead9; }
+.file-card-folder-actions { justify-content: space-between; }
+
+/* Folder row in list view */
+.file-list-folder-row { cursor: pointer; }
+.file-list-folder-row .file-list-icon { color: #c9a86a; }
+
+/* Move-to-folder modal */
+.file-move-panel { max-width: 460px; }
+.file-move-list {
+  border: 1px solid #e6ded6;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.file-move-item {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #f0e9e1;
+  color: #2a2320;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.86rem;
+  font-weight: 600;
+  gap: 9px;
+  padding: 10px 12px;
+  text-align: left;
+}
+.file-move-item svg { color: #c9a86a; flex: none; }
+.file-move-item:last-child { border-bottom: 0; }
+.file-move-item:hover:not(:disabled) { background: #faf6f0; }
+.file-move-item:disabled { color: #b7ab9f; cursor: not-allowed; }
+.file-move-empty { color: #8a7c70; font-size: 0.85rem; margin: 14px 0; text-align: center; }

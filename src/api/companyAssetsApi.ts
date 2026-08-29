@@ -44,6 +44,7 @@ export type CompanyAsset = {
   // Present when assetType === "link"
   linkUrl?: string;
   isPublic: boolean;
+  folderId?: string | null;
   uploadedBy?: { firstName?: string; lastName?: string; email?: string } | string;
   createdAt?: string;
   updatedAt?: string;
@@ -122,6 +123,9 @@ export const listCompanyAssets = (params?: {
   search?: string;
   category?: CompanyAssetCategory;
   isPublic?: boolean;
+  /** "root" for the library root, a folder id to browse into it, or
+   * omitted entirely to search across every folder. */
+  folderId?: string;
   page?: number;
   limit?: number;
 }) =>
@@ -130,6 +134,7 @@ export const listCompanyAssets = (params?: {
       search: params?.search,
       category: params?.category,
       isPublic: params?.isPublic,
+      folderId: params?.folderId,
       page: params?.page,
       limit: params?.limit
     })}`
@@ -141,6 +146,8 @@ export type UploadCompanyAssetInput = {
   description?: string;
   category: CompanyAssetCategory;
   isPublic: boolean;
+  /** Folder to upload into — omit or "root" for the library root. */
+  folderId?: string | null;
 };
 
 export const uploadCompanyAsset = (input: UploadCompanyAssetInput) => {
@@ -150,6 +157,7 @@ export const uploadCompanyAsset = (input: UploadCompanyAssetInput) => {
   formData.append("description", input.description ?? "");
   formData.append("category", input.category);
   formData.append("isPublic", String(input.isPublic));
+  if (input.folderId) formData.append("folderId", input.folderId);
 
   return request<{ asset: CompanyAsset }>("/api/company-assets", {
     method: "POST",
@@ -163,6 +171,7 @@ export type AddCompanyAssetLinkInput = {
   category: CompanyAssetCategory;
   isPublic: boolean;
   linkUrl: string;
+  folderId?: string | null;
 };
 
 export const addCompanyAssetLink = (input: AddCompanyAssetLinkInput) =>
@@ -177,6 +186,7 @@ export type UpdateCompanyAssetInput = Partial<{
   category: CompanyAssetCategory;
   isPublic: boolean;
   linkUrl: string;
+  folderId: string | null;
 }>;
 
 export const updateCompanyAsset = (id: string, updates: UpdateCompanyAssetInput) =>
