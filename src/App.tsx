@@ -16,6 +16,7 @@ import { UsersPage } from "./pages/UsersPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { SchemesPage } from "./pages/SchemesPage";
+import { CompanyFilesPage } from "./pages/CompanyFilesPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { GynacDashboard } from "./pages/gynac/GynacDashboard";
@@ -42,6 +43,7 @@ function AdminApp() {
           <Route path="/conditions" element={<ConditionsPage />} />
           <Route path="/gynecologists" element={<DoctorsPage />} />
           <Route path="/schemes" element={<SchemesPage />} />
+          <Route path="/company-files" element={<CompanyFilesPage />} />
           <Route path="/scheme-applications" element={<SchemeApplicationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />

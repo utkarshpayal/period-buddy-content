@@ -17,6 +17,7 @@ import {
   Stethoscope,
   ClipboardCheck,
   Landmark,
+  Files,
   Menu,
   X
 } from "lucide-react";
@@ -124,6 +125,11 @@ export const Sidebar: React.FC = () => {
           <NavLink to="/scheme-applications" className={link} onClick={close}>
             <ClipboardCheck size={18} />
             Scheme Applications
+          </NavLink>
+
+          <NavLink to="/company-files" className={link} onClick={close}>
+            <Files size={18} />
+            Company Files
           </NavLink>
 
           <NavLink to="/settings" className={link} onClick={close}>

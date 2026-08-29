@@ -151,8 +151,28 @@ export const UsersPage: React.FC = () => {
         </div>
       )}
 
-      <div className="admin-toolbar">
-        <div className="admin-search">
+      <div className="app-filter-bar">
+        <select className="app-filter-select" value={role} onChange={(e) => setRole(e.target.value)}>
+          {ROLE_FILTERS.map((r) => (
+            <option key={r.value || "all"} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="app-filter-select"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as "" | "active" | "suspended")}
+        >
+          {STATUS_FILTERS.map((s) => (
+            <option key={s.value || "all"} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+
+        <label className="scheme-search app-filter-search">
           <Search size={16} />
           <input
             type="search"
@@ -160,35 +180,7 @@ export const UsersPage: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-      </div>
-
-      <div className="admin-filter-row">
-        <span className="admin-filter-label">Role</span>
-        {ROLE_FILTERS.map((r) => (
-          <button
-            key={r.value || "all"}
-            type="button"
-            className={`admin-chip ${role === r.value ? "is-active" : ""}`}
-            onClick={() => setRole(r.value)}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="admin-filter-row">
-        <span className="admin-filter-label">Status</span>
-        {STATUS_FILTERS.map((s) => (
-          <button
-            key={s.value || "all"}
-            type="button"
-            className={`admin-chip ${status === s.value ? "is-active" : ""}`}
-            onClick={() => setStatus(s.value)}
-          >
-            {s.label}
-          </button>
-        ))}
+        </label>
       </div>
 
       {loading ? (
