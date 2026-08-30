@@ -143,6 +143,24 @@ h3 {
   color: #7f2e4b;
 }
 
+/* A horizontal tab strip reusing .type-nav/.type-button (sidebar's vertical
+   nav) inside a page body, e.g. the Subscriptions workspace's
+   Overview/Features/Plans/Settings tabs. */
+.sub-tab-nav {
+  background: #fff;
+  border: 1px solid #ecdfe3;
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 6px;
+}
+
+.sub-tab-nav .type-button {
+  flex: 0 0 auto;
+}
+
 .sidebar-footer {
   align-self: end;
   background: #f4f0e8;
@@ -1629,6 +1647,17 @@ img.media-upload-preview {
   text-transform: capitalize;
 }
 
+/* A select/input/switch used as a detail-row's value (instead of plain
+   text) — constrains the global `select,input{width:100%}` rule so it sits
+   compactly on the row's right side instead of fighting .detail-label for
+   space. */
+.gy-inline-select,
+.gy-inline-input {
+  width: auto;
+  min-width: 120px;
+  max-width: 220px;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -1844,6 +1873,7 @@ img.media-upload-preview {
   padding: 11px 12px;
 }
 .gy-table-4 .gy-tr { grid-template-columns: 2fr 1fr 1fr 1fr; }
+.gy-table-5 .gy-tr { grid-template-columns: 1.6fr 1.6fr 1fr 0.9fr 1fr; }
 .gy-tr:not(.gy-th):hover { background: #f6f0e9; border-radius: 8px; }
 .gy-th {
   color: #76695f;

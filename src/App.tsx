@@ -18,6 +18,7 @@ import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { SchemesPage } from "./pages/SchemesPage";
 import { CompanyFilesPage } from "./pages/CompanyFilesPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
+import { SubscriptionsPage } from "./pages/subscriptions/SubscriptionsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { GynacDashboard } from "./pages/gynac/GynacDashboard";
 import { GynacBookings } from "./pages/gynac/GynacBookings";
@@ -45,6 +46,7 @@ function AdminApp() {
           <Route path="/schemes" element={<SchemesPage />} />
           <Route path="/company-files" element={<CompanyFilesPage />} />
           <Route path="/scheme-applications" element={<SchemeApplicationsPage />} />
+          <Route path="/subscriptions" element={<SubscriptionsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -18,6 +18,7 @@ import {
   ClipboardCheck,
   Landmark,
   Files,
+  CreditCard,
   Menu,
   X
 } from "lucide-react";
@@ -130,6 +131,11 @@ export const Sidebar: React.FC = () => {
           <NavLink to="/company-files" className={link} onClick={close}>
             <Files size={18} />
             Company Files
+          </NavLink>
+
+          <NavLink to="/subscriptions" className={link} onClick={close}>
+            <CreditCard size={18} />
+            Subscriptions
           </NavLink>
 
           <NavLink to="/settings" className={link} onClick={close}>
