@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  CheckCircle2,
   Loader2,
   Search,
   Clock,
@@ -34,6 +33,7 @@ import {
   schemeName
 } from "../api/schemeApplicationsApi";
 import { useAppContext } from "../context/AppContext";
+import { useNoticeToast } from "../components/Toast";
 
 const STATUS_FILTERS: { key: SchemeApplicationStatus | "all"; label: string }[] = [
   { key: "all", label: "All" },
@@ -84,6 +84,7 @@ export const SchemeApplicationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<SchemeApplicationStatus | "all">("all");
@@ -372,12 +373,6 @@ export const SchemeApplicationsPage: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
 

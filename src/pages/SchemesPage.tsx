@@ -30,6 +30,7 @@ import {
   prettifyEnum
 } from "../api/schemesApi";
 import { useAppContext } from "../context/AppContext";
+import { useNoticeToast } from "../components/Toast";
 
 const PAGE_SIZE = 20;
 
@@ -134,6 +135,7 @@ export const SchemesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -280,12 +282,6 @@ export const SchemesPage: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
 

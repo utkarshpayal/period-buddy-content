@@ -55,6 +55,7 @@ import {
   deleteCompanyFolder
 } from "../api/companyFoldersApi";
 import { useAppContext } from "../context/AppContext";
+import { useNoticeToast } from "../components/Toast";
 
 const PAGE_SIZE = 24;
 const VIEW_MODE_KEY = "period-buddy-company-files-view";
@@ -146,6 +147,7 @@ export const CompanyFilesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState<CompanyAssetCategory | "all">("all");
@@ -664,12 +666,6 @@ export const CompanyFilesPage: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
 

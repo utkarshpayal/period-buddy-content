@@ -171,3 +171,102 @@ export async function listAuditLogs(
   q.set("limit", String(params.limit ?? 25));
   return adminRequest(`/api/audit-logs?${q.toString()}`);
 }
+
+/* ------------------------ Push notifications ------------------------- */
+
+export type BroadcastAudience = "all" | "user" | "partner" | "doctor" | "selected";
+export type BroadcastStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+
+export type PushBroadcast = {
+  _id: string;
+  title: string;
+  body: string;
+  audience: BroadcastAudience;
+  recipientPreview?: string[];
+  saveToInbox: boolean;
+  status: BroadcastStatus;
+  cancelRequested: boolean;
+  totalUsers: number;
+  totalWithToken: number;
+  processedUsers: number;
+  sentCount: number;
+  failedCount: number;
+  invalidTokenCount: number;
+  inboxCount: number;
+  batchesCompleted: number;
+  attempts: number;
+  lastError?: string | null;
+  createdBy?: { _id: string; firstName?: string; lastName?: string; email?: string } | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+};
+
+export type AudienceCount = {
+  audience: BroadcastAudience;
+  totalUsers: number;
+  totalWithToken: number;
+  fcmConfigured: boolean;
+};
+
+export type BroadcastInput = {
+  title: string;
+  body: string;
+  audience: BroadcastAudience;
+  /** Required when audience is "selected". */
+  userIds?: string[];
+  saveToInbox: boolean;
+};
+
+export type Recipient = {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  profilePicture?: string;
+  /** Unknown until looked up (e.g. a user handed over from the Users page). */
+  hasDevice?: boolean;
+};
+
+export async function searchRecipients(search: string): Promise<{ users: Recipient[] }> {
+  return adminRequest(`/api/admin/notifications/recipients?search=${encodeURIComponent(search)}`);
+}
+
+export async function getAudienceCount(audience: Exclude<BroadcastAudience, "selected">): Promise<AudienceCount> {
+  return adminRequest(`/api/admin/notifications/audience?audience=${audience}`);
+}
+
+export async function sendTestNotification(input: {
+  title: string;
+  body: string;
+  email: string;
+}): Promise<{ messageId: string }> {
+  return adminRequest(`/api/admin/notifications/test`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createBroadcast(input: BroadcastInput): Promise<{ broadcast: PushBroadcast }> {
+  return adminRequest(`/api/admin/notifications/broadcasts`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function listBroadcasts(
+  page = 1,
+  limit = 10
+): Promise<{ broadcasts: PushBroadcast[]; pagination: Pagination }> {
+  return adminRequest(`/api/admin/notifications/broadcasts?page=${page}&limit=${limit}`);
+}
+
+export async function cancelBroadcast(id: string): Promise<{ broadcast: PushBroadcast }> {
+  return adminRequest(`/api/admin/notifications/broadcasts/${id}/cancel`, { method: "POST" });
+}
+
+export async function retryBroadcast(id: string): Promise<{ broadcast: PushBroadcast }> {
+  return adminRequest(`/api/admin/notifications/broadcasts/${id}/retry`, { method: "POST" });
+}

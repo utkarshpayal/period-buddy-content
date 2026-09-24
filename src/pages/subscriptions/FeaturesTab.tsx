@@ -11,6 +11,7 @@ import {
   deleteFeature,
   updateFeature
 } from "../../api/subscriptionApi";
+import { useNoticeToast } from "../../components/Toast";
 
 type FormState = {
   key: string;
@@ -46,6 +47,7 @@ export const FeaturesTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
@@ -201,12 +203,6 @@ export const FeaturesTab: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
 

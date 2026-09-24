@@ -13,6 +13,7 @@ import {
   UserCheck,
   Users,
   BarChart3,
+  Bell,
   ScrollText,
   Stethoscope,
   ClipboardCheck,
@@ -81,6 +82,11 @@ export const Sidebar: React.FC = () => {
           <NavLink to="/users" className={link} onClick={close}>
             <Users size={18} />
             Users
+          </NavLink>
+
+          <NavLink to="/notifications" className={link} onClick={close}>
+            <Bell size={18} />
+            Push Notifications
           </NavLink>
 
           <NavLink to="/audit-logs" className={link} onClick={close}>

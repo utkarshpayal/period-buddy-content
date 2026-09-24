@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Loader2, AlertCircle, CheckCircle2, Plus, Trash2, Clock, Copy } from "lucide-react";
 import { AvailabilitySlot, getAvailability, setAvailability } from "../../api/doctorApi";
 import { GynacHead } from "./GynacHead";
+import { useNoticeToast } from "../../components/Toast";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -17,6 +18,7 @@ export const GynacAvailability: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
 
   useEffect(() => {
     (async () => {
@@ -154,12 +156,6 @@ export const GynacAvailability: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
 

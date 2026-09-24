@@ -30,7 +30,10 @@ const txLabel = (tx: Entitlement) => {
   return tx.featureKey ?? "Feature";
 };
 
+// `user` is null when the buyer's account was deleted after purchasing
+// (populate() finds nothing) — must not crash the whole page.
 const userLabel = (tx: Entitlement) => {
+  if (!tx.user) return "Deleted account";
   if (typeof tx.user === "string") return tx.user;
   return [tx.user.firstName, tx.user.lastName].filter(Boolean).join(" ") || tx.user.email || tx.user._id;
 };
@@ -165,7 +168,7 @@ export const OverviewTab: React.FC = () => {
               <span>{userLabel(tx)}</span>
               <span>{txLabel(tx)}</span>
               <span>
-                {tx.currency} {tx.amount.toLocaleString()}
+                {tx.currency} {(tx.amount ?? 0).toLocaleString()}
               </span>
               <span>
                 <span className={`gy-pill ${STATUS_TONE[tx.status]}`}>{tx.status}</span>

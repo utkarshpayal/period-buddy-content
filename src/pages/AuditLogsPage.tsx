@@ -14,7 +14,8 @@ const ACTION_FILTERS = [
   { value: "content.created", label: "Content created" },
   { value: "content.updated", label: "Content updated" },
   { value: "content.deleted", label: "Content deleted" },
-  { value: "account.deleted", label: "Account deleted" }
+  { value: "account.deleted", label: "Account deleted" },
+  { value: "push_broadcast.created", label: "Push broadcast" }
 ];
 
 // Colour the action pill by its domain prefix.

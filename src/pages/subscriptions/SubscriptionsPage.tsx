@@ -5,6 +5,7 @@ import { FeaturesTab } from "./FeaturesTab";
 import { PlansTab } from "./PlansTab";
 import { CouponsTab } from "./CouponsTab";
 import { SettingsTab } from "./SettingsTab";
+import { ErrorBoundary } from "../../components/ErrorBoundary";
 
 type TabKey = "overview" | "features" | "plans" | "coupons" | "settings";
 
@@ -57,11 +58,14 @@ export const SubscriptionsPage: React.FC = () => {
         ))}
       </nav>
 
-      {tab === "overview" && <OverviewTab />}
-      {tab === "features" && <FeaturesTab />}
-      {tab === "plans" && <PlansTab />}
-      {tab === "coupons" && <CouponsTab />}
-      {tab === "settings" && <SettingsTab />}
+      {/* keyed by tab so switching tabs clears a previous tab's crash */}
+      <ErrorBoundary key={tab} label={`the ${tab} tab`}>
+        {tab === "overview" && <OverviewTab />}
+        {tab === "features" && <FeaturesTab />}
+        {tab === "plans" && <PlansTab />}
+        {tab === "coupons" && <CouponsTab />}
+        {tab === "settings" && <SettingsTab />}
+      </ErrorBoundary>
     </div>
   );
 };

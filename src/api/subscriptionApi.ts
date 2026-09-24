@@ -111,7 +111,8 @@ export type EntitlementUser = { _id: string; firstName?: string; lastName?: stri
 
 export type Entitlement = {
   _id: string;
-  user: EntitlementUser | string;
+  /** null when the buyer's account has since been deleted. */
+  user: EntitlementUser | string | null;
   source: "plan" | "feature";
   plan?: { _id: string; name: string } | string | null;
   featureKey?: string;

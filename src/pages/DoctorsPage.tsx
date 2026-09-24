@@ -4,7 +4,6 @@ import {
   UserPlus,
   Loader2,
   AlertCircle,
-  CheckCircle2,
   Mail,
   RefreshCw,
   Power,
@@ -21,6 +20,7 @@ import {
   formatMoney
 } from "../api/doctorApi";
 import { useAppContext } from "../context/AppContext";
+import { useNoticeToast } from "../components/Toast";
 
 const emptyForm = {
   name: "",
@@ -40,6 +40,7 @@ export const DoctorsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -171,12 +172,6 @@ export const DoctorsPage: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
       {inviteUrl && (

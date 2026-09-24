@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import {
   SubscriptionSettings,
   getSubscriptionSettings,
   updateSubscriptionSettings
 } from "../../api/subscriptionApi";
+import { useNoticeToast, useToast } from "../../components/Toast";
 
 export const SettingsTab: React.FC = () => {
   const [settings, setSettings] = useState<SubscriptionSettings | null>(null);
@@ -12,6 +13,8 @@ export const SettingsTab: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
+  const toast = useToast();
 
   const load = async () => {
     setLoading(true);
@@ -39,7 +42,7 @@ export const SettingsTab: React.FC = () => {
       setSettings(next);
       setNotice("Settings saved.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save settings.");
+      toast.error(err instanceof Error ? err.message : "Could not save settings.");
     } finally {
       setSaving(false);
     }
@@ -69,12 +72,6 @@ export const SettingsTab: React.FC = () => {
         <div className="gy-alert gy-alert-error">
           <AlertCircle size={16} />
           <span>{error}</span>
-        </div>
-      )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <CheckCircle2 size={16} />
-          <span>{notice}</span>
         </div>
       )}
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  Bell,
   Loader2,
   Search,
   ShieldOff,
@@ -17,6 +19,7 @@ import {
   Pagination,
   UserActivity
 } from "../api/adminApi";
+import { useNoticeToast } from "../components/Toast";
 
 const ROLE_FILTERS = [
   { value: "", label: "All roles" },
@@ -49,11 +52,13 @@ const formatDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—";
 
 export const UsersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useNoticeToast(notice, () => setNotice(null));
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -145,11 +150,6 @@ export const UsersPage: React.FC = () => {
           <span>{error}</span>
         </div>
       )}
-      {notice && (
-        <div className="gy-alert gy-alert-ok">
-          <span>{notice}</span>
-        </div>
-      )}
 
       <div className="app-filter-bar">
         <select className="app-filter-select" value={role} onChange={(e) => setRole(e.target.value)}>
@@ -232,6 +232,16 @@ export const UsersPage: React.FC = () => {
                   <td>{formatDate(u.createdAt)}</td>
                   <td>
                     <div className="admin-cell-actions">
+                      {u.isActive && !u.deletedAt && (
+                        <button
+                          type="button"
+                          className="gy-icon-btn"
+                          title="Send push notification"
+                          onClick={() => navigate("/notifications", { state: { recipient: u } })}
+                        >
+                          <Bell size={16} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="gy-icon-btn"

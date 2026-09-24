@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext";
+import { ToastProvider } from "./components/Toast";
 import { Sidebar } from "./components/Sidebar";
 import { GynacSidebar } from "./components/GynacSidebar";
 import { Dashboard } from "./pages/Dashboard";
@@ -15,6 +16,7 @@ import { DoctorsPage } from "./pages/DoctorsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import { SchemesPage } from "./pages/SchemesPage";
 import { CompanyFilesPage } from "./pages/CompanyFilesPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
@@ -37,6 +39,7 @@ function AdminApp() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/audit-logs" element={<AuditLogsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/blogs" element={<BlogsPage />} />
           <Route path="/qa" element={<QAsPage />} />
           <Route path="/videos" element={<VideosPage />} />
@@ -106,9 +109,11 @@ function AppContent() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </ToastProvider>
     </AppProvider>
   );
 }
