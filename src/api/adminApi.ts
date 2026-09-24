@@ -184,6 +184,8 @@ export type PushBroadcast = {
   audience: BroadcastAudience;
   recipientPreview?: string[];
   saveToInbox: boolean;
+  /** Optional FCM data payload; `route` is the in-app screen a tap opens. */
+  data?: { route?: string } | null;
   status: BroadcastStatus;
   cancelRequested: boolean;
   totalUsers: number;
@@ -216,6 +218,8 @@ export type BroadcastInput = {
   /** Required when audience is "selected". */
   userIds?: string[];
   saveToInbox: boolean;
+  /** In-app path opened when the notification is tapped, e.g. "/tracker". Omit for the notifications list. */
+  route?: string;
 };
 
 export type Recipient = {
@@ -242,6 +246,7 @@ export async function sendTestNotification(input: {
   title: string;
   body: string;
   email: string;
+  route?: string;
 }): Promise<{ messageId: string }> {
   return adminRequest(`/api/admin/notifications/test`, {
     method: "POST",
