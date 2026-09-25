@@ -8,12 +8,13 @@ import {
   RefreshCw,
   Power,
   Copy,
-  X
+  X,
+  Search,
 } from "lucide-react";
 import {
   AdminDoctor,
   inviteDoctor,
-  listDoctorsForAdmin,
+  listDoctorsForAdminPage,
   resendInvite,
   updateDoctorByAdmin,
   deactivateDoctor,
@@ -21,6 +22,7 @@ import {
 } from "../api/doctorApi";
 import { useAppContext } from "../context/AppContext";
 import { useNoticeToast } from "../components/Toast";
+import { Pagination, type PageInfo } from "../components/Pagination";
 
 const emptyForm = {
   name: "",
@@ -46,11 +48,32 @@ export const DoctorsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
-  const load = async () => {
+  // Server-side paging (20 per page) + search over name/specialty/email.
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PageInfo | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const load = async (targetPage = page) => {
     setLoading(true);
     setError(null);
     try {
-      setDoctors(await listDoctorsForAdmin());
+      const res = await listDoctorsForAdminPage({ page: targetPage, search: debouncedSearch });
+      if (res.doctors.length === 0 && targetPage > 1) {
+        setPage(targetPage - 1);
+        return;
+      }
+      setDoctors(res.doctors);
+      setPagination(res.pagination);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load gynecologists.");
     } finally {
@@ -59,9 +82,9 @@ export const DoctorsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    load();
+    load(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, debouncedSearch]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,6 +317,17 @@ export const DoctorsPage: React.FC = () => {
         </div>
       )}
 
+      <label className="scheme-search app-filter-search" style={{ maxWidth: 360, marginBottom: 12 }}>
+        <Search size={16} />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name, specialty, or email…"
+          aria-label="Search gynecologists"
+        />
+      </label>
+
       {loading ? (
         <div className="gy-empty">
           <Loader2 className="spin-icon" size={22} />
@@ -302,7 +336,11 @@ export const DoctorsPage: React.FC = () => {
       ) : doctors.length === 0 ? (
         <div className="gy-empty">
           <Stethoscope size={26} />
-          <p>No gynecologists yet. Invite your first clinician to get started.</p>
+          <p>
+            {debouncedSearch
+              ? `No gynecologists match “${debouncedSearch}”.`
+              : "No gynecologists yet. Invite your first clinician to get started."}
+          </p>
         </div>
       ) : (
         <div className="gy-doc-grid">
@@ -352,6 +390,8 @@ export const DoctorsPage: React.FC = () => {
           })}
         </div>
       )}
+
+      <Pagination pagination={pagination} onPageChange={setPage} disabled={loading} itemLabel="gynecologists" />
     </div>
   );
 };

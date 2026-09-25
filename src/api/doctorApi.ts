@@ -1,3 +1,4 @@
+import type { PageInfo } from "../components/Pagination";
 import { getApiToken, handleUnauthorized } from "./authApi";
 import { fetchWithTimeout } from "./http";
 
@@ -195,10 +196,12 @@ type ApiEnvelope<T> = {
   success?: boolean;
   message?: string;
   data?: T;
+  /** Present on list endpoints called with ?page=/?limit= (backend sendPaginatedList). */
+  pagination?: PageInfo;
   token?: string;
 };
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function requestEnvelope<T>(path: string, options: RequestInit = {}): Promise<ApiEnvelope<T>> {
   if (!apiBaseUrl) {
     throw new Error(
       "The clinician portal requires the API. Add VITE_API_BASE_URL to a root .env file, then restart the dev server."
@@ -240,6 +243,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     );
   }
 
+  return body ?? {};
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const body = await requestEnvelope<T>(path, options);
   return (body?.data ?? (body as unknown as T)) as T;
 }
 
@@ -286,6 +294,21 @@ export const getConsultations = (status?: ConsultationStatus) =>
   request<Consultation[]>(
     `/api/doctor/consultations${status ? `?status=${status}` : ""}`
   );
+
+/** One page of the doctor's bookings (newest first). */
+export const getConsultationsPage = async (params: {
+  page: number;
+  limit?: number;
+  status?: ConsultationStatus;
+  /** Patient first/last name, matched on the server. */
+  search?: string;
+}) => {
+  const query = new URLSearchParams({ page: String(params.page), limit: String(params.limit ?? 20) });
+  if (params.status) query.set("status", params.status);
+  if (params.search?.trim()) query.set("search", params.search.trim());
+  const body = await requestEnvelope<Consultation[]>(`/api/doctor/consultations?${query}`);
+  return { consultations: body.data ?? [], pagination: body.pagination ?? null };
+};
 
 export const getConsultationPatient = (id: string) =>
   request<PatientOverview>(`/api/doctor/consultations/${id}/patient`);
@@ -396,6 +419,13 @@ export const listDoctorsForAdmin = (search?: string) =>
   request<AdminDoctor[]>(
     `/api/doctor/admin/list${search ? `?search=${encodeURIComponent(search)}` : ""}`
   );
+
+export const listDoctorsForAdminPage = async (params: { page: number; limit?: number; search?: string }) => {
+  const query = new URLSearchParams({ page: String(params.page), limit: String(params.limit ?? 20) });
+  if (params.search?.trim()) query.set("search", params.search.trim());
+  const body = await requestEnvelope<AdminDoctor[]>(`/api/doctor/admin/list?${query}`);
+  return { doctors: body.data ?? [], pagination: body.pagination ?? null };
+};
 
 export const updateDoctorByAdmin = (id: string, updates: Partial<DoctorProfile>) =>
   request<AdminDoctor>(`/api/doctor/admin/${id}`, {

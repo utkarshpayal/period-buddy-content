@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Tag, Trash2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
 import {
   Coupon,
   CouponInput,
   DiscountType,
-  adminListCoupons,
+  adminListCouponsPage,
   createCoupon,
   deleteCoupon,
   updateCoupon
 } from "../../api/subscriptionApi";
 import { useNoticeToast } from "../../components/Toast";
+import { Pagination, type PageInfo } from "../../components/Pagination";
 
 type FormState = {
   code: string;
@@ -78,11 +79,33 @@ export const CouponsTab: React.FC = () => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = async () => {
+  // Server-side paging (20 per page) with a code search.
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PageInfo | null>(null);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const load = async (targetPage = page) => {
     setLoading(true);
     setError(null);
     try {
-      setCoupons(await adminListCoupons());
+      const res = await adminListCouponsPage({ page: targetPage, search: debouncedSearch });
+      // Deleting the last coupon on a later page leaves it empty — step back.
+      if (res.coupons.length === 0 && targetPage > 1) {
+        setPage(targetPage - 1);
+        return;
+      }
+      setCoupons(res.coupons);
+      setPagination(res.pagination);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load coupons.");
     } finally {
@@ -91,8 +114,9 @@ export const CouponsTab: React.FC = () => {
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -291,6 +315,17 @@ export const CouponsTab: React.FC = () => {
         </div>
       )}
 
+      <label className="scheme-search app-filter-search" style={{ maxWidth: 320, marginBottom: 12 }}>
+        <Search size={16} />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by code…"
+          aria-label="Search coupons by code"
+        />
+      </label>
+
       {loading ? (
         <div className="gy-empty">
           <Loader2 size={20} className="spin" />
@@ -299,7 +334,11 @@ export const CouponsTab: React.FC = () => {
       ) : coupons.length === 0 ? (
         <div className="gy-empty">
           <Tag size={22} />
-          <span>No coupons yet. Click “Add Coupon” to create the first one.</span>
+          <span>
+            {debouncedSearch
+              ? `No coupons match “${debouncedSearch}”.`
+              : "No coupons yet. Click “Add Coupon” to create the first one."}
+          </span>
         </div>
       ) : (
         <div className="scheme-app-list">
@@ -353,6 +392,8 @@ export const CouponsTab: React.FC = () => {
           })}
         </div>
       )}
+
+      <Pagination pagination={pagination} onPageChange={setPage} disabled={loading} itemLabel="coupons" />
     </div>
   );
 };
