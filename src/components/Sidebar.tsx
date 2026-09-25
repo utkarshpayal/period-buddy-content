@@ -31,7 +31,7 @@ export const Sidebar: React.FC = () => {
 
   const brand = (
     <div className="brand-lockup">
-      <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
+      <img className="sidebar-logo" src="/images/logo.png" alt="The Nura Care" />
       <div>
         <p className="eyebrow">The Nura Care</p>
         <h1>{title}</h1>

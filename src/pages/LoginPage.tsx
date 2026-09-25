@@ -35,7 +35,7 @@ export const LoginPage: React.FC = () => {
     <div className="auth-screen">
       <aside className="auth-aside" aria-hidden>
         <div className="auth-aside-brand">
-          <img src="/assets/logo.png" alt="" />
+          <img src="/images/logo.png" alt="" />
           <span>The Nura Care</span>
         </div>
         <div className="auth-aside-copy">
@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
 
       <main className="auth-main">
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <img className="auth-form-logo" src="/assets/logo.png" alt="The Nura Care" />
+          <img className="auth-form-logo" src="/images/logo.png" alt="The Nura Care" />
           <h2>Welcome back</h2>
           <p className="auth-form-sub">Sign in to your Nura workspace</p>
 
