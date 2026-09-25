@@ -56,7 +56,7 @@ export const SetPasswordPage: React.FC = () => {
     <div className="login-page-container">
       <div className="login-card">
         <div className="login-brand">
-          <img className="login-logo-img" src="/assets/logo.png" alt="The Nura Care" />
+          <img className="login-logo-img" src="/images/logo.png" alt="The Nura Care" />
           <h2>The Nura Care</h2>
           <p className="subtitle">Accept your invitation</p>
         </div>

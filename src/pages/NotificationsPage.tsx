@@ -350,7 +350,7 @@ const PhonePreview: React.FC<{ title: string; body: string }> = ({ title, body }
     </div>
     <div className="pn-notif">
       <div className="pn-notif-head">
-        <img src="/assets/logo.png" alt="" className="pn-notif-icon" />
+        <img src="/images/logo.png" alt="" className="pn-notif-icon" />
         <span>THE NURA CARE</span>
         <span className="pn-notif-now">now</span>
       </div>
