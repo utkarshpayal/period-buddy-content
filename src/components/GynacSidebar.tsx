@@ -38,7 +38,7 @@ export const GynacSidebar: React.FC = () => {
     <>
       <div className="mobile-navbar">
         <div className="brand-lockup">
-          <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
+          <img className="sidebar-logo" src="/images/logo.png" alt="The Nura Care" />
           <div>
             <p className="eyebrow">The Nura Care</p>
             <h1>Clinician Portal</h1>
@@ -59,7 +59,7 @@ export const GynacSidebar: React.FC = () => {
 
       <aside className={`sidebar ${open ? "open" : ""}`}>
       <div className="brand-lockup">
-        <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
+        <img className="sidebar-logo" src="/images/logo.png" alt="The Nura Care" />
         <div>
           <p className="eyebrow">The Nura Care</p>
           <h1>Clinician Portal</h1>
