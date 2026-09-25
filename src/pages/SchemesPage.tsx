@@ -1,3 +1,4 @@
+import { isPendingApprovalError } from "../api/approval";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Landmark,
@@ -225,6 +226,11 @@ export const SchemesPage: React.FC = () => {
       }
       setShowForm(false);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        setShowForm(false);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not save this scheme.");
     } finally {
       setSubmitting(false);
@@ -241,6 +247,10 @@ export const SchemesPage: React.FC = () => {
       setTotal((t) => Math.max(0, t - 1));
       setNotice(`Deleted "${s.name}".`);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not delete this scheme.");
     } finally {
       setDeletingId(null);

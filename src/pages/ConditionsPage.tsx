@@ -3,6 +3,7 @@ import {
   Heart, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Sparkles, Activity, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
@@ -219,6 +220,7 @@ export const ConditionsPage: React.FC = () => {
                       <div className="entry-title-row">
                         <h4>{condition.title}</h4>
                         <span className={`status-chip ${condition.status}`}>{condition.status}</span>
+                        <PendingBadge id={condition.id} />
                       </div>
                       <p>{condition.summary}</p>
                       <div className="entry-meta">

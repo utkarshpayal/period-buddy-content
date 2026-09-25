@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { KeyRound, Loader2, AlertCircle, Check, Stethoscope } from "lucide-react";
+import { KeyRound, Loader2, AlertCircle, Check, Sparkles } from "lucide-react";
 import { setPasswordFromInvite } from "../api/doctorApi";
 
 // These keys mirror authApi's private storage keys so a set-password success
-// logs the clinician straight in on reload.
+// logs the invitee (clinician or staff) straight in on reload.
 const TOKEN_KEY = "period-buddy-api-token";
 const USER_KEY = "period-buddy-auth-user";
 
@@ -40,8 +40,8 @@ export const SetPasswordPage: React.FC = () => {
       if (result.token) localStorage.setItem(TOKEN_KEY, result.token);
       if (result.user) localStorage.setItem(USER_KEY, JSON.stringify(result.user));
       setDone(true);
-      // Full reload so AppProvider hydrates the new doctor session and routes
-      // into the clinician portal.
+      // Full reload so AppProvider hydrates the new session and routes into
+      // the clinician portal or the Admin Workspace, depending on the role.
       setTimeout(() => {
         window.location.href = "/";
       }, 1400);
@@ -56,9 +56,9 @@ export const SetPasswordPage: React.FC = () => {
     <div className="login-page-container">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-logo">PB</div>
-          <h2>Period Buddy</h2>
-          <p className="subtitle">Clinician Onboarding</p>
+          <img className="login-logo-img" src="/assets/logo.png" alt="The Nura Care" />
+          <h2>The Nura Care</h2>
+          <p className="subtitle">Accept your invitation</p>
         </div>
 
         {!linkValid ? (
@@ -72,17 +72,17 @@ export const SetPasswordPage: React.FC = () => {
               <Check size={28} />
             </div>
             <h3>Password Set</h3>
-            <p className="success-desc">Signing you in to the clinician portal…</p>
+            <p className="success-desc">Signing you in to your workspace…</p>
           </div>
         ) : (
           <form className="login-form-pane" onSubmit={handleSubmit}>
             <div className="form-header">
-              <Stethoscope size={18} />
-              <span>Welcome, Doctor</span>
+              <Sparkles size={18} />
+              <span>Welcome to Nura</span>
             </div>
 
             <p className="login-help-text" style={{ marginTop: 0 }}>
-              Create a password for <strong>{email}</strong> to access your dashboard.
+              Create a password for <strong>{email}</strong> to finish setting up your account.
             </p>
 
             {error && (

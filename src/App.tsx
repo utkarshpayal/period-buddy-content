@@ -4,30 +4,18 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import { ToastProvider } from "./components/Toast";
 import { Sidebar } from "./components/Sidebar";
 import { GynacSidebar } from "./components/GynacSidebar";
-import { Dashboard } from "./pages/Dashboard";
-import { BlogsPage } from "./pages/BlogsPage";
-import { QAsPage } from "./pages/QAsPage";
-import { VideosPage } from "./pages/VideosPage";
-import { GuidesPage } from "./pages/GuidesPage";
-import { ConditionsPage } from "./pages/ConditionsPage";
-import { SettingsPage } from "./pages/SettingsPage";
+import { RequireAccess } from "./components/RequireAccess";
+import { ALL_NAV_ITEMS } from "./navigation";
 import { LoginPage } from "./pages/LoginPage";
-import { DoctorsPage } from "./pages/DoctorsPage";
-import { UsersPage } from "./pages/UsersPage";
-import { AnalyticsPage } from "./pages/AnalyticsPage";
-import { AuditLogsPage } from "./pages/AuditLogsPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-import { SchemesPage } from "./pages/SchemesPage";
-import { CompanyFilesPage } from "./pages/CompanyFilesPage";
-import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
-import { SubscriptionsPage } from "./pages/subscriptions/SubscriptionsPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
+import { NoAccessPage } from "./pages/NoAccessPage";
 import { GynacDashboard } from "./pages/gynac/GynacDashboard";
 import { GynacBookings } from "./pages/gynac/GynacBookings";
 import { GynacPayments } from "./pages/gynac/GynacPayments";
 import { GynacReels } from "./pages/gynac/GynacReels";
 import { GynacAvailability } from "./pages/gynac/GynacAvailability";
 import { GynacProfile } from "./pages/gynac/GynacProfile";
+import { isAdminApiConfigured } from "./api/adminApi";
 
 function AdminApp() {
   return (
@@ -35,23 +23,14 @@ function AdminApp() {
       <Sidebar />
       <main className="workspace-main-content">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/audit-logs" element={<AuditLogsPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/blogs" element={<BlogsPage />} />
-          <Route path="/qa" element={<QAsPage />} />
-          <Route path="/videos" element={<VideosPage />} />
-          <Route path="/guides" element={<GuidesPage />} />
-          <Route path="/conditions" element={<ConditionsPage />} />
-          <Route path="/gynecologists" element={<DoctorsPage />} />
-          <Route path="/schemes" element={<SchemesPage />} />
-          <Route path="/company-files" element={<CompanyFilesPage />} />
-          <Route path="/scheme-applications" element={<SchemeApplicationsPage />} />
-          <Route path="/subscriptions" element={<SubscriptionsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/login" element={<LoginPage />} />
+          {ALL_NAV_ITEMS.map((item) => (
+            <Route
+              key={item.path}
+              path={item.path}
+              element={<RequireAccess permissions={item.permissions}>{item.element}</RequireAccess>}
+            />
+          ))}
+          <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -80,7 +59,7 @@ function GynacApp() {
 }
 
 function AppContent() {
-  const { isAuthenticated, role } = useAppContext();
+  const { isAuthenticated, role, access } = useAppContext();
 
   // Signed out: the only reachable screens are the login page and the public
   // invite (set-password) flow. Every other path bounces to /login.
@@ -94,26 +73,29 @@ function AppContent() {
     );
   }
 
-  // Signed in: full role-based access to the studio / clinician portal.
+  // Signed in: clinicians get the Gynac portal, staff get the Admin
+  // Workspace scoped to their permissions. Any other account (a regular app
+  // user, a partner) has no business here. Local sandbox mode (no API) is
+  // treated as a Super Admin so the UI can be explored offline.
+  const portal =
+    role === "doctor" ? <GynacApp /> : access || !isAdminApiConfigured ? <AdminApp /> : <NoAccessPage signOut />;
+
   return (
     <Routes>
       <Route path="/set-password" element={<SetPasswordPage />} />
-      <Route
-        path="*"
-        element={role === "doctor" ? <GynacApp /> : <AdminApp />}
-      />
+      <Route path="*" element={portal} />
     </Routes>
   );
 }
 
 export default function App() {
   return (
-    <AppProvider>
-      <ToastProvider>
+    <ToastProvider>
+      <AppProvider>
         <BrowserRouter>
           <AppContent />
         </BrowserRouter>
-      </ToastProvider>
-    </AppProvider>
+      </AppProvider>
+    </ToastProvider>
   );
 }

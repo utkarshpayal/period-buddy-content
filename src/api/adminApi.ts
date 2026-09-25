@@ -1,3 +1,4 @@
+import { throwIfPendingApproval } from "./approval";
 import { getApiToken, handleUnauthorized } from "./authApi";
 import { fetchWithTimeout } from "./http";
 
@@ -70,7 +71,7 @@ type Envelope<T> = { data?: T; message?: string; error?: string };
 
 /* ----------------------------- Request ------------------------------- */
 
-async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!apiBaseUrl) {
     throw new Error("Admin API is not configured (VITE_API_BASE_URL is unset).");
   }
@@ -100,13 +101,14 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
       handleUnauthorized();
       message = "Your session has expired. Please sign in again.";
     }
-    if (response.status === 403) {
-      message = "This account does not have Super Admin permission.";
+    if (response.status === 403 && !message) {
+      message = "You don't have permission to do this.";
     }
     throw new Error(message);
   }
 
   const body = (await response.json()) as Envelope<T>;
+  throwIfPendingApproval(response.status, body);
   return (body.data ?? (body as unknown as T)) as T;
 }
 
@@ -184,6 +186,8 @@ export type PushBroadcast = {
   audience: BroadcastAudience;
   recipientPreview?: string[];
   saveToInbox: boolean;
+  /** Optional FCM data payload; `route` is the in-app screen a tap opens. */
+  data?: { route?: string } | null;
   status: BroadcastStatus;
   cancelRequested: boolean;
   totalUsers: number;
@@ -216,6 +220,8 @@ export type BroadcastInput = {
   /** Required when audience is "selected". */
   userIds?: string[];
   saveToInbox: boolean;
+  /** In-app path opened when the notification is tapped, e.g. "/tracker". Omit for the notifications list. */
+  route?: string;
 };
 
 export type Recipient = {
@@ -242,6 +248,7 @@ export async function sendTestNotification(input: {
   title: string;
   body: string;
   email: string;
+  route?: string;
 }): Promise<{ messageId: string }> {
   return adminRequest(`/api/admin/notifications/test`, {
     method: "POST",

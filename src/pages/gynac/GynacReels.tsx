@@ -1,16 +1,5 @@
-import React, { useEffect, useState } from "react";
-import {
-  Loader2,
-  AlertCircle,
-  Film,
-  Plus,
-  Trash2,
-  Eye,
-  Heart,
-  X,
-  CheckCircle2,
-  Wand2
-} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Loader2, Film, Plus, Trash2, Eye, EyeOff, Heart, X, CheckCircle2, Wand2, PlayCircle } from "lucide-react";
 import {
   Reel,
   getMyReels,
@@ -21,7 +10,8 @@ import {
 import { MediaUploadField } from "../../components/MediaUploadField";
 import { uploadMediaFile } from "../../api/uploadApi";
 import { captureVideoThumbnail, formatDuration } from "../../lib/videoThumbnail";
-import { GynacHead } from "./GynacHead";
+import { EmptyState, ErrorState, PageHeader, StatCard, Tabs, timeAgo } from "../../components/ui";
+import { useToast } from "../../components/Toast";
 
 type ReelForm = {
   title: string;
@@ -39,7 +29,11 @@ const emptyReel: ReelForm = {
   thumbnailUrl: ""
 };
 
+type ReelFilter = "all" | "live" | "hidden";
+
 export const GynacReels: React.FC = () => {
+  const toast = useToast();
+  const [filter, setFilter] = useState<ReelFilter>("all");
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +114,7 @@ export const GynacReels: React.FC = () => {
       setThumbStatus(null);
       setShowForm(false);
       await load();
+      toast.success("Reel published.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not publish reel.");
     } finally {
@@ -131,18 +126,20 @@ export const GynacReels: React.FC = () => {
     try {
       await updateReel(reel._id, { isActive: !reel.isActive });
       await load();
+      toast.success(reel.isActive ? "Reel hidden from the app." : "Reel is live again.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update reel.");
+      toast.error(err instanceof Error ? err.message : "Could not update reel.");
     }
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Delete this reel?")) return;
+    if (!window.confirm("Delete this reel? This can't be undone.")) return;
     try {
       await deleteReel(id);
       await load();
+      toast.success("Reel deleted.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete reel.");
+      toast.error(err instanceof Error ? err.message : "Could not delete reel.");
     }
   };
 
@@ -152,158 +149,184 @@ export const GynacReels: React.FC = () => {
     setThumbStatus(null);
   };
 
+  const totals = useMemo(
+    () => ({
+      live: reels.filter((r) => r.isActive).length,
+      views: reels.reduce((sum, r) => sum + (r.viewCount ?? 0), 0),
+      likes: reels.reduce((sum, r) => sum + (r.likeCount ?? 0), 0)
+    }),
+    [reels]
+  );
+
+  const shown = reels.filter((r) => (filter === "all" ? true : filter === "live" ? r.isActive : !r.isActive));
+
   return (
-    <div className="workspace-page">
-      <GynacHead
-        title="Reels & Content"
-        subtitle={
-          reels.length > 0
-            ? `${reels.filter((r) => r.isActive).length} live · ${reels.length} total · ${reels.reduce(
-                (s, r) => s + (r.viewCount ?? 0),
-                0
-              )} views. Publish short educational videos for the community.`
-            : "Publish short educational videos for the Period Buddy community."
-        }
+    <div className="gx-page">
+      <PageHeader
+        eyebrow="Content"
+        title="Reels"
+        subtitle="Short educational videos that appear in the Nura community feed under your name."
         actions={
-          <button className="gy-btn gy-btn-primary" type="button" onClick={() => setShowForm((s) => !s)}>
+          <button className="gx-btn gx-btn-primary" type="button" onClick={() => setShowForm(true)}>
             <Plus size={16} /> New reel
           </button>
         }
       />
 
-      {error && (
-        <div className="gy-alert gy-alert-error">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && !showForm && <ErrorState message={error} />}
 
-      {showForm && (
-        <div className="modal-overlay" onClick={closeForm}>
-        <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
-          <div className="gy-card-head">
-            <h3>Publish a reel</h3>
-            <button className="gy-icon-btn" type="button" onClick={closeForm}>
-              <X size={18} />
-            </button>
-          </div>
-          <form className="gy-form-grid" onSubmit={submit}>
-            <label className="gy-field gy-field-full">
-              <span>Title *</span>
-              <input
-                value={form.title}
-                onChange={(e) => set({ title: e.target.value })}
-                placeholder="e.g. 3 quick tips to ease period cramps"
-                required
-              />
-            </label>
+      <div className="gx-stat-grid is-3">
+        <StatCard tone="berry" icon={<PlayCircle size={20} />} label="Live reels" value={totals.live} hint={`${reels.length} total`} />
+        <StatCard tone="teal" icon={<Eye size={20} />} label="Total views" value={totals.views.toLocaleString()} />
+        <StatCard tone="plum" icon={<Heart size={20} />} label="Total likes" value={totals.likes.toLocaleString()} />
+      </div>
 
-            <div className="gy-field gy-field-full">
-              <MediaUploadField
-                kind="video"
-                folder="reels"
-                label="Reel video (uploads to storage)"
-                value={form.directMp4Url}
-                onChange={(url) => set({ directMp4Url: url })}
-                onDurationChange={(seconds) => set({ duration: formatDuration(seconds) })}
-                required
-              />
-            </div>
-
-            <div className="gy-field gy-field-full">
-              <MediaUploadField
-                kind="image"
-                folder="thumbnails"
-                label="Thumbnail (optional — auto-generated from the video if left empty)"
-                value={form.thumbnailUrl}
-                onChange={(url) => set({ thumbnailUrl: url })}
-              />
-              {!form.thumbnailUrl && form.directMp4Url && (
-                <button
-                  className="gy-btn gy-btn-ghost gy-thumb-gen"
-                  type="button"
-                  onClick={async () => {
-                    const url = await generateThumbnail();
-                    if (url) set({ thumbnailUrl: url });
-                    else setError("Auto-thumbnail failed — please upload one manually.");
-                  }}
-                >
-                  <Wand2 size={14} /> Generate thumbnail from video
-                </button>
-              )}
-              {thumbStatus && <p className="gy-muted gy-thumb-status">{thumbStatus}</p>}
-            </div>
-
-            <label className="gy-field">
-              <span>Category</span>
-              <input
-                value={form.category}
-                onChange={(e) => set({ category: e.target.value })}
-                placeholder="Wellness"
-              />
-            </label>
-            <label className="gy-field">
-              <span>Duration (auto-filled)</span>
-              <input
-                value={form.duration}
-                onChange={(e) => set({ duration: e.target.value })}
-                placeholder="0:30"
-              />
-            </label>
-
-            <div className="gy-form-actions gy-field-full">
-              <button className="gy-btn gy-btn-ghost" type="button" onClick={closeForm}>
-                Cancel
-              </button>
-              <button className="gy-btn gy-btn-primary" type="submit" disabled={saving}>
-                {saving ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}
-                {saving ? "Publishing…" : "Publish"}
-              </button>
-            </div>
-          </form>
-        </section>
-        </div>
+      {reels.length > 0 && (
+        <Tabs
+          label="Filter reels"
+          value={filter}
+          onChange={setFilter}
+          items={[
+            { value: "all", label: "All", count: reels.length },
+            { value: "live", label: "Live", count: totals.live },
+            { value: "hidden", label: "Hidden", count: reels.length - totals.live }
+          ]}
+        />
       )}
 
       {loading ? (
-        <div className="gy-empty">
-          <Loader2 className="spin-icon" size={22} />
-          <p>Loading reels…</p>
+        <div className="gx-reel-grid">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <span key={i} className="gx-skeleton" style={{ height: 320, borderRadius: 18 }} />
+          ))}
         </div>
       ) : reels.length === 0 ? (
-        <div className="gy-empty">
-          <Film size={26} />
-          <p>No reels yet. Publish your first educational video.</p>
+        <div className="gx-card">
+          <EmptyState
+            icon={<Film size={24} />}
+            title="Share your first reel"
+            action={
+              <button className="gx-btn gx-btn-primary" type="button" onClick={() => setShowForm(true)}>
+                <Plus size={16} /> Upload a video
+              </button>
+            }
+          >
+            A 30–60 second tip on cramps, PCOS or cycle health is a great way to build trust with patients.
+          </EmptyState>
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="gx-card">
+          <EmptyState icon={<Film size={22} />} title={`No ${filter} reels`} />
         </div>
       ) : (
-        <div className="gy-reel-grid">
-          {reels.map((reel) => (
-            <article className={`gy-card gy-reel-card ${reel.isActive ? "" : "inactive"}`} key={reel._id}>
-              <div
-                className="gy-reel-thumb"
-                style={{ backgroundImage: `url(${reel.thumbnailUrl})` }}
-              >
-                <span className="gy-reel-duration">{reel.duration || "0:30"}</span>
-                {!reel.isActive && <span className="gy-reel-badge">Hidden</span>}
-              </div>
-              <div className="gy-reel-body">
-                <h4>{reel.title}</h4>
-                <p className="gy-muted">{reel.category}</p>
-                <div className="gy-reel-stats">
-                  <span><Eye size={13} /> {reel.viewCount ?? 0}</span>
-                  <span><Heart size={13} /> {reel.likeCount ?? 0}</span>
-                </div>
-                <div className="gy-reel-actions">
-                  <button className="gy-btn gy-btn-ghost" type="button" onClick={() => toggleActive(reel)}>
-                    {reel.isActive ? "Hide" : "Show"}
-                  </button>
-                  <button className="gy-btn gy-btn-danger" type="button" onClick={() => remove(reel._id)}>
-                    <Trash2 size={14} />
-                  </button>
+        <div className="gx-reel-grid">
+          {shown.map((reel) => (
+            <article className={`gx-reel ${reel.isActive ? "" : "is-hidden"}`} key={reel._id}>
+              <a className="gx-reel-thumb" href={reel.directMp4Url} target="_blank" rel="noreferrer" style={{ backgroundImage: `url(${reel.thumbnailUrl})` }}>
+                <span className="gx-reel-play" aria-hidden><PlayCircle size={40} /></span>
+                <span className="gx-reel-duration">{reel.duration || "0:30"}</span>
+                <span className={`gx-reel-state ${reel.isActive ? "is-live" : ""}`}>{reel.isActive ? "Live" : "Hidden"}</span>
+              </a>
+              <div className="gx-reel-body">
+                <h3 title={reel.title}>{reel.title}</h3>
+                <p className="gx-muted">
+                  {reel.category || "General"}
+                  {reel.publishedAt ? ` · ${timeAgo(reel.publishedAt)}` : ""}
+                </p>
+                <div className="gx-reel-foot">
+                  <span className="gx-reel-stats">
+                    <span><Eye size={14} /> {reel.viewCount ?? 0}</span>
+                    <span><Heart size={14} /> {reel.likeCount ?? 0}</span>
+                  </span>
+                  <span className="gx-reel-actions">
+                    <button className="gx-icon-btn" type="button" onClick={() => toggleActive(reel)} title={reel.isActive ? "Hide from app" : "Make live"} aria-label={reel.isActive ? "Hide from app" : "Make live"}>
+                      {reel.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                    <button className="gx-icon-btn is-danger" type="button" onClick={() => remove(reel._id)} title="Delete" aria-label="Delete reel">
+                      <Trash2 size={16} />
+                    </button>
+                  </span>
                 </div>
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="gx-overlay is-centered" onClick={closeForm}>
+          <form className="gx-dialog is-wide" onSubmit={submit} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Publish a reel">
+            <div className="gx-drawer-head">
+              <span><Film size={16} /> Publish a reel</span>
+              <button className="gx-icon-btn" type="button" aria-label="Close" onClick={closeForm}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {error && <ErrorState message={error} />}
+
+            <div className="gx-form-grid">
+              <label className="gx-field gx-field-full">
+                <span>Title</span>
+                <input value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. 3 quick tips to ease period cramps" required autoFocus />
+              </label>
+
+              <div className="gx-field gx-field-full">
+                <MediaUploadField
+                  kind="video"
+                  folder="reels"
+                  label="Video"
+                  value={form.directMp4Url}
+                  onChange={(url) => set({ directMp4Url: url })}
+                  onDurationChange={(seconds) => set({ duration: formatDuration(seconds) })}
+                  required
+                />
+              </div>
+
+              <div className="gx-field gx-field-full">
+                <MediaUploadField
+                  kind="image"
+                  folder="thumbnails"
+                  label="Thumbnail (optional — we'll grab a frame from the video)"
+                  value={form.thumbnailUrl}
+                  onChange={(url) => set({ thumbnailUrl: url })}
+                />
+                {!form.thumbnailUrl && form.directMp4Url && (
+                  <button
+                    className="gx-btn gx-btn-ghost gx-btn-sm"
+                    type="button"
+                    onClick={async () => {
+                      const url = await generateThumbnail();
+                      if (url) set({ thumbnailUrl: url });
+                      else setError("Auto-thumbnail failed — please upload one manually.");
+                    }}
+                  >
+                    <Wand2 size={14} /> Generate from video
+                  </button>
+                )}
+                {thumbStatus && <small className="gx-muted">{thumbStatus}</small>}
+              </div>
+
+              <label className="gx-field">
+                <span>Category</span>
+                <input value={form.category} onChange={(e) => set({ category: e.target.value })} placeholder="Wellness" />
+              </label>
+              <label className="gx-field">
+                <span>Duration</span>
+                <input value={form.duration} onChange={(e) => set({ duration: e.target.value })} placeholder="Filled in from the video" />
+              </label>
+            </div>
+
+            <div className="gx-dialog-actions">
+              <button className="gx-btn gx-btn-ghost" type="button" onClick={closeForm}>
+                Cancel
+              </button>
+              <button className="gx-btn gx-btn-primary" type="submit" disabled={saving}>
+                {saving ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}
+                {saving ? "Publishing…" : "Publish reel"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

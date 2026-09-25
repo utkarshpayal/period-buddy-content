@@ -1,3 +1,4 @@
+import { isPendingApprovalError } from "../api/approval";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -55,6 +56,29 @@ const ROLES: { value: RoleAudience; label: string }[] = [
   { value: "user", label: "App users" },
   { value: "partner", label: "Partners" },
   { value: "doctor", label: "Gynecologists" }
+];
+
+// Where a tap on the notification lands in the app. Values are plain in-app
+// paths (The-Nura-App expo-router routes); the backend and the app both
+// re-validate them as in-app paths. "" = the app's notifications list.
+// Partner accounts are sent to their equivalent screen (Home/Tracker → shared
+// overview, Community → forum), or to their notifications list when the
+// screen has no partner equivalent.
+const DESTINATIONS: { value: string; label: string }[] = [
+  { value: "", label: "Notifications list (default)" },
+  { value: "/home", label: "Home" },
+  { value: "/tracker", label: "Cycle tracker / log today" },
+  { value: "/insights", label: "Daily insights" },
+  { value: "/predictions", label: "Predictions" },
+  { value: "/community", label: "Community" },
+  { value: "/blogs", label: "Blogs" },
+  { value: "/reels", label: "Videos" },
+  { value: "/habits", label: "Habits" },
+  { value: "/forest", label: "Wellness forest" },
+  { value: "/qa", label: "Ask Nura AI" },
+  { value: "/consultation", label: "Book a consultation" },
+  { value: "/government-schemes", label: "Government schemes" },
+  { value: "/subscription", label: "My subscription / plans" }
 ];
 
 const MODES: { value: Mode; label: string; hint: string; icon: React.ReactNode }[] = [
@@ -349,6 +373,7 @@ export const NotificationsPage: React.FC = () => {
   const [role, setRole] = useState<RoleAudience>("user");
   const [picked, setPicked] = useState<Recipient[]>([]);
   const [saveToInbox, setSaveToInbox] = useState(true);
+  const [route, setRoute] = useState("");
   const [showTest, setShowTest] = useState(false);
   const [testEmail, setTestEmail] = useState("");
 
@@ -466,9 +491,13 @@ export const NotificationsPage: React.FC = () => {
     if (!testEmail.trim()) return setError("Enter the email of the account to test on.");
     setTesting(true);
     try {
-      await sendTestNotification({ title: t, body: b, email: testEmail.trim() });
+      await sendTestNotification({ title: t, body: b, email: testEmail.trim(), route: route || undefined });
       setNotice(`Test sent to ${testEmail.trim()} — check that phone.`);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not send the test.");
     } finally {
       setTesting(false);
@@ -484,7 +513,8 @@ export const NotificationsPage: React.FC = () => {
         body: b,
         audience: mode === "people" ? "selected" : countAudience,
         userIds: mode === "people" ? picked.map((p) => p._id) : undefined,
-        saveToInbox
+        saveToInbox,
+        route: route || undefined
       });
       setConfirming(false);
       setNotice(
@@ -495,10 +525,15 @@ export const NotificationsPage: React.FC = () => {
       setTitle("");
       setBody("");
       setPicked([]);
+      setRoute("");
       if (page === 1) await loadHistory(true);
       else setPage(1);
     } catch (err) {
       setConfirming(false);
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not start the send.");
     } finally {
       setSending(false);
@@ -713,6 +748,20 @@ export const NotificationsPage: React.FC = () => {
               {body.length > BODY_SOFT && (
                 <small className="pn-warn">Only the first ~{BODY_SOFT} characters show before the user expands it.</small>
               )}
+            </label>
+
+            <label className="pn-field">
+              <span className="pn-label-row">
+                <span>Opens in the app</span>
+              </span>
+              <select value={route} onChange={(e) => setRoute(e.target.value)}>
+                {DESTINATIONS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+              <small className="pn-muted">The screen people land on when they tap the notification.</small>
             </label>
 
             <label className="gy-switch pn-inbox">
@@ -933,6 +982,10 @@ export const NotificationsPage: React.FC = () => {
               <div>
                 <dt>Push to devices</dt>
                 <dd>{reach ? `${mode === "people" ? "" : "≈ "}${fmt(reach.devices)}` : "—"}</dd>
+              </div>
+              <div>
+                <dt>Opens</dt>
+                <dd>{DESTINATIONS.find((d) => d.value === route)?.label ?? route}</dd>
               </div>
               <div>
                 <dt>In-app inbox</dt>

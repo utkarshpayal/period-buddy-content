@@ -1,51 +1,48 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
-import {
-  LayoutGrid,
-  FileText,
-  FileQuestion,
-  Film,
-  BookOpen,
-  Heart,
-  Settings,
-  LogOut,
-  LogIn,
-  UserCheck,
-  Users,
-  BarChart3,
-  Bell,
-  ScrollText,
-  Stethoscope,
-  ClipboardCheck,
-  Landmark,
-  Files,
-  CreditCard,
-  Menu,
-  X
-} from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { visibleSections } from "../navigation";
+import { WORKSPACE_TITLE, roleLabel } from "../auth/access";
+
+const initialsOf = (label: string) =>
+  label
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "NA";
 
 export const Sidebar: React.FC = () => {
-  const { authSession, logout } = useAppContext();
+  const { authSession, access, can, logout, approvalSummary } = useAppContext();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
-  const userFullName = [authSession?.user?.firstName, authSession?.user?.lastName].filter(Boolean).join(" ");
-  const signedInLabel = userFullName || authSession?.user?.name;
+  const sections = useMemo(() => visibleSections(can), [can]);
+  const title = WORKSPACE_TITLE[access?.department ?? "organisation"];
 
-  const link = ({ isActive }: { isActive: boolean }) =>
-    isActive ? "type-button active" : "type-button";
+  const user = authSession?.user;
+  const signedInLabel =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.name || user?.email || "Signed in";
+  const badgeCount = approvalSummary.toReview || approvalSummary.minePending;
+
+  const link = ({ isActive }: { isActive: boolean }) => (isActive ? "type-button active" : "type-button");
+
+  const brand = (
+    <div className="brand-lockup">
+      <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
+      <div>
+        <p className="eyebrow">The Nura Care</p>
+        <h1>{title}</h1>
+      </div>
+    </div>
+  );
 
   return (
     <>
       <div className="mobile-navbar">
-        <div className="brand-lockup">
-          <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
-          <div>
-            <p className="eyebrow">The Nura Care</p>
-            <h1>Admin Portal</h1>
-          </div>
-        </div>
+        {brand}
         <button
           className="mobile-menu-btn"
           type="button"
@@ -59,117 +56,54 @@ export const Sidebar: React.FC = () => {
 
       {open && <div className="nav-backdrop" onClick={close} />}
 
-      <aside className={`sidebar ${open ? "open" : ""}`}>
-        <div className="brand-lockup">
-          <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
-          <div>
-            <p className="eyebrow">The Nura Care</p>
-            <h1>Admin Portal</h1>
-          </div>
-        </div>
+      <aside className={`sidebar workspace-sidebar ${open ? "open" : ""}`}>
+        {brand}
 
-        <nav className="type-nav" aria-label="Content type filters">
-          <NavLink to="/" className={link} onClick={close}>
-            <LayoutGrid size={18} />
-            Dashboard
-          </NavLink>
-
-          <NavLink to="/analytics" className={link} onClick={close}>
-            <BarChart3 size={18} />
-            Analytics
-          </NavLink>
-
-          <NavLink to="/users" className={link} onClick={close}>
-            <Users size={18} />
-            Users
-          </NavLink>
-
-          <NavLink to="/notifications" className={link} onClick={close}>
-            <Bell size={18} />
-            Push Notifications
-          </NavLink>
-
-          <NavLink to="/audit-logs" className={link} onClick={close}>
-            <ScrollText size={18} />
-            Audit Logs
-          </NavLink>
-
-          <NavLink to="/blogs" className={link} onClick={close}>
-            <FileText size={18} />
-            Blogs
-          </NavLink>
-
-          <NavLink to="/qa" className={link} onClick={close}>
-            <FileQuestion size={18} />
-            Q&A Forum
-          </NavLink>
-
-          <NavLink to="/videos" className={link} onClick={close}>
-            <Film size={18} />
-            Video Reels
-          </NavLink>
-
-          <NavLink to="/guides" className={link} onClick={close}>
-            <BookOpen size={18} />
-            Wellbeing Guides
-          </NavLink>
-
-          <NavLink to="/conditions" className={link} onClick={close}>
-            <Heart size={18} />
-            Health Issues
-          </NavLink>
-
-          <NavLink to="/gynecologists" className={link} onClick={close}>
-            <Stethoscope size={18} />
-            Gynecologists
-          </NavLink>
-
-          <NavLink to="/schemes" className={link} onClick={close}>
-            <Landmark size={18} />
-            Govt. Schemes
-          </NavLink>
-
-          <NavLink to="/scheme-applications" className={link} onClick={close}>
-            <ClipboardCheck size={18} />
-            Scheme Applications
-          </NavLink>
-
-          <NavLink to="/company-files" className={link} onClick={close}>
-            <Files size={18} />
-            Company Files
-          </NavLink>
-
-          <NavLink to="/subscriptions" className={link} onClick={close}>
-            <CreditCard size={18} />
-            Subscriptions
-          </NavLink>
-
-          <NavLink to="/settings" className={link} onClick={close}>
-            <Settings size={18} />
-            Studio Settings
-          </NavLink>
+        <nav className="type-nav" aria-label="Workspace navigation">
+          {sections.map((section) => (
+            <div className="nav-group" key={section.id}>
+              <p className="nav-section-label">{section.label}</p>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const count = item.badge === "approvals" ? badgeCount : 0;
+                return (
+                  <NavLink key={item.path} to={item.path} end={item.path === "/"} className={link} onClick={close}>
+                    <Icon size={18} />
+                    <span className="nav-label">{item.label}</span>
+                    {count > 0 && (
+                      <span
+                        className={`nav-badge ${approvalSummary.toReview ? "is-alert" : ""}`}
+                        title={approvalSummary.toReview ? `${count} waiting for your review` : `${count} of your requests pending`}
+                      >
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        {authSession ? (
+        {authSession && (
           <div className="sidebar-user-card">
             <div className="user-info">
-              <UserCheck size={16} className="user-icon" />
-              <span className="user-name" title={signedInLabel}>
-                {signedInLabel}
+              <span className="user-avatar" aria-hidden>
+                {initialsOf(signedInLabel)}
               </span>
+              <div className="user-meta">
+                <span className="user-name" title={signedInLabel}>
+                  {signedInLabel}
+                </span>
+                <span className={`user-role-badge dept-${access?.department ?? "organisation"}`}>
+                  {access?.roleLabel ?? roleLabel(user?.role)}
+                </span>
+              </div>
             </div>
             <button onClick={() => { close(); logout(); }} className="logout-btn" type="button">
               <LogOut size={16} />
               Log out
             </button>
-          </div>
-        ) : (
-          <div className="sidebar-user-card sidebar-login-card">
-            <p className="sidebar-login-hint">You&apos;re browsing as a guest.</p>
-            <NavLink to="/login" className="login-cta-btn" onClick={close}>
-              <LogIn size={14} />
-              Sign in
-            </NavLink>
           </div>
         )}
       </aside>

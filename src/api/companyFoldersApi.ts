@@ -50,9 +50,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     body = undefined;
   }
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     handleUnauthorized();
     throw new Error(body?.message ?? "Your session has expired. Please sign in again.");
+  }
+  // 403 = signed in, but this role lacks the permission. Not a session problem.
+  if (response.status === 403) {
+    throw new Error(body?.message ?? "You don't have permission to do this.");
   }
 
   if (!response.ok) {

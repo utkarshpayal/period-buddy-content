@@ -1,3 +1,4 @@
+import { throwIfPendingApproval } from "./approval";
 import { starterContent } from "../data/starterContent";
 import { ContentItem, ContentType, CycleStage } from "../types/content";
 import { getApiToken, handleUnauthorized } from "./authApi";
@@ -517,9 +518,6 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
       message = "Your session has expired. Please sign in again.";
     }
 
-    if (response.status === 403) {
-      message = `${message}. This account is signed in but does not have content admin permission. Use an admin account or grant this user content permissions in the backend.`;
-    }
 
     throw new Error(message);
   }
@@ -528,7 +526,9 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const body = (await response.json()) as T;
+  throwIfPendingApproval(response.status, body);
+  return body;
 }
 
 export async function loadContent(): Promise<LoadResult> {
@@ -585,19 +585,7 @@ export async function createContent(item: ContentItem): Promise<MutationResult> 
       source: "api"
     };
   } catch (error) {
-    const message = getErrorMessage(error);
-
-    if (!isPermissionError(message)) {
-      throw error;
-    }
-
-    writeLocalContent([item, ...readLocalContent()]);
-
-    return {
-      item,
-      message: `${message} Saved locally instead.`,
-      source: "blocked"
-    };
+    throw error instanceof Error ? error : new Error(getErrorMessage(error));
   }
 }
 
@@ -624,19 +612,7 @@ export async function updateContent(id: string, item: ContentItem): Promise<Muta
       source: "api"
     };
   } catch (error) {
-    const message = getErrorMessage(error);
-
-    if (!isPermissionError(message)) {
-      throw error;
-    }
-
-    writeLocalContent(readLocalContent().map((contentItem) => (contentItem.id === id ? item : contentItem)));
-
-    return {
-      item,
-      message: `${message} Updated locally instead.`,
-      source: "blocked"
-    };
+    throw error instanceof Error ? error : new Error(getErrorMessage(error));
   }
 }
 
@@ -660,17 +636,6 @@ export async function deleteContent(id: string, type: ContentType): Promise<Muta
       source: "api"
     };
   } catch (error) {
-    const message = getErrorMessage(error);
-
-    if (!isPermissionError(message)) {
-      throw error;
-    }
-
-    writeLocalContent(readLocalContent().filter((contentItem) => contentItem.id !== id));
-
-    return {
-      message: `${message} Deleted locally instead.`,
-      source: "blocked"
-    };
+    throw error instanceof Error ? error : new Error(getErrorMessage(error));
   }
 }

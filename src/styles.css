@@ -4682,13 +4682,13 @@ button:focus-visible,
 .pn-label-row { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #5f554d; }
 .pn-count { font-weight: 500; color: var(--pb-muted, #8c7f8a); font-variant-numeric: tabular-nums; }
 .pn-count.is-warn { color: #b7791f; }
-.pn-field input, .pn-field textarea, .pn-test input {
+.pn-field input, .pn-field textarea, .pn-field select, .pn-test input {
   font: inherit; font-size: 0.92rem;
   background: #fff; border: 1px solid #e6d8de; border-radius: 11px; padding: 11px 12px;
   color: var(--pb-ink, #2a2230); resize: vertical;
   transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
-.pn-field input:focus, .pn-field textarea:focus, .pn-test input:focus {
+.pn-field input:focus, .pn-field textarea:focus, .pn-field select:focus, .pn-test input:focus {
   border-color: var(--pn-berry); box-shadow: 0 0 0 3px rgba(176, 58, 99, 0.14); outline: none;
 }
 .pn-warn { color: #b7791f; font-size: 0.75rem; }

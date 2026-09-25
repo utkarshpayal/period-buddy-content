@@ -1,3 +1,4 @@
+import { isPendingApprovalError } from "../api/approval";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -107,6 +108,10 @@ export const UsersPage: React.FC = () => {
       setUsers((prev) => prev.map((x) => (x._id === u._id ? { ...x, isActive: res.user.isActive } : x)));
       setNotice(`${fullName(u)} ${nextActive ? "activated" : "suspended"}.`);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : `Failed to ${verb} user.`);
     } finally {
       setBusyId(null);

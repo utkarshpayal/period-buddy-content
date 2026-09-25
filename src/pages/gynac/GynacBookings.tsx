@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Loader2,
   AlertCircle,
@@ -12,7 +13,12 @@ import {
   Activity,
   Droplet,
   CalendarDays,
-  ClipboardList
+  ClipboardList,
+  ArrowLeft,
+  Search,
+  MessagesSquare,
+  Inbox,
+  Pill
 } from "lucide-react";
 import {
   Consultation,
@@ -30,16 +36,31 @@ import {
   formatMoney,
   getWebSocketUrl
 } from "../../api/doctorApi";
-import { GynacHead } from "./GynacHead";
+import { Avatar, EmptyState, PageHeader, StatusBadge, Tabs, timeAgo } from "../../components/ui";
+import { useToast } from "../../components/Toast";
 import { ConsultationCall, ConsultationCallHandle } from "./ConsultationCall";
 
-const FILTERS: { key: ConsultationStatus | "all"; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Active" },
-  { key: "paid", label: "New" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" }
+type Filter = ConsultationStatus | "all";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "paid", label: "New" },
+  { value: "active", label: "In progress" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" }
 ];
+
+/** "Today" / "Yesterday" / a date — for separators in the conversation. */
+const dayLabel = (iso?: string) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+};
 
 /**
  * Collapses a message list so the same message never renders twice. The load,
@@ -60,7 +81,11 @@ function dedupeMessages(messages: ConsultationMessage[]): ConsultationMessage[] 
 }
 
 export const GynacBookings: React.FC = () => {
-  const [filter, setFilter] = useState<ConsultationStatus | "all">("all");
+  const toast = useToast();
+  const location = useLocation();
+  const openOnLoad = (location.state as { open?: string } | null)?.open;
+  const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
   const [bookings, setBookings] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +114,11 @@ export const GynacBookings: React.FC = () => {
     try {
       const list = await getConsultations(filter === "all" ? undefined : filter);
       setBookings(list);
+      // Arriving from the dashboard's "Up next" list opens that booking.
+      if (openOnLoad && !selected) {
+        const target = list.find((b) => b._id === openOnLoad);
+        if (target) openChat(target);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load bookings.");
     } finally {
@@ -112,7 +142,7 @@ export const GynacBookings: React.FC = () => {
     try {
       setMessages(dedupeMessages(await getConsultationMessages(booking._id)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load messages.");
+      toast.error(err instanceof Error ? err.message : "Failed to load messages.");
     } finally {
       setMsgLoading(false);
     }
@@ -187,7 +217,7 @@ export const GynacBookings: React.FC = () => {
         );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send message.");
+      toast.error(err instanceof Error ? err.message : "Could not send message.");
     } finally {
       setSending(false);
     }
@@ -221,7 +251,7 @@ export const GynacBookings: React.FC = () => {
   const beginCall = () => {
     if (!selected) return;
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setError("Still connecting to the consultation room. Try again in a moment.");
+      toast.show("Still connecting to the consultation room. Try again in a moment.", "info");
       return;
     }
     callRef.current?.startCall();
@@ -235,8 +265,9 @@ export const GynacBookings: React.FC = () => {
       setSelected(updated);
       setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
       setShowRx(false);
+      toast.success("Prescription saved and shared with the patient.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save prescription.");
+      toast.error(err instanceof Error ? err.message : "Could not save prescription.");
     } finally {
       setRxSaving(false);
     }
@@ -245,11 +276,13 @@ export const GynacBookings: React.FC = () => {
   const finish = async () => {
     if (!selected) return;
     try {
+      if (!window.confirm("Mark this consultation as completed? Chat will close for this session.")) return;
       const updated = await completeConsultation(selected._id);
       setSelected(updated);
+      toast.success("Consultation completed.");
       setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not complete session.");
+      toast.error(err instanceof Error ? err.message : "Could not complete session.");
     }
   };
 
@@ -261,159 +294,229 @@ export const GynacBookings: React.FC = () => {
       setSelected(updated);
       setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not cancel session.");
+      toast.error(err instanceof Error ? err.message : "Could not cancel session.");
     }
   };
 
-  const isLive = selected && ["paid", "active"].includes(selected.status);
+  const isLive = Boolean(selected && ["paid", "active"].includes(selected.status));
   // Patient records (and the prescription editor) should only be reachable
   // while the session is actually live — once a booking is completed or
   // cancelled, both close back down rather than staying open indefinitely.
   const isConnected = isLive;
 
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? bookings.filter((b) => patientName(b.userId).toLowerCase().includes(q)) : bookings;
+  }, [bookings, search]);
+
+  // Messages with a date separator wherever the day changes.
+  const thread = useMemo(() => {
+    const out: Array<{ kind: "day"; label: string } | { kind: "msg"; msg: ConsultationMessage }> = [];
+    let lastDay = "";
+    for (const msg of messages) {
+      const label = dayLabel(msg.sentAt);
+      if (label && label !== lastDay) {
+        out.push({ kind: "day", label });
+        lastDay = label;
+      }
+      out.push({ kind: "msg", msg });
+    }
+    return out;
+  }, [messages]);
+
+  const onComposerKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      e.currentTarget.form?.requestSubmit();
+    }
+  };
+
+  const selectedName = selected ? patientName(selected.userId) : "";
+
   return (
-    <div className="workspace-page">
-      <GynacHead
-        title="Bookings & Consultations"
-        subtitle="Review bookings, chat with patients, connect over video, and share prescriptions."
+    <div className="gx-page gx-page-fill">
+      <PageHeader
+        eyebrow="Consultations"
+        title="Bookings & Chat"
+        subtitle="Chat with patients, start video calls, and share prescriptions — all in one place."
       />
 
       {error && (
-        <div className="gy-alert gy-alert-error">
-          <AlertCircle size={16} />
+        <div className="gx-error" role="alert">
+          <AlertCircle size={18} />
           <span>{error}</span>
         </div>
       )}
 
-      <div className="gy-filters">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            className={`gy-chip ${filter === f.key ? "active" : ""}`}
-            onClick={() => setFilter(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <div className={`gx-inbox ${selected ? "has-selection" : ""}`}>
+        <aside className="gx-inbox-list" aria-label="Bookings">
+          <div className="gx-inbox-tools">
+            <label className="gx-search">
+              <Search size={16} />
+              <input
+                type="search"
+                placeholder="Search patients"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            <Tabs label="Filter bookings" items={FILTERS} value={filter} onChange={setFilter} />
+          </div>
 
-      <div className="gy-bookings-layout">
-        <div className="gy-booking-list">
-          {loading ? (
-            <div className="gy-empty">
-              <Loader2 className="spin-icon" size={20} />
-              <p>Loading…</p>
-            </div>
-          ) : bookings.length === 0 ? (
-            <div className="gy-empty">
-              <p>No bookings in this view.</p>
-            </div>
-          ) : (
-            bookings.map((b) => (
-              <button
-                key={b._id}
-                type="button"
-                className={`gy-booking-item ${selected?._id === b._id ? "active" : ""}`}
-                onClick={() => openChat(b)}
-              >
-                <div className="gy-booking-item-head">
-                  <strong>{patientName(b.userId)}</strong>
-                  <em className={`gy-pill gy-status-${b.status}`}>{b.status}</em>
-                </div>
-                <p className="gy-muted">
-                  {formatMoney(b.amountPaid, b.currency)} ·{" "}
-                  {b.createdAt ? new Date(b.createdAt).toLocaleDateString() : ""}
-                </p>
-              </button>
-            ))
-          )}
-        </div>
+          <div className="gx-inbox-items">
+            {loading ? (
+              <div className="gx-center-pad">
+                <Loader2 className="spin-icon" size={20} />
+              </div>
+            ) : visible.length === 0 ? (
+              <EmptyState icon={<Inbox size={22} />} title={search ? "No matching patients" : "Nothing here"}>
+                {search ? "Try a different name." : "Bookings in this view will show up here."}
+              </EmptyState>
+            ) : (
+              visible.map((b) => {
+                const name = patientName(b.userId);
+                return (
+                  <button
+                    key={b._id}
+                    type="button"
+                    className={`gx-inbox-item ${selected?._id === b._id ? "is-active" : ""} ${b.status === "paid" ? "is-new" : ""}`}
+                    onClick={() => openChat(b)}
+                  >
+                    <Avatar name={name} />
+                    <span className="gx-inbox-item-text">
+                      <span className="gx-inbox-item-top">
+                        <strong>{name}</strong>
+                        <time>{timeAgo(b.updatedAt || b.createdAt)}</time>
+                      </span>
+                      <span className="gx-inbox-item-bottom">
+                        <StatusBadge status={b.status} />
+                        <span className="gx-muted">{formatMoney(b.amountPaid, b.currency)}</span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </aside>
 
-        <div className="gy-chat-panel">
+        <section className="gx-conversation" aria-label="Conversation">
           {!selected ? (
-            <div className="gy-empty gy-chat-empty">
-              <FileText size={26} />
-              <p>Select a booking to view the conversation.</p>
-            </div>
+            <EmptyState icon={<MessagesSquare size={24} />} title="Select a booking">
+              Pick a patient on the left to see your conversation, start a call, or write a prescription.
+            </EmptyState>
           ) : (
             <>
-              <div className="gy-chat-head">
-                <div>
-                  <strong>{patientName(selected.userId)}</strong>
-                  <em className={`gy-pill gy-status-${selected.status}`}>{selected.status}</em>
+              <header className="gx-conv-head">
+                <button type="button" className="gx-icon-btn gx-back" aria-label="Back to bookings" onClick={() => setSelected(null)}>
+                  <ArrowLeft size={18} />
+                </button>
+                <Avatar name={selectedName} />
+                <div className="gx-conv-title">
+                  <strong>{selectedName}</strong>
+                  <span>
+                    <StatusBadge status={selected.status} /> {formatMoney(selected.amountPaid, selected.currency)} · booked{" "}
+                    {timeAgo(selected.createdAt)}
+                  </span>
                 </div>
-                <div className="gy-chat-actions">
+                <div className="gx-conv-actions">
                   {isConnected && (
-                    <button className="gy-btn gy-btn-ghost" type="button" onClick={openPatient}>
-                      <UserIcon size={15} /> Patient records
+                    <button className="gx-btn gx-btn-ghost" type="button" onClick={openPatient}>
+                      <UserIcon size={16} /> <span className="gx-hide-sm">Records</span>
                     </button>
                   )}
-                  <button className="gy-btn gy-btn-primary" type="button" onClick={beginCall} disabled={!isLive}>
-                    <Video size={15} /> Video call
+                  <button className="gx-btn gx-btn-ghost" type="button" onClick={() => setShowRx(true)} disabled={!isLive}>
+                    <Pill size={16} /> <span className="gx-hide-sm">Prescription</span>
                   </button>
-                  <button
-                    className="gy-btn gy-btn-ghost"
-                    type="button"
-                    onClick={() => setShowRx(true)}
-                    disabled={!isLive}
-                  >
-                    <FileText size={15} /> Prescription
+                  <button className="gx-btn gx-btn-primary" type="button" onClick={beginCall} disabled={!isLive}>
+                    <Video size={16} /> <span className="gx-hide-sm">Video call</span>
                   </button>
+                </div>
+              </header>
+
+              {isLive && (
+                <div className="gx-conv-bar">
+                  <span>
+                    {selected.status === "paid"
+                      ? "New booking — reply to start the consultation."
+                      : "Consultation in progress."}
+                  </span>
+                  <span className="gx-conv-bar-actions">
+                    <button className="gx-btn gx-btn-sm gx-btn-success" type="button" onClick={finish}>
+                      <CheckCircle2 size={14} /> Complete
+                    </button>
+                    <button className="gx-btn gx-btn-sm gx-btn-quiet-danger" type="button" onClick={abort}>
+                      <XCircle size={14} /> Cancel
+                    </button>
+                  </span>
+                </div>
+              )}
+
+              {selected.prescription && (
+                <div className="gx-rx-pinned">
+                  <FileText size={16} />
+                  <div>
+                    <strong>Prescription shared</strong>
+                    <p>{selected.prescription}</p>
+                  </div>
                   {isLive && (
-                    <>
-                      <button className="gy-btn gy-btn-ok" type="button" onClick={finish}>
-                        <CheckCircle2 size={15} /> Complete
-                      </button>
-                      <button className="gy-btn gy-btn-danger" type="button" onClick={abort}>
-                        <XCircle size={15} /> Cancel
-                      </button>
-                    </>
+                    <button type="button" className="gx-link" onClick={() => setShowRx(true)}>
+                      Edit
+                    </button>
                   )}
                 </div>
-              </div>
+              )}
 
-              <div className="gy-messages" ref={scrollRef}>
+              <div className="gx-messages" ref={scrollRef}>
                 {msgLoading ? (
-                  <div className="gy-empty">
+                  <div className="gx-center-pad">
                     <Loader2 className="spin-icon" size={18} />
                   </div>
                 ) : messages.length === 0 ? (
-                  <p className="gy-muted gy-center">No messages yet. Say hello to your patient.</p>
+                  <p className="gx-thread-empty">No messages yet. Say hello to {selectedName.split(" ")[0]}.</p>
                 ) : (
-                  messages.map((m) => (
-                    <div
-                      key={m._id}
-                      className={`gy-bubble ${m.sender === "doctor" ? "mine" : "theirs"}`}
-                    >
-                      <p>{m.text}</p>
-                      {m.attachmentUrl && (
-                        <a href={m.attachmentUrl} target="_blank" rel="noreferrer" className="gy-attach">
-                          Attachment
-                        </a>
-                      )}
-                      <span className="gy-bubble-time">
-                        {m.sentAt ? new Date(m.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                      </span>
-                    </div>
-                  ))
+                  thread.map((entry, i) =>
+                    entry.kind === "day" ? (
+                      <div className="gx-day-sep" key={`day-${entry.label}-${i}`}>
+                        <span>{entry.label}</span>
+                      </div>
+                    ) : (
+                      <div key={entry.msg._id ?? i} className={`gx-bubble ${entry.msg.sender === "doctor" ? "mine" : "theirs"}`}>
+                        <p>{entry.msg.text}</p>
+                        {entry.msg.attachmentUrl && (
+                          <a href={entry.msg.attachmentUrl} target="_blank" rel="noreferrer" className="gx-attach">
+                            <FileText size={14} /> View attachment
+                          </a>
+                        )}
+                        <time>
+                          {entry.msg.sentAt
+                            ? new Date(entry.msg.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                            : ""}
+                        </time>
+                      </div>
+                    )
+                  )
                 )}
               </div>
 
-              <form className="gy-composer" onSubmit={send}>
-                <input
+              <form className="gx-composer" onSubmit={send}>
+                <textarea
+                  rows={1}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder={isLive ? "Type a message…" : "Session is not active"}
+                  onKeyDown={onComposerKey}
+                  placeholder={isLive ? "Write a message…" : "This consultation is closed"}
+                  title="Enter to send · Shift+Enter for a new line"
                   disabled={!isLive || sending}
+                  aria-label="Message"
                 />
-                <button className="gy-btn gy-btn-primary" type="submit" disabled={!isLive || sending || !draft.trim()}>
-                  {sending ? <Loader2 className="spin-icon" size={16} /> : <Send size={16} />}
+                <button className="gx-btn gx-btn-primary gx-send" type="submit" disabled={!isLive || sending || !draft.trim()} aria-label="Send">
+                  {sending ? <Loader2 className="spin-icon" size={18} /> : <Send size={18} />}
                 </button>
               </form>
             </>
           )}
-        </div>
+        </section>
       </div>
 
       {selected && (
@@ -421,7 +524,7 @@ export const GynacBookings: React.FC = () => {
           key={selected._id}
           ref={callRef}
           roomId={`consultation_${selected._id}`}
-          peerName={patientName(selected.userId)}
+          peerName={selectedName}
           socketRef={socketRef}
           messages={messages}
           onSendMessage={sendMessageText}
@@ -429,114 +532,98 @@ export const GynacBookings: React.FC = () => {
       )}
 
       {showPatient && selected && (
-        <div className="gy-modal-overlay" onClick={() => setShowPatient(false)}>
-          <aside className="gy-patient-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="gy-modal-head">
+        <div className="gx-overlay" onClick={() => setShowPatient(false)}>
+          <aside className="gx-drawer" onClick={(e) => e.stopPropagation()} aria-label="Patient records">
+            <div className="gx-drawer-head">
               <span><UserIcon size={16} /> Patient records</span>
-              <button className="gy-icon-btn" type="button" onClick={() => setShowPatient(false)}>
+              <button className="gx-icon-btn" type="button" aria-label="Close" onClick={() => setShowPatient(false)}>
                 <X size={18} />
               </button>
             </div>
 
             {patientLoading ? (
-              <div className="gy-empty">
+              <div className="gx-center-pad">
                 <Loader2 className="spin-icon" size={20} />
-                <p>Loading patient records…</p>
               </div>
             ) : patientError ? (
-              <div className="gy-alert gy-alert-error">
+              <div className="gx-error">
                 <AlertCircle size={16} />
                 <span>{patientError}</span>
               </div>
             ) : patient ? (
-              <div className="gy-patient-body">
-                <div className="gy-patient-id">
-                  <span className="gy-patient-avatar" aria-hidden>
-                    {patient.profile.name.trim().charAt(0).toUpperCase() || "P"}
-                  </span>
+              <div className="gx-drawer-body">
+                <div className="gx-patient-id">
+                  <Avatar name={patient.profile.name} size="lg" src={patient.profile.profilePicture} />
                   <div>
-                    <h4>{patient.profile.name}</h4>
-                    <p className="gy-muted">{patient.profile.email}</p>
-                    <div className="gy-patient-tags">
-                      {patient.profile.age != null && <span className="gy-tag">{patient.profile.age} yrs</span>}
-                      {patient.profile.gender && <span className="gy-tag">{patient.profile.gender}</span>}
-                      {patient.profile.country && <span className="gy-tag">{patient.profile.country}</span>}
+                    <h3>{patient.profile.name}</h3>
+                    <p className="gx-muted">{patient.profile.email}</p>
+                    <div className="gx-tags">
+                      {patient.profile.age != null && <span className="gx-tag">{patient.profile.age} yrs</span>}
+                      {patient.profile.gender && <span className="gx-tag">{patient.profile.gender}</span>}
+                      {patient.profile.country && <span className="gx-tag">{patient.profile.country}</span>}
                     </div>
                   </div>
                 </div>
 
-                <section className="gy-patient-section">
-                  <h5><Activity size={14} /> Cycle overview</h5>
+                <section className="gx-drawer-section">
+                  <h4><Activity size={14} /> Cycle overview</h4>
                   {patient.cycle ? (
-                    <div className="gy-patient-metrics">
-                      <div className="gy-metric">
-                        <span className="gy-metric-value">{patient.cycle.cycleLength ?? "—"}</span>
-                        <span className="gy-metric-label">Cycle length (days)</span>
-                      </div>
-                      <div className="gy-metric">
-                        <span className="gy-metric-value">{patient.cycle.periodLength ?? "—"}</span>
-                        <span className="gy-metric-label">Period length (days)</span>
-                      </div>
-                      <div className="gy-metric">
-                        <span className="gy-metric-value">
+                    <div className="gx-metrics">
+                      <div><strong>{patient.cycle.cycleLength ?? "—"}</strong><span>Cycle length (days)</span></div>
+                      <div><strong>{patient.cycle.periodLength ?? "—"}</strong><span>Period length (days)</span></div>
+                      <div>
+                        <strong>
                           {patient.cycle.lastPeriodStartDate
-                            ? new Date(patient.cycle.lastPeriodStartDate).toLocaleDateString()
+                            ? new Date(patient.cycle.lastPeriodStartDate).toLocaleDateString(undefined, { day: "numeric", month: "short" })
                             : "—"}
-                        </span>
-                        <span className="gy-metric-label">Last period start</span>
+                        </strong>
+                        <span>Last period start</span>
                       </div>
-                      {patient.cycle.pregnancyMode && (
-                        <div className="gy-metric">
-                          <span className="gy-metric-value">Yes</span>
-                          <span className="gy-metric-label">Pregnancy mode</span>
-                        </div>
-                      )}
+                      {patient.cycle.pregnancyMode && <div><strong>Yes</strong><span>Pregnancy mode</span></div>}
                     </div>
                   ) : (
-                    <p className="gy-muted">No cycle data shared.</p>
+                    <p className="gx-muted">No cycle data shared.</p>
                   )}
                 </section>
 
-                <section className="gy-patient-section">
-                  <h5><Droplet size={14} /> Recent logs</h5>
+                <section className="gx-drawer-section">
+                  <h4><Droplet size={14} /> Recent logs</h4>
                   {patient.recentLogs.length === 0 ? (
-                    <p className="gy-muted">No recent logs.</p>
+                    <p className="gx-muted">No recent logs.</p>
                   ) : (
-                    <div className="gy-log-list">
+                    <ul className="gx-log-list">
                       {patient.recentLogs.map((log) => (
-                        <div className="gy-log-row" key={log._id}>
-                          <span className="gy-log-date">
+                        <li key={log._id}>
+                          <span className="gx-log-date">
                             <CalendarDays size={12} />
-                            {log.date ? new Date(log.date).toLocaleDateString() : log.dateKey}
+                            {log.date ? new Date(log.date).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : log.dateKey}
                           </span>
-                          <div className="gy-log-tags">
-                            {log.flow && log.flow !== "none" && <span className={`gy-tag gy-flow-${log.flow}`}>{log.flow}</span>}
-                            {log.phase && <span className="gy-tag">{log.phase}</span>}
-                            {log.mood && <span className="gy-tag">{log.mood}</span>}
-                            {(log.symptoms ?? []).slice(0, 3).map((s) => (
-                              <span className="gy-tag gy-tag-symptom" key={s}>{s}</span>
+                          <span className="gx-tags">
+                            {log.flow && log.flow !== "none" && <span className={`gx-tag flow-${log.flow}`}>{log.flow}</span>}
+                            {log.phase && <span className="gx-tag">{log.phase}</span>}
+                            {log.mood && <span className="gx-tag">{log.mood}</span>}
+                            {(log.symptoms ?? []).slice(0, 3).map((sym) => (
+                              <span className="gx-tag is-symptom" key={sym}>{sym}</span>
                             ))}
-                          </div>
-                        </div>
+                          </span>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   )}
                 </section>
 
                 {patient.screenings.length > 0 && (
-                  <section className="gy-patient-section">
-                    <h5><ClipboardList size={14} /> Screening assessments</h5>
-                    <div className="gy-screen-list">
-                      {patient.screenings.map((s) => (
-                        <div className={`gy-screen-card gy-risk-${s.riskLevel}`} key={s._id}>
-                          <div className="gy-screen-head">
-                            <strong>{s.condition.toUpperCase()}</strong>
-                            <span className="gy-risk-badge">{s.riskLevel} risk · {s.score}</span>
-                          </div>
-                          <p className="gy-muted">{s.doctorDiscussionSummary || s.summary}</p>
+                  <section className="gx-drawer-section">
+                    <h4><ClipboardList size={14} /> Screening assessments</h4>
+                    {patient.screenings.map((sc) => (
+                      <div className={`gx-screen risk-${sc.riskLevel}`} key={sc._id}>
+                        <div className="gx-screen-head">
+                          <strong>{sc.condition.toUpperCase()}</strong>
+                          <span>{sc.riskLevel} risk · score {sc.score}</span>
                         </div>
-                      ))}
-                    </div>
+                        <p>{sc.doctorDiscussionSummary || sc.summary}</p>
+                      </div>
+                    ))}
                   </section>
                 )}
               </div>
@@ -546,25 +633,28 @@ export const GynacBookings: React.FC = () => {
       )}
 
       {showRx && selected && (
-        <div className="gy-modal-overlay" onClick={() => setShowRx(false)}>
-          <div className="gy-card gy-rx-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="gy-modal-head">
-              <span><FileText size={16} /> Prescription for {patientName(selected.userId)}</span>
-              <button className="gy-icon-btn" type="button" onClick={() => setShowRx(false)}>
+        <div className="gx-overlay is-centered" onClick={() => setShowRx(false)}>
+          <div className="gx-dialog" role="dialog" aria-label="Prescription" onClick={(e) => e.stopPropagation()}>
+            <div className="gx-drawer-head">
+              <span><Pill size={16} /> Prescription for {selectedName}</span>
+              <button className="gx-icon-btn" type="button" aria-label="Close" onClick={() => setShowRx(false)}>
                 <X size={18} />
               </button>
             </div>
+            <p className="gx-muted">The patient sees this in their app as soon as you save.</p>
             <textarea
-              rows={8}
+              className="gx-textarea"
+              rows={9}
               value={rxText}
               onChange={(e) => setRxText(e.target.value)}
-              placeholder="Medication, dosage, advice, follow-up…"
+              placeholder={"Medication — dosage — duration\nAdvice\nFollow-up"}
+              autoFocus
             />
-            <div className="gy-form-actions">
-              <button className="gy-btn gy-btn-ghost" type="button" onClick={() => setShowRx(false)}>
+            <div className="gx-dialog-actions">
+              <button className="gx-btn gx-btn-ghost" type="button" onClick={() => setShowRx(false)}>
                 Cancel
               </button>
-              <button className="gy-btn gy-btn-primary" type="button" onClick={saveRx} disabled={rxSaving || !rxText.trim()}>
+              <button className="gx-btn gx-btn-primary" type="button" onClick={saveRx} disabled={rxSaving || !rxText.trim()}>
                 {rxSaving ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}
                 Save prescription
               </button>

@@ -5,7 +5,7 @@ import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 
 export const SettingsPage: React.FC = () => {
-  const { authSession, logout, apiSource, apiMessage } = useAppContext();
+  const { authSession, access, logout, apiSource } = useAppContext();
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const contentEndpoint = import.meta.env.VITE_CONTENT_ENDPOINT || "/api/content";
@@ -13,8 +13,8 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="workspace-page">
       <Header 
-        title="Studio Settings" 
-        subtitle="Manage active backend endpoints, environment credentials, and account details." 
+        title="Account & Settings"
+        subtitle="Your account, your access, and the backend this workspace is connected to."
       />
 
       <ApiBanner />
@@ -59,7 +59,7 @@ export const SettingsPage: React.FC = () => {
         <section className="settings-card">
           <div className="card-title-row">
             <Shield size={20} className="card-icon" />
-            <h3>Administrator Session</h3>
+            <h3>Your Account</h3>
           </div>
 
           {authSession ? (
@@ -70,8 +70,17 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               <div className="detail-row">
-                <span className="detail-label">Designated Role</span>
-                <span className="detail-value capitalize">{authSession.user?.role || "Admin"}</span>
+                <span className="detail-label">Role</span>
+                <span className="detail-value">{access?.roleLabel ?? authSession.user?.role ?? "—"}</span>
+              </div>
+
+              <div className="detail-row">
+                <span className="detail-label">Permissions</span>
+                <span className="detail-value settings-perms">
+                  {access?.permissions.length
+                    ? access.permissions.map((p) => <code key={p}>{p}</code>)
+                    : "—"}
+                </span>
               </div>
 
               <div className="detail-row">
@@ -87,7 +96,7 @@ export const SettingsPage: React.FC = () => {
               <div className="logout-btn-container">
                 <button onClick={logout} className="btn-logout-settings" type="button">
                   <LogOut size={16} />
-                  Terminate Admin Session
+                  Sign out
                 </button>
               </div>
             </div>
