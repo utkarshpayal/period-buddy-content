@@ -33,6 +33,7 @@ npm run dev               # http://localhost:5173 (also reachable on your LAN)
 |---|---|
 | `VITE_API_BASE_URL` | Backend URL: `http://localhost:5000` for a local backend, `https://www.backend.thenura.care` for production. Most pages need it. |
 | `VITE_LOGIN_ENDPOINT` | Login path (default `/api/auth/login`) |
+| `VITE_CONTENT_ENDPOINT` | Content API path (default `/api/content`) |
 | `VITE_API_TOKEN` | **Dev only**: a fixed bearer token to skip login while developing. Ignored in production builds. |
 
 Put `.env` in the **project root** (Vite doesn't read `src/.env`). All `VITE_*`
