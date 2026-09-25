@@ -25,7 +25,7 @@ import {
   ConsultationMessage,
   ConsultationStatus,
   PatientOverview,
-  getConsultations,
+  getConsultationsPage,
   getConsultationMessages,
   getConsultationPatient,
   sendConsultationMessage,
@@ -108,28 +108,75 @@ export const GynacBookings: React.FC = () => {
   const socketRef = useRef<WebSocket | null>(null);
   const callRef = useRef<ConsultationCallHandle | null>(null);
 
+  // Paged 20 at a time ("Load more" at the bottom of the list); the patient
+  // search runs on the server so it covers every booking, not just the
+  // loaded ones.
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [hasMoreBookings, setHasMoreBookings] = useState(false);
+  const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const loadGeneration = useRef(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const fetchBookingsPage = (page: number) =>
+    getConsultationsPage({
+      page,
+      status: filter === "all" ? undefined : filter,
+      search: debouncedSearch || undefined,
+    });
+
   const loadBookings = async () => {
+    const generation = ++loadGeneration.current;
     setLoading(true);
     setError(null);
     try {
-      const list = await getConsultations(filter === "all" ? undefined : filter);
+      const { consultations: list, pagination } = await fetchBookingsPage(1);
+      if (generation !== loadGeneration.current) return;
       setBookings(list);
+      setBookingsPage(1);
+      setHasMoreBookings(Boolean(pagination?.hasNextPage));
       // Arriving from the dashboard's "Up next" list opens that booking.
       if (openOnLoad && !selected) {
         const target = list.find((b) => b._id === openOnLoad);
         if (target) openChat(target);
       }
     } catch (err) {
+      if (generation !== loadGeneration.current) return;
       setError(err instanceof Error ? err.message : "Failed to load bookings.");
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
+    }
+  };
+
+  const loadMoreBookings = async () => {
+    if (loadingMoreBookings || !hasMoreBookings) return;
+    const generation = loadGeneration.current;
+    setLoadingMoreBookings(true);
+    try {
+      const next = bookingsPage + 1;
+      const { consultations: list, pagination } = await fetchBookingsPage(next);
+      if (generation !== loadGeneration.current) return;
+      setBookings((prev) => {
+        const seen = new Set(prev.map((b) => b._id));
+        return prev.concat(list.filter((b) => !seen.has(b._id)));
+      });
+      setBookingsPage(next);
+      setHasMoreBookings(Boolean(pagination?.hasNextPage));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not load more bookings.");
+    } finally {
+      setLoadingMoreBookings(false);
     }
   };
 
   useEffect(() => {
     loadBookings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, debouncedSearch]);
 
   const openChat = async (booking: Consultation) => {
     setSelected(booking);
@@ -304,10 +351,8 @@ export const GynacBookings: React.FC = () => {
   // cancelled, both close back down rather than staying open indefinitely.
   const isConnected = isLive;
 
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return q ? bookings.filter((b) => patientName(b.userId).toLowerCase().includes(q)) : bookings;
-  }, [bookings, search]);
+  // Search is applied server-side (see fetchBookingsPage).
+  const visible = bookings;
 
   // Messages with a date separator wherever the day changes.
   const thread = useMemo(() => {
@@ -397,6 +442,18 @@ export const GynacBookings: React.FC = () => {
                 );
               })
             )}
+            {!loading && hasMoreBookings ? (
+              <div className="gx-center-pad">
+                <button
+                  type="button"
+                  className="gy-btn gy-btn-ghost"
+                  onClick={loadMoreBookings}
+                  disabled={loadingMoreBookings}
+                >
+                  {loadingMoreBookings ? <Loader2 className="spin-icon" size={16} /> : null} Load more
+                </button>
+              </div>
+            ) : null}
           </div>
         </aside>
 

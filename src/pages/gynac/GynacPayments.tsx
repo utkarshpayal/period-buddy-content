@@ -13,6 +13,11 @@ import {
   Tabs,
   formatDate
 } from "../../components/ui";
+import { Pagination } from "../../components/Pagination";
+
+// Table rows per page. Totals, the session count and the CSV export always
+// cover every row in the chosen period — only the table itself is paged.
+const ROWS_PER_PAGE = 25;
 
 type Range = "all" | "30d" | "90d" | "year";
 
@@ -68,6 +73,14 @@ export const GynacPayments: React.FC = () => {
       .filter((p) => !q || patientName(p.userId).toLowerCase().includes(q))
       .sort((a, b) => new Date(paidAt(b) ?? 0).getTime() - new Date(paidAt(a) ?? 0).getTime());
   }, [data, range, search]);
+
+  const [tablePage, setTablePage] = useState(1);
+  useEffect(() => {
+    setTablePage(1);
+  }, [range, search]);
+  const pageCount = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
+  const currentPage = Math.min(tablePage, pageCount);
+  const pageRows = rows.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
   const total = rows.reduce((sum, p) => sum + (p.amountPaid ?? 0), 0);
   const avg = rows.length ? Math.round(total / rows.length) : 0;
@@ -153,7 +166,7 @@ export const GynacPayments: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((p) => {
+                {pageRows.map((p) => {
                   const name = patientName(p.userId);
                   return (
                     <tr key={p._id}>
@@ -176,6 +189,13 @@ export const GynacPayments: React.FC = () => {
                 </tr>
               </tfoot>
             </table>
+            <div style={{ padding: "12px 16px" }}>
+              <Pagination
+                pagination={{ page: currentPage, pages: pageCount, total: rows.length }}
+                onPageChange={setTablePage}
+                itemLabel="payments"
+              />
+            </div>
           </div>
         )}
       </Card>

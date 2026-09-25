@@ -1,3 +1,4 @@
+import type { PageInfo } from "../components/Pagination";
 import { throwIfPendingApproval } from "./approval";
 import { getApiToken, handleUnauthorized } from "./authApi";
 import { fetchWithTimeout } from "./http";
@@ -148,9 +149,11 @@ type ApiEnvelope<T> = {
   statusCode?: number;
   message?: string;
   data?: T;
+  /** Present on list endpoints called with ?page=/?limit= (backend sendPaginatedList). */
+  pagination?: PageInfo;
 };
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function requestEnvelope<T>(path: string, options: RequestInit = {}): Promise<ApiEnvelope<T>> {
   if (!apiBaseUrl) {
     throw new Error(
       "This page requires the API. Add VITE_API_BASE_URL to a root .env file, then restart the dev server."
@@ -192,6 +195,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   throwIfPendingApproval(response.status, body);
 
+  return body ?? {};
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const body = await requestEnvelope<T>(path, options);
   return (body?.data ?? (body as unknown as T)) as T;
 }
 
@@ -248,6 +256,14 @@ export const deletePlan = (id: string) =>
 /* ------------------------------- Coupons --------------------------------- */
 
 export const adminListCoupons = () => request<Coupon[]>("/api/admin/subscriptions/coupons");
+
+/** One page of coupons (newest first), optionally filtered by code. */
+export const adminListCouponsPage = async (params: { page: number; limit?: number; search?: string }) => {
+  const query = new URLSearchParams({ page: String(params.page), limit: String(params.limit ?? 20) });
+  if (params.search?.trim()) query.set("search", params.search.trim());
+  const body = await requestEnvelope<Coupon[]>(`/api/admin/subscriptions/coupons?${query}`);
+  return { coupons: body.data ?? [], pagination: body.pagination ?? null };
+};
 
 export const createCoupon = (input: CouponInput) =>
   request<Coupon>("/api/admin/subscriptions/coupons", {
