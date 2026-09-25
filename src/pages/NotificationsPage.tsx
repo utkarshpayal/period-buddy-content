@@ -1,3 +1,4 @@
+import { isPendingApprovalError } from "../api/approval";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -493,6 +494,10 @@ export const NotificationsPage: React.FC = () => {
       await sendTestNotification({ title: t, body: b, email: testEmail.trim(), route: route || undefined });
       setNotice(`Test sent to ${testEmail.trim()} — check that phone.`);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not send the test.");
     } finally {
       setTesting(false);
@@ -525,6 +530,10 @@ export const NotificationsPage: React.FC = () => {
       else setPage(1);
     } catch (err) {
       setConfirming(false);
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not start the send.");
     } finally {
       setSending(false);

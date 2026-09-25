@@ -3,6 +3,7 @@ import {
   Film, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, PlayCircle, BarChart3, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
@@ -235,6 +236,7 @@ export const VideosPage: React.FC = () => {
                       <div className="entry-title-row">
                         <h4>{video.title}</h4>
                         <span className={`status-chip ${video.status}`}>{video.status}</span>
+                        <PendingBadge id={video.id} />
                       </div>
                       <p>{video.summary || video.videoUrl}</p>
                       <div className="entry-meta">

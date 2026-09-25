@@ -3,6 +3,7 @@ import {
   FileQuestion, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, CheckCircle, ShieldAlert, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
@@ -216,6 +217,7 @@ export const QAsPage: React.FC = () => {
                       <div className="entry-title-row">
                         <h4>{qa.question || qa.title}</h4>
                         <span className={`status-chip ${qa.status}`}>{qa.status}</span>
+                        <PendingBadge id={qa.id} />
                       </div>
                       <p>{qa.answer || qa.summary}</p>
                       <div className="entry-meta">

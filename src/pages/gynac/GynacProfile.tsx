@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Loader2, AlertCircle, Save } from "lucide-react";
-import { DoctorProfile, getMyProfile, updateMyProfile } from "../../api/doctorApi";
-import { GynacHead } from "./GynacHead";
+import { Building2, Clock, Globe2, Loader2, Save, Star } from "lucide-react";
+import { DoctorProfile, formatMoney, getMyProfile, updateMyProfile } from "../../api/doctorApi";
+import { Card, ErrorState, PageHeader, PageSkeleton } from "../../components/ui";
 import { useNoticeToast } from "../../components/Toast";
 
 export const GynacProfile: React.FC = () => {
@@ -12,6 +12,7 @@ export const GynacProfile: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   useNoticeToast(notice, () => setNotice(null));
   const [languagesText, setLanguagesText] = useState("");
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -27,8 +28,10 @@ export const GynacProfile: React.FC = () => {
     })();
   }, []);
 
-  const set = (patch: Partial<DoctorProfile>) =>
+  const set = (patch: Partial<DoctorProfile>) => {
+    setDirty(true);
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +54,7 @@ export const GynacProfile: React.FC = () => {
       setProfile(updated);
       setLanguagesText((updated.languages ?? []).join(", "));
       setNotice("Profile updated.");
+      setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save profile.");
     } finally {
@@ -58,97 +62,150 @@ export const GynacProfile: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading) return <PageSkeleton stats={0} rows={8} />;
+  if (!profile) {
     return (
-      <div className="workspace-page">
-        <div className="gy-empty">
-          <Loader2 className="spin-icon" size={22} />
-          <p>Loading profile…</p>
-        </div>
+      <div className="gx-page">
+        <ErrorState message={error ?? "Profile not found."} />
       </div>
     );
   }
 
-  if (error && !profile) {
-    return (
-      <div className="workspace-page">
-        <div className="gy-alert gy-alert-error">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profile) return null;
+  const languages = languagesText.split(",").map((l) => l.trim()).filter(Boolean);
+  const BIO_MAX = 600;
 
   return (
-    <div className="workspace-page">
-      <GynacHead title="My Profile" subtitle="How you appear to patients on Period Buddy." />
+    <div className="gx-page">
+      <PageHeader
+        eyebrow="Account"
+        title="My profile"
+        subtitle="This is how patients see you when they choose a gynecologist in the Nura app."
+      />
 
-      {error && (
-        <div className="gy-alert gy-alert-error">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorState message={error} />}
 
-      <section className="gy-card gy-form-card">
-        <form className="gy-form-grid" onSubmit={save}>
-          <label className="gy-field">
-            <span>Display name</span>
-            <input value={profile.name} onChange={(e) => set({ name: e.target.value })} required />
-          </label>
-          <label className="gy-field">
-            <span>Specialty</span>
-            <input value={profile.specialty} onChange={(e) => set({ specialty: e.target.value })} required />
-          </label>
-          <label className="gy-field">
-            <span>Avatar emoji</span>
-            <input value={profile.avatarEmoji ?? ""} onChange={(e) => set({ avatarEmoji: e.target.value })} />
-          </label>
-          <label className="gy-field">
-            <span>Experience</span>
-            <input value={profile.experience ?? ""} onChange={(e) => set({ experience: e.target.value })} />
-          </label>
-          <label className="gy-field">
-            <span>Price / session</span>
-            <input
-              type="number"
-              min={0}
-              value={profile.pricePerSession}
-              onChange={(e) => set({ pricePerSession: Number(e.target.value) })}
-            />
-          </label>
-          <label className="gy-field">
-            <span>Currency</span>
-            <select value={profile.currency ?? "INR"} onChange={(e) => set({ currency: e.target.value })}>
-              <option value="INR">INR (₹)</option>
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-            </select>
-          </label>
-          <label className="gy-field gy-field-full">
-            <span>Hospital / Clinic</span>
-            <input value={profile.hospital ?? ""} onChange={(e) => set({ hospital: e.target.value })} />
-          </label>
-          <label className="gy-field gy-field-full">
-            <span>Languages (comma separated)</span>
-            <input value={languagesText} onChange={(e) => setLanguagesText(e.target.value)} />
-          </label>
-          <label className="gy-field gy-field-full">
-            <span>Bio</span>
-            <textarea rows={4} value={profile.bio ?? ""} onChange={(e) => set({ bio: e.target.value })} />
-          </label>
-          <div className="gy-form-actions gy-field-full">
-            <button className="gy-btn gy-btn-primary" type="submit" disabled={saving}>
+      <div className="gx-profile-layout">
+        <form className="gx-card gx-form" onSubmit={save}>
+          <fieldset>
+            <legend>Identity</legend>
+            <div className="gx-form-grid">
+              <label className="gx-field">
+                <span>Display name</span>
+                <input value={profile.name} onChange={(e) => set({ name: e.target.value })} required />
+              </label>
+              <label className="gx-field">
+                <span>Specialty</span>
+                <input value={profile.specialty} onChange={(e) => set({ specialty: e.target.value })} required />
+              </label>
+              <label className="gx-field">
+                <span>Avatar emoji</span>
+                <input value={profile.avatarEmoji ?? ""} maxLength={4} onChange={(e) => set({ avatarEmoji: e.target.value })} />
+                <small>Shown on your card in the app.</small>
+              </label>
+              <label className="gx-field">
+                <span>Experience</span>
+                <input value={profile.experience ?? ""} placeholder="e.g. 12 years" onChange={(e) => set({ experience: e.target.value })} />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Practice</legend>
+            <div className="gx-form-grid">
+              <label className="gx-field">
+                <span>Consultation fee</span>
+                <div className="gx-input-group">
+                  <select value={profile.currency ?? "INR"} onChange={(e) => set({ currency: e.target.value })} aria-label="Currency">
+                    <option value="INR">₹ INR</option>
+                    <option value="USD">$ USD</option>
+                    <option value="EUR">€ EUR</option>
+                    <option value="GBP">£ GBP</option>
+                  </select>
+                  <input
+                    type="number"
+                    min={0}
+                    value={profile.pricePerSession}
+                    onChange={(e) => set({ pricePerSession: Number(e.target.value) })}
+                    aria-label="Price per session"
+                  />
+                </div>
+              </label>
+              <label className="gx-field">
+                <span>Hospital / clinic</span>
+                <input value={profile.hospital ?? ""} onChange={(e) => set({ hospital: e.target.value })} />
+              </label>
+              <label className="gx-field gx-field-full">
+                <span>Languages</span>
+                <input
+                  value={languagesText}
+                  placeholder="English, Hindi"
+                  onChange={(e) => {
+                    setDirty(true);
+                    setLanguagesText(e.target.value);
+                  }}
+                />
+                <small>Separate with commas.</small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>About you</legend>
+            <label className="gx-field gx-field-full">
+              <span>Bio</span>
+              <textarea
+                rows={5}
+                maxLength={BIO_MAX}
+                value={profile.bio ?? ""}
+                placeholder="Your approach, areas of focus, and what patients can expect."
+                onChange={(e) => set({ bio: e.target.value })}
+              />
+              <small className="gx-counter">{(profile.bio ?? "").length}/{BIO_MAX}</small>
+            </label>
+          </fieldset>
+
+          <div className="gx-form-footer">
+            <span className="gx-muted">{dirty ? "You have unsaved changes." : "All changes saved."}</span>
+            <button className="gx-btn gx-btn-primary" type="submit" disabled={saving || !dirty}>
               {saving ? <Loader2 className="spin-icon" size={16} /> : <Save size={16} />}
               Save profile
             </button>
           </div>
         </form>
-      </section>
+
+        <aside className="gx-profile-preview" aria-label="Preview">
+          <p className="gx-eyebrow">Patient view</p>
+          <Card className="gx-doctor-card">
+            <div className="gx-doctor-card-top">
+              <span className="gx-doctor-emoji" aria-hidden>{profile.avatarEmoji || "👩‍⚕️"}</span>
+              <div>
+                <h3>{profile.name || "Your name"}</h3>
+                <p>{profile.specialty || "Specialty"}</p>
+                {profile.rating ? (
+                  <span className="gx-inline-meta">
+                    <Star size={13} className="gx-star" /> {profile.rating.toFixed(1)}
+                    {profile.totalConsultations ? ` · ${profile.totalConsultations} consultations` : ""}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <ul className="gx-doctor-facts">
+              {profile.experience && <li><Clock size={14} /> {profile.experience} experience</li>}
+              {profile.hospital && <li><Building2 size={14} /> {profile.hospital}</li>}
+              {languages.length > 0 && <li><Globe2 size={14} /> {languages.join(", ")}</li>}
+            </ul>
+            {profile.bio && <p className="gx-doctor-bio">{profile.bio}</p>}
+            <div className="gx-doctor-cta">
+              <span>
+                <strong>{formatMoney(profile.pricePerSession, profile.currency || "INR")}</strong> / session
+              </span>
+              <span className={`gx-avail-pill ${profile.isAvailable ? "is-on" : ""}`}>
+                {profile.isAvailable ? "Available" : "Paused"}
+              </span>
+            </div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 };

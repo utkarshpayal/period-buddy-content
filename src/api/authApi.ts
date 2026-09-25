@@ -1,10 +1,15 @@
+import type { WorkspaceAccess } from "../auth/access";
+
 export type AuthUser = {
   id?: string;
+  _id?: string;
   name?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
   role?: string;
+  /** Staff only: role label, department and permissions (see auth/access.ts). */
+  access?: WorkspaceAccess;
 };
 
 export type AuthSession = {
@@ -142,6 +147,11 @@ function saveAuthSession(session: AuthSession) {
   if (session.user) {
     localStorage.setItem(userStorageKey, JSON.stringify(session.user));
   }
+}
+
+/** Replace the stored user (e.g. after GET /api/admin/me refreshes access). */
+export function saveStoredUser(user: AuthUser) {
+  localStorage.setItem(userStorageKey, JSON.stringify(user));
 }
 
 function getErrorMessage(error: unknown) {

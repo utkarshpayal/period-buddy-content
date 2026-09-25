@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Loader2, AlertCircle, CheckCircle2, Plus, Trash2, Clock, Copy } from "lucide-react";
+import { Loader2, CheckCircle2, Plus, Trash2, Clock, Copy, CalendarOff } from "lucide-react";
 import { AvailabilitySlot, getAvailability, setAvailability } from "../../api/doctorApi";
-import { GynacHead } from "./GynacHead";
+import { ErrorState, PageHeader, PageSkeleton, Toggle } from "../../components/ui";
 import { useNoticeToast } from "../../components/Toast";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -16,6 +16,7 @@ export const GynacAvailability: React.FC = () => {
   const [week, setWeek] = useState<WeekMap>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   useNoticeToast(notice, () => setNotice(null));
@@ -55,6 +56,7 @@ export const GynacAvailability: React.FC = () => {
   );
 
   const toggleDay = (day: number) => {
+    setDirty(true);
     setWeek((prev) => {
       const next = { ...prev };
       if (next[day]?.length) delete next[day];
@@ -63,10 +65,13 @@ export const GynacAvailability: React.FC = () => {
     });
   };
 
-  const addRange = (day: number) =>
+  const addRange = (day: number) => {
+    setDirty(true);
     setWeek((prev) => ({ ...prev, [day]: [...(prev[day] ?? []), defaultRange()] }));
+  };
 
-  const removeRange = (day: number, idx: number) =>
+  const removeRange = (day: number, idx: number) => {
+    setDirty(true);
     setWeek((prev) => {
       const ranges = (prev[day] ?? []).filter((_, i) => i !== idx);
       const next = { ...prev };
@@ -74,16 +79,20 @@ export const GynacAvailability: React.FC = () => {
       else delete next[day];
       return next;
     });
+  };
 
-  const updateRange = (day: number, idx: number, patch: Partial<Range>) =>
+  const updateRange = (day: number, idx: number, patch: Partial<Range>) => {
+    setDirty(true);
     setWeek((prev) => ({
       ...prev,
       [day]: (prev[day] ?? []).map((r, i) => (i === idx ? { ...r, ...patch } : r))
     }));
+  };
 
   const copyToWeekdays = (day: number) => {
     const ranges = week[day];
     if (!ranges?.length) return;
+    setDirty(true);
     setWeek((prev) => {
       const next = { ...prev };
       [1, 2, 3, 4, 5].forEach((d) => {
@@ -119,6 +128,7 @@ export const GynacAvailability: React.FC = () => {
     try {
       await setAvailability(slots);
       setNotice("Availability saved.");
+      setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save availability.");
     } finally {
@@ -126,104 +136,116 @@ export const GynacAvailability: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="workspace-page">
-        <div className="gy-empty">
-          <Loader2 className="spin-icon" size={22} />
-          <p>Loading availability…</p>
-        </div>
-      </div>
-    );
-  }
+  const minutes = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  // Overview strip spans 6am–10pm so typical clinic hours fill the bar.
+  const DAY_START = 6 * 60;
+  const DAY_SPAN = 16 * 60;
+
+  if (loading) return <PageSkeleton stats={0} rows={7} />;
 
   return (
-    <div className="workspace-page">
-      <GynacHead
-        title="Weekly Availability"
-        subtitle={`Set the recurring hours when patients can book you. ${enabledDays} day${
-          enabledDays === 1 ? "" : "s"
-        } active · ${weeklySlots} bookable slot${weeklySlots === 1 ? "" : "s"} / week.`}
+    <div className="gx-page">
+      <PageHeader
+        eyebrow="Practice"
+        title="Weekly availability"
+        subtitle={`Recurring hours patients can book. ${enabledDays} day${enabledDays === 1 ? "" : "s"} open · ${weeklySlots} slot${weeklySlots === 1 ? "" : "s"} a week.`}
         actions={
-          <button className="gy-btn gy-btn-primary" type="button" onClick={save} disabled={saving}>
+          <button className="gx-btn gx-btn-primary" type="button" onClick={save} disabled={saving || !dirty}>
             {saving ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}
-            Save availability
+            {dirty ? "Save changes" : "Saved"}
           </button>
         }
       />
 
-      {error && (
-        <div className="gy-alert gy-alert-error">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorState message={error} />}
 
-      <div className="gy-week">
+      <section className="gx-card gx-week-overview" aria-label="Week at a glance">
+        {DAYS_SHORT.map((label, day) => (
+          <div className="gx-week-col" key={label}>
+            <span className="gx-week-day">{label}</span>
+            <div className="gx-week-track">
+              {(week[day] ?? []).map((r, i) => {
+                const top = Math.max(0, ((minutes(r.startTime) - DAY_START) / DAY_SPAN) * 100);
+                const height = Math.max(3, ((minutes(r.endTime) - minutes(r.startTime)) / DAY_SPAN) * 100);
+                return (
+                  <span
+                    key={i}
+                    className="gx-week-block"
+                    style={{ top: `${top}%`, height: `${Math.min(height, 100 - top)}%` }}
+                    title={`${r.startTime}–${r.endTime} · ${r.maxSlots} slots`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        <div className="gx-week-scale" aria-hidden>
+          <span>6am</span>
+          <span>2pm</span>
+          <span>10pm</span>
+        </div>
+      </section>
+
+      <div className="gx-days">
         {DAYS.map((label, day) => {
           const ranges = week[day] ?? [];
           const active = ranges.length > 0;
           return (
-            <section className={`gy-card gy-day-card ${active ? "active" : ""}`} key={label}>
-              <div className="gy-day-head">
-                <label className="gy-switch">
-                  <input type="checkbox" checked={active} onChange={() => toggleDay(day)} />
-                  <span className="gy-switch-track" aria-hidden />
-                  <span className="gy-day-name">
-                    <span className="gy-day-full">{label}</span>
-                    <span className="gy-day-short">{DAYS_SHORT[day]}</span>
-                  </span>
-                </label>
-                {active && (
-                  <div className="gy-day-tools">
-                    <button className="gy-btn gy-btn-ghost" type="button" onClick={() => addRange(day)}>
-                      <Plus size={14} /> Range
+            <section className={`gx-day ${active ? "is-open" : ""}`} key={label}>
+              <div className="gx-day-head">
+                <Toggle checked={active} onChange={() => toggleDay(day)} label={<strong>{label}</strong>} />
+                {active ? (
+                  <div className="gx-day-tools">
+                    <button className="gx-btn gx-btn-ghost gx-btn-sm" type="button" onClick={() => addRange(day)}>
+                      <Plus size={14} /> Add hours
                     </button>
                     {day !== 0 && day !== 6 && (
-                      <button className="gy-btn gy-btn-ghost" type="button" onClick={() => copyToWeekdays(day)}>
-                        <Copy size={14} /> To weekdays
+                      <button className="gx-btn gx-btn-ghost gx-btn-sm" type="button" onClick={() => copyToWeekdays(day)}>
+                        <Copy size={14} /> Copy to weekdays
                       </button>
                     )}
                   </div>
+                ) : (
+                  <span className="gx-day-off">
+                    <CalendarOff size={14} /> Unavailable
+                  </span>
                 )}
               </div>
 
-              {!active ? (
-                <p className="gy-muted gy-day-off">Unavailable</p>
-              ) : (
-                <div className="gy-range-list">
-                  {ranges.map((r, idx) => (
-                    <div className="gy-range-row" key={idx}>
-                      <input
-                        type="time"
-                        value={r.startTime}
-                        onChange={(e) => updateRange(day, idx, { startTime: e.target.value })}
-                      />
-                      <span className="gy-muted">to</span>
-                      <input
-                        type="time"
-                        value={r.endTime}
-                        onChange={(e) => updateRange(day, idx, { endTime: e.target.value })}
-                      />
-                      <label className="gy-slot-max">
-                        <span>Slots</span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={r.maxSlots}
-                          onChange={(e) => updateRange(day, idx, { maxSlots: Number(e.target.value) })}
-                        />
-                      </label>
-                      <button
-                        className="gy-icon-btn gy-icon-danger"
-                        type="button"
-                        onClick={() => removeRange(day, idx)}
-                        aria-label="Remove range"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
+              {active && (
+                <div className="gx-ranges">
+                  {ranges.map((r, idx) => {
+                    const invalid = r.startTime >= r.endTime;
+                    return (
+                      <div className={`gx-range ${invalid ? "is-invalid" : ""}`} key={idx}>
+                        <label>
+                          <span>From</span>
+                          <input type="time" value={r.startTime} onChange={(e) => updateRange(day, idx, { startTime: e.target.value })} />
+                        </label>
+                        <label>
+                          <span>To</span>
+                          <input type="time" value={r.endTime} onChange={(e) => updateRange(day, idx, { endTime: e.target.value })} />
+                        </label>
+                        <label className="gx-range-slots">
+                          <span>Slots</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={r.maxSlots}
+                            onChange={(e) => updateRange(day, idx, { maxSlots: Number(e.target.value) })}
+                          />
+                        </label>
+                        <button className="gx-icon-btn is-danger" type="button" onClick={() => removeRange(day, idx)} aria-label={`Remove ${label} hours`}>
+                          <Trash2 size={16} />
+                        </button>
+                        {invalid && <p className="gx-field-error">End time must be after the start time.</p>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -231,10 +253,9 @@ export const GynacAvailability: React.FC = () => {
         })}
       </div>
 
-      <div className="gy-avail-hint">
-        <Clock size={14} />
-        <span>Patients see these hours in the app when booking a consultation.</span>
-      </div>
+      <p className="gx-hint">
+        <Clock size={14} /> Patients see these hours in the app when they book a consultation.
+      </p>
     </div>
   );
 };

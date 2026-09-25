@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
+import { isPendingApprovalMessage } from "../api/approval";
 
 type ToastTone = "success" | "error" | "info";
 type ToastItem = { id: number; tone: ToastTone; message: string };
@@ -64,7 +65,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     () => ({
       show,
       success: (m) => show(m, "success"),
-      error: (m) => show(m, "error")
+      // A queued approval arrives through the same catch blocks as real
+      // failures (see api/approval.ts) — show it as information instead.
+      error: (m) => show(m, isPendingApprovalMessage(m) ? "info" : "error")
     }),
     [show]
   );
@@ -104,7 +107,7 @@ export const useNoticeToast = (notice: string | null, clear: () => void) => {
   clearRef.current = clear;
   useEffect(() => {
     if (!notice) return;
-    toast.success(notice);
+    toast.show(notice, isPendingApprovalMessage(notice) ? "info" : "success");
     clearRef.current();
   }, [notice, toast]);
 };

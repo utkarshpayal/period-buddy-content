@@ -3,6 +3,7 @@ import {
   BookOpen, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Leaf, Sparkles, Heart, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
@@ -226,6 +227,7 @@ export const GuidesPage: React.FC = () => {
                       <div className="entry-title-row">
                         <h4>{guide.title}</h4>
                         <span className={`status-chip ${guide.status}`}>{guide.status}</span>
+                        <PendingBadge id={guide.id} />
                       </div>
                       <p>{guide.summary}</p>
                       <div className="entry-meta">

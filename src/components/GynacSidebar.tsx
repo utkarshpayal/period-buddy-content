@@ -41,7 +41,7 @@ export const GynacSidebar: React.FC = () => {
           <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
           <div>
             <p className="eyebrow">The Nura Care</p>
-            <h1>Gynac Portal</h1>
+            <h1>Clinician Portal</h1>
           </div>
         </div>
         <button
@@ -62,7 +62,7 @@ export const GynacSidebar: React.FC = () => {
         <img className="sidebar-logo" src="/assets/logo.png" alt="The Nura Care" />
         <div>
           <p className="eyebrow">The Nura Care</p>
-          <h1>Gynac Portal</h1>
+          <h1>Clinician Portal</h1>
         </div>
       </div>
 
@@ -90,7 +90,7 @@ export const GynacSidebar: React.FC = () => {
         <p className="nav-section-label">Content</p>
         <NavLink to="/reels" className={link} onClick={close}>
           <Film size={18} />
-          Reels &amp; Content
+          Reels
         </NavLink>
 
         <p className="nav-section-label">Account</p>
@@ -106,7 +106,7 @@ export const GynacSidebar: React.FC = () => {
             <span className="user-avatar" aria-hidden>{initials}</span>
             <div className="user-meta">
               <span className="user-name" title={signedInLabel}>{signedInLabel}</span>
-              <span className="user-role-badge">Gynecologist</span>
+              <span className="user-role-badge dept-clinical">Gynecologist</span>
             </div>
           </div>
           <button onClick={() => { close(); logout(); }} className="logout-btn" type="button">

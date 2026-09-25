@@ -1,23 +1,19 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LogIn, Loader2, AlertCircle, KeyRound, Check, Clock } from "lucide-react";
+import React, { useState } from "react";
+import { AlertCircle, Clock, Eye, EyeOff, FileText, Loader2, LogIn, Smartphone, Stethoscope } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 
+/**
+ * One sign-in for everyone who works on Nura: content, app and clinical
+ * staff land in the Admin Workspace scoped to their role; gynecologists land
+ * in the clinician portal. Routing happens in App.tsx once the session exists.
+ */
 export const LoginPage: React.FC = () => {
-  const { login, apiMessage, authSession, sessionExpired, clearSessionExpired } = useAppContext();
-  const navigate = useNavigate();
+  const { login, sessionExpired, clearSessionExpired } = useAppContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // Once a fresh session exists, leave the login screen for the studio.
-  useEffect(() => {
-    if (authSession?.token) {
-      const t = setTimeout(() => navigate("/", { replace: true }), 600);
-      return () => clearTimeout(t);
-    }
-  }, [authSession?.token, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,98 +26,91 @@ export const LoginPage: React.FC = () => {
     }
 
     setIsLoading(true);
-    const success = await login({ email: email.trim(), password });
+    const error = await login({ email: email.trim(), password });
     setIsLoading(false);
-
-    if (!success) {
-      setErrorMsg(apiMessage || "Invalid credentials. Please try again.");
-    }
+    if (error) setErrorMsg(error || "Invalid credentials. Please try again.");
   };
 
   return (
-    <div className="login-page-container">
-      <div className="login-card">
-        <div className="login-brand">
-          <img className="login-logo-img" src="/assets/logo.png" alt="Nura Care Logo" />
-
-          <h2>The Nura Care</h2>
-          <p className="subtitle">Admin Portal</p>
+    <div className="auth-screen">
+      <aside className="auth-aside" aria-hidden>
+        <div className="auth-aside-brand">
+          <img src="/assets/logo.png" alt="" />
+          <span>The Nura Care</span>
         </div>
+        <div className="auth-aside-copy">
+          <h1>One workspace for everyone behind Nura.</h1>
+          <p>Sign in with your work account. You'll only see the tools your role needs.</p>
+        </div>
+        <ul className="auth-aside-list">
+          <li><FileText size={18} /> Content teams write, review and publish</li>
+          <li><Smartphone size={18} /> App teams run users, pushes and plans</li>
+          <li><Stethoscope size={18} /> Gynecologists manage consultations</li>
+        </ul>
+      </aside>
 
-        {authSession ? (
-          <div className="login-success-state">
-            <div className="success-icon-wrapper">
-              <Check size={28} />
+      <main className="auth-main">
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
+          <img className="auth-form-logo" src="/assets/logo.png" alt="The Nura Care" />
+          <h2>Welcome back</h2>
+          <p className="auth-form-sub">Sign in to your Nura workspace</p>
+
+          {sessionExpired && !errorMsg && (
+            <div className="login-info-alert">
+              <Clock size={16} />
+              <span>Your session expired. Please sign in again to continue.</span>
             </div>
-            <h3>Successfully Signed In</h3>
-            <p className="user-email">{authSession.user?.email}</p>
-            <p className="success-desc">
-              You are signed in as an administrator. Use the sidebar to navigate the studio.
-            </p>
-          </div>
-        ) : (
-          <form className="login-form-pane" onSubmit={handleSubmit}>
-            <div className="form-header">
-              <KeyRound size={18} />
-              <span>Admin Authentication</span>
+          )}
+
+          {errorMsg && (
+            <div className="login-error-alert" role="alert">
+              <AlertCircle size={16} />
+              <span>{errorMsg}</span>
             </div>
+          )}
 
-            {sessionExpired && !errorMsg && (
-              <div className="login-info-alert">
-                <Clock size={16} />
-                <span>Your session expired. Please sign in again to continue.</span>
-              </div>
-            )}
+          <label className="auth-field">
+            <span>Work email</span>
+            <input
+              autoComplete="email"
+              autoFocus
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@thenura.care"
+              type="email"
+              value={email}
+            />
+          </label>
 
-            {errorMsg && (
-              <div className="login-error-alert">
-                <AlertCircle size={16} />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div className="input-group">
-              <label htmlFor="email-input">Email Address</label>
+          <label className="auth-field">
+            <span>Password</span>
+            <div className="auth-password">
               <input
-                id="email-input"
-                autoComplete="email"
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@periodbuddy.com"
-                required
-                type="email"
-                value={email}
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="password-input">Password</label>
-              <input
-                id="password-input"
                 autoComplete="current-password"
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                type="password"
+                placeholder="Your password"
+                type={showPassword ? "text" : "password"}
                 value={password}
               />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+          </label>
 
-            <button className="btn-login-submit" disabled={isLoading} type="submit">
-              {isLoading ? (
-                <>
-                  <Loader2 className="spin-icon" size={18} />
-                  <span>Signing In...</span>
-                </>
-              ) : (
-                <>
-                  <LogIn size={18} />
-                  <span>Sign In</span>
-                </>
-              )}
-            </button>
-          </form>
-        )}
-      </div>
+          <button className="auth-submit" disabled={isLoading} type="submit">
+            {isLoading ? <Loader2 className="spin-icon" size={18} /> : <LogIn size={18} />}
+            {isLoading ? "Signing in…" : "Sign in"}
+          </button>
+
+          <p className="auth-foot">
+            New to the team? Use the invitation link in your email to set your password.
+          </p>
+        </form>
+      </main>
     </div>
   );
 };

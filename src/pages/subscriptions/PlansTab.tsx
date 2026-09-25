@@ -1,3 +1,4 @@
+import { isPendingApprovalError } from "../../api/approval";
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Package, Pencil, Plus, Trash2, X } from "lucide-react";
 import {
@@ -144,6 +145,11 @@ export const PlansTab: React.FC = () => {
       }
       setShowForm(false);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        setShowForm(false);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not save this plan.");
     } finally {
       setSubmitting(false);
@@ -157,6 +163,10 @@ export const PlansTab: React.FC = () => {
       const updated = await updatePlan(p._id, { isActive: !p.isActive });
       setPlans((prev) => prev.map((x) => (x._id === p._id ? updated : x)));
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not update this plan.");
     } finally {
       setBusyId(null);
@@ -173,6 +183,10 @@ export const PlansTab: React.FC = () => {
       setPlans((prev) => prev.filter((x) => x._id !== p._id));
       setNotice(`Deleted "${p.name}".`);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not delete this plan.");
     } finally {
       setBusyId(null);

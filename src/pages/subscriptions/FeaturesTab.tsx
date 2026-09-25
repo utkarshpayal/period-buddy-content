@@ -1,3 +1,4 @@
+import { isPendingApprovalError } from "../../api/approval";
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ListChecks, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import {
@@ -110,6 +111,10 @@ export const FeaturesTab: React.FC = () => {
       const updated = await updateFeature(f._id, { isPremium: !f.isPremium });
       patchLocal(f._id, updated);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not update this feature.");
     } finally {
       setBusyId(null);
@@ -123,6 +128,10 @@ export const FeaturesTab: React.FC = () => {
       const updated = await updateFeature(f._id, { price });
       patchLocal(f._id, updated);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not update the price.");
     } finally {
       setBusyId(null);
@@ -136,6 +145,10 @@ export const FeaturesTab: React.FC = () => {
       const updated = await updateFeature(f._id, { billingCycle });
       patchLocal(f._id, updated);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not update the billing cycle.");
     } finally {
       setBusyId(null);
@@ -169,6 +182,11 @@ export const FeaturesTab: React.FC = () => {
       }
       setShowForm(false);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        setShowForm(false);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not save this feature.");
     } finally {
       setSubmitting(false);
@@ -185,6 +203,10 @@ export const FeaturesTab: React.FC = () => {
       setFeatures((prev) => prev.filter((x) => x._id !== f._id));
       setNotice(`Deleted "${f.name}".`);
     } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Could not delete this feature.");
     } finally {
       setBusyId(null);

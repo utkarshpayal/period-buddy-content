@@ -3,6 +3,7 @@ import {
   FileText, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, BookOpen, AlertCircle, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
@@ -213,6 +214,7 @@ export const BlogsPage: React.FC = () => {
                       <div className="entry-title-row">
                         <h4>{blog.title}</h4>
                         <span className={`status-chip ${blog.status}`}>{blog.status}</span>
+                        <PendingBadge id={blog.id} />
                       </div>
                       <p>{blog.summary || blog.body}</p>
                       <div className="entry-meta">
