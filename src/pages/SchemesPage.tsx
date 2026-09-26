@@ -1,16 +1,6 @@
 import { isPendingApprovalError } from "../api/approval";
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Landmark,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Search,
-  Plus,
-  Pencil,
-  Trash2,
-  X
-} from "lucide-react";
+import { Landmark, AlertCircle, CheckCircle2, Loader2, Search, Plus, Pencil, Trash2, X, Check } from "lucide-react";
 import {
   GovernmentBenefit,
   GovernmentLevel,
@@ -388,17 +378,22 @@ export const SchemesPage: React.FC = () => {
 
             <div className="gy-field gy-field-full">
               <span>Categories *</span>
-              <div className="scheme-filter-chips">
-                {SCHEME_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    className={`type-button ${form.categories.includes(cat) ? "active" : ""}`}
-                    onClick={() => toggleCategory(cat)}
-                  >
-                    {prettifyEnum(cat)}
-                  </button>
-                ))}
+              <div className="plan-feature-chips">
+                {SCHEME_CATEGORIES.map((cat) => {
+                  const on = form.categories.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`plan-feature-chip ${on ? "active" : ""}`}
+                      aria-pressed={on}
+                      onClick={() => toggleCategory(cat)}
+                    >
+                      {on ? <Check size={14} /> : <Plus size={14} />}
+                      {prettifyEnum(cat)}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

@@ -607,7 +607,7 @@ export const SchemeApplicationsPage: React.FC = () => {
                             )}
                           </div>
                         </td>
-                        <td>{fmtDate(app.createdAt)}</td>
+                        <td data-label="Submitted">{fmtDate(app.createdAt)}</td>
                         <td>
                           <span className={`gy-pill ${pill.cls}`}>{pill.label}</span>
                         </td>

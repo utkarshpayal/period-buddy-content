@@ -234,7 +234,7 @@ export const UsersPage: React.FC = () => {
                       {u.isActive ? "Active" : "Suspended"}
                     </span>
                   </td>
-                  <td>{formatDate(u.createdAt)}</td>
+                  <td data-label="Joined">{formatDate(u.createdAt)}</td>
                   <td>
                     <div className="admin-cell-actions">
                       {u.isActive && !u.deletedAt && (

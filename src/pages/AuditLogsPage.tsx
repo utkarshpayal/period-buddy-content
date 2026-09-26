@@ -128,13 +128,13 @@ export const AuditLogsPage: React.FC = () => {
                   <td>
                     <span className={`gy-pill ${actionPill(l.action)}`}>{l.action}</span>
                   </td>
-                  <td>
+                  <td data-label="Actor">
                     <div className="admin-user-name" style={{ textTransform: "capitalize" }}>
                       {l.actorRole || "—"}
                     </div>
                     {l.actorId && <div className="admin-user-sub">…{l.actorId.slice(-6)}</div>}
                   </td>
-                  <td>
+                  <td data-label="Resource">
                     <div className="admin-user-name" style={{ textTransform: "capitalize" }}>
                       {l.resourceType || "—"}
                     </div>

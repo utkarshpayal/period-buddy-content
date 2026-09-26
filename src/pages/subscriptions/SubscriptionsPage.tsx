@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CreditCard, LayoutGrid, ListChecks, Package, Sliders, Tag } from "lucide-react";
+import { LayoutGrid, ListChecks, Package, Sliders, Tag } from "lucide-react";
 import { OverviewTab } from "./OverviewTab";
 import { FeaturesTab } from "./FeaturesTab";
 import { PlansTab } from "./PlansTab";
@@ -18,7 +18,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 ];
 
 /**
- * The Subscriptions workspace — one route with an internal tab strip rather
+ * The Subscriptions workspace — one route with its own section menu rather
  * than four separate sidebar links (matches how "Studio Settings" is a
  * single destination). Features/Plans/Settings all write through
  * api/subscriptionApi.ts to /api/admin/subscriptions/*.
@@ -37,35 +37,35 @@ export const SubscriptionsPage: React.FC = () => {
             and track purchases — all without touching the app or backend.
           </p>
         </div>
-        <div className="header-actions">
-          <span className="gy-pill gy-pill-info">
-            <CreditCard size={14} /> Feature-wise &amp; plan-wise billing
-          </span>
-        </div>
       </header>
 
-      <nav className="type-nav sub-tab-nav" aria-label="Subscription sections">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`type-button ${tab === t.key ? "active" : ""}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <div className="sub-layout">
+        <nav className="sub-tab-nav" aria-label="Subscription sections">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={`sub-tab ${tab === t.key ? "active" : ""}`}
+              aria-current={tab === t.key ? "page" : undefined}
+              onClick={() => setTab(t.key)}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
-      {/* keyed by tab so switching tabs clears a previous tab's crash */}
-      <ErrorBoundary key={tab} label={`the ${tab} tab`}>
-        {tab === "overview" && <OverviewTab />}
-        {tab === "features" && <FeaturesTab />}
-        {tab === "plans" && <PlansTab />}
-        {tab === "coupons" && <CouponsTab />}
-        {tab === "settings" && <SettingsTab />}
-      </ErrorBoundary>
+        <div className="sub-panel">
+          {/* keyed by tab so switching tabs clears a previous tab's crash */}
+          <ErrorBoundary key={tab} label={`the ${tab} tab`}>
+            {tab === "overview" && <OverviewTab />}
+            {tab === "features" && <FeaturesTab />}
+            {tab === "plans" && <PlansTab />}
+            {tab === "coupons" && <CouponsTab />}
+            {tab === "settings" && <SettingsTab />}
+          </ErrorBoundary>
+        </div>
+      </div>
     </div>
   );
 };

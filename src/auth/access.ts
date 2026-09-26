@@ -133,3 +133,41 @@ export function deriveAccess(role: string | null | undefined): WorkspaceAccess |
     assignableRoles
   };
 }
+
+/** Plain-language names for permissions, grouped by the area they unlock.
+ * Used to show a staff member what they can do (Account & Settings). */
+const PERMISSION_INFO: Record<Permission, { area: string; label: string }> = {
+  [P.CONTENT_READ]: { area: "Content", label: "View" },
+  [P.CONTENT_WRITE]: { area: "Content", label: "Write drafts" },
+  [P.CONTENT_PUBLISH]: { area: "Content", label: "Publish" },
+  [P.CONTENT_APPROVE]: { area: "Content", label: "Approve changes" },
+  [P.USERS_READ]: { area: "App users", label: "View" },
+  [P.USERS_MANAGE]: { area: "App users", label: "Suspend & restore" },
+  [P.PUSH_READ]: { area: "Push notifications", label: "View" },
+  [P.PUSH_SEND]: { area: "Push notifications", label: "Send" },
+  [P.PUSH_BROADCAST]: { area: "Push notifications", label: "Broadcast to everyone" },
+  [P.ANALYTICS_READ]: { area: "Analytics", label: "View" },
+  [P.SUBSCRIPTIONS_READ]: { area: "Subscriptions", label: "View" },
+  [P.SUBSCRIPTIONS_WRITE]: { area: "Subscriptions", label: "Edit drafts" },
+  [P.SUBSCRIPTIONS_MANAGE]: { area: "Subscriptions", label: "Manage pricing" },
+  [P.SCHEME_APPLICATIONS_READ]: { area: "Scheme applications", label: "View" },
+  [P.SCHEME_APPLICATIONS_REVIEW]: { area: "Scheme applications", label: "Review" },
+  [P.MARKETING_READ]: { area: "Marketing", label: "View" },
+  [P.APP_APPROVE]: { area: "Approvals", label: "Approve app changes" },
+  [P.DOCTORS_READ]: { area: "Gynecologists", label: "View" },
+  [P.DOCTORS_MANAGE]: { area: "Gynecologists", label: "Invite & manage" },
+  [P.STAFF_MANAGE]: { area: "Team", label: "Invite & manage roles" },
+  [P.AUDIT_READ]: { area: "Audit logs", label: "View" },
+  [P.COMPANY_FILES_MANAGE]: { area: "Company files", label: "Manage" }
+};
+
+/** Group permission keys by area, in a stable order. Unknown keys (a newer
+ * backend) are kept under "Other" with their raw name. */
+export function groupPermissions(permissions: string[]): { area: string; actions: string[] }[] {
+  const groups = new Map<string, string[]>();
+  for (const perm of permissions) {
+    const info = PERMISSION_INFO[perm as Permission] ?? { area: "Other", label: perm };
+    groups.set(info.area, [...(groups.get(info.area) ?? []), info.label]);
+  }
+  return [...groups].map(([area, actions]) => ({ area, actions }));
+}

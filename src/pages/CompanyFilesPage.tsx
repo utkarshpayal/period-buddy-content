@@ -1238,44 +1238,50 @@ export const CompanyFilesPage: React.FC = () => {
           </span>
         </div>
       ) : viewMode === "grid" ? (
+        <>
+        {!isSearching && folders.length > 0 && (
+          <section className="file-section" aria-label="Folders">
+            <h3 className="file-section-title">Folders</h3>
+            <div className="file-folder-grid">
+              {folders.map((f) => {
+                const count = (f.subfolderCount || 0) + (f.assetCount || 0);
+                return (
+                  <div key={f._id} className="gy-card file-folder-card">
+                    <button className="file-folder-main" onClick={() => enterFolder(f)} type="button">
+                      <span className="file-folder-icon" aria-hidden="true">
+                        <Folder size={20} />
+                      </span>
+                      <span className="file-folder-text">
+                        <strong title={f.name}>{f.name}</strong>
+                        <span>
+                          {count} item{count === 1 ? "" : "s"}
+                        </span>
+                      </span>
+                    </button>
+                    <div className="file-card-buttons">
+                      <button className="gy-icon-btn" onClick={() => openRenameFolder(f)} type="button" title="Rename" aria-label={`Rename ${f.name}`}>
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        className="gy-icon-btn gy-icon-btn-danger"
+                        onClick={() => confirmDeleteFolder(f)}
+                        type="button"
+                        title="Delete"
+                        aria-label={`Delete ${f.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+        {assets.length > 0 && (
+        <section className="file-section" aria-label="Files">
+          {!isSearching && folders.length > 0 && <h3 className="file-section-title">Files</h3>}
         <div className="file-grid">
-          {!isSearching &&
-            folders.map((f) => (
-              <div key={f._id} className="gy-card file-card file-card-folder" onDoubleClick={() => enterFolder(f)}>
-                <button className="file-card-preview file-card-folder-open" onClick={() => enterFolder(f)} type="button">
-                  <Folder size={30} />
-                </button>
-
-                <div className="file-card-body">
-                  <div className="file-card-title-row">
-                    <h3 title={f.name}>{f.name}</h3>
-                  </div>
-                  <p className="file-card-meta">
-                    {(f.subfolderCount || 0) + (f.assetCount || 0)} item
-                    {(f.subfolderCount || 0) + (f.assetCount || 0) === 1 ? "" : "s"}
-                  </p>
-                </div>
-
-                <div className="file-card-actions file-card-folder-actions">
-                  <button className="gy-btn gy-btn-ghost" type="button" onClick={() => enterFolder(f)}>
-                    Open
-                  </button>
-                  <div className="file-card-buttons">
-                    <button className="gy-icon-btn" onClick={() => openRenameFolder(f)} type="button" title="Rename">
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      className="gy-icon-btn gy-icon-btn-danger"
-                      onClick={() => confirmDeleteFolder(f)}
-                      type="button"
-                      title="Delete"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
           {assets.map((a) => {
             const preview = a.assetType === "file" ? previewKind(a.mimeType) : null;
             const Icon = assetIcon(a);
@@ -1294,10 +1300,6 @@ export const CompanyFilesPage: React.FC = () => {
                 <div className="file-card-body">
                   <div className="file-card-title-row">
                     <h3 title={a.title}>{a.title}</h3>
-                    <span className={`gy-pill ${a.isPublic ? "gy-pill-ok" : "gy-pill-muted"}`}>
-                      {a.isPublic ? <Globe size={12} /> : null}
-                      {a.isPublic ? "Public" : "Private"}
-                    </span>
                   </div>
                   <p className="file-card-meta">{metaLine(a)}</p>
                   {a.description && <p className="file-card-desc">{a.description}</p>}
@@ -1312,7 +1314,7 @@ export const CompanyFilesPage: React.FC = () => {
                       onChange={() => toggleVisibility(a)}
                     />
                     <span className="gy-switch-track" aria-hidden />
-                    <span>Public</span>
+                    <span>{a.isPublic ? "Public" : "Private"}</span>
                   </label>
                   {renderActions(a)}
                 </div>
@@ -1320,6 +1322,9 @@ export const CompanyFilesPage: React.FC = () => {
             );
           })}
         </div>
+        </section>
+        )}
+        </>
       ) : (
         <div className="admin-table-card">
           <table className="admin-table">
@@ -1340,7 +1345,7 @@ export const CompanyFilesPage: React.FC = () => {
                       <div className="file-list-title">
                         <Folder size={17} className="file-list-icon" />
                         <div>
-                          <div className="admin-user-name">{f.name}</div>
+                          <div className="admin-user-name" title={f.name}>{f.name}</div>
                           <div className="admin-user-sub">
                             {(f.subfolderCount || 0) + (f.assetCount || 0)} item
                             {(f.subfolderCount || 0) + (f.assetCount || 0) === 1 ? "" : "s"}
@@ -1376,7 +1381,7 @@ export const CompanyFilesPage: React.FC = () => {
                       <div className="file-list-title">
                         <Icon size={17} className="file-list-icon" />
                         <div>
-                          <div className="admin-user-name">{a.title}</div>
+                          <div className="admin-user-name" title={a.title}>{a.title}</div>
                           <div className="admin-user-sub">
                             {a.assetType === "link"
                               ? linkHost(a.linkUrl ?? "")
@@ -1400,7 +1405,7 @@ export const CompanyFilesPage: React.FC = () => {
                         <span>{a.isPublic ? "Public" : "Private"}</span>
                       </label>
                     </td>
-                    <td>
+                    <td data-label="Uploaded">
                       <div className="admin-user-name" style={{ fontWeight: 500 }}>
                         {uploaderLabel(a) ?? "—"}
                       </div>

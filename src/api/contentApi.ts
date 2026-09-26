@@ -2,6 +2,7 @@ import { throwIfPendingApproval } from "./approval";
 import { starterContent } from "../data/starterContent";
 import { ContentItem, ContentType, CycleStage } from "../types/content";
 import { getApiToken, handleUnauthorized } from "./authApi";
+import { uid } from "../lib/uid";
 
 export type ApiSource = "api" | "blocked" | "local";
 
@@ -209,7 +210,7 @@ function normalizeType(type: BackendContentItem["type"]): ContentType {
 function normalizeLocalItem(item: ContentItem & { type?: string }): ContentItem {
   return {
     ...item,
-    id: item.id || crypto.randomUUID(),
+    id: item.id || uid(),
     type: normalizeType(item.type),
     title: item.title || item.question || "Untitled content",
     status: item.status ?? "draft",
@@ -260,7 +261,7 @@ function normalizeItem(item: BackendContentItem): ContentItem {
   };
 
   return {
-    id: String(item.id ?? item._id ?? crypto.randomUUID()),
+    id: String(item.id ?? item._id ?? uid()),
     type,
     title: item.title ?? item.question ?? "Untitled content",
     status: normalizeStatus(item) as ContentItem["status"],

@@ -8,9 +8,10 @@ import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage, ContentType } from "../types/content";
+import { uid } from "../lib/uid";
 
 const emptyGuide = (): ContentItem => ({
-  id: crypto.randomUUID(),
+  id: uid(),
   type: "guide",
   title: "",
   status: "draft",

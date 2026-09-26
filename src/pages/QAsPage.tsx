@@ -7,9 +7,10 @@ import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
+import { uid } from "../lib/uid";
 
 const emptyQA = (): ContentItem => ({
-  id: crypto.randomUUID(),
+  id: uid(),
   type: "qa",
   title: "",
   status: "draft",
