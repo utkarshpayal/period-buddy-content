@@ -5,11 +5,13 @@ import {
   AlertCircle,
   AlertTriangle,
   Bell,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   Copy,
   Inbox,
   Loader2,
+  Pencil,
   RefreshCw,
   RotateCcw,
   Search,
@@ -27,16 +29,35 @@ import {
   BroadcastStatus,
   Pagination,
   PushBroadcast,
+  PushSchedule,
   Recipient,
+  ScheduleStatus,
   cancelBroadcast,
+  cancelSchedule,
   createBroadcast,
+  createSchedule,
   getAudienceCount,
+  getSchedule,
   listBroadcasts,
+  listSchedules,
+  pauseSchedule,
+  resumeSchedule,
   retryBroadcast,
   searchRecipients,
-  sendTestNotification
+  sendTestNotification,
+  updateSchedule
 } from "../api/adminApi";
 import { useNoticeToast } from "../components/Toast";
+import {
+  ScheduledList,
+  WhenState,
+  WhenStep,
+  defaultWhen,
+  describeWhen,
+  toTiming,
+  whenBlocker,
+  whenFromSchedule
+} from "./notifications/schedule";
 
 /* ------------------------------ Constants ------------------------------ */
 
@@ -144,6 +165,15 @@ const audienceText = (b: PushBroadcast) => {
   }
   return ROLES.find((r) => r.value === b.audience)?.label ?? b.audience;
 };
+
+const scheduleAudienceText = (s: PushSchedule) => {
+  if (s.audience === "all") return "Everyone";
+  if (s.audience === "selected") return s.recipientPreview?.join(", ") || "Selected people";
+  return ROLES.find((r) => r.value === s.audience)?.label ?? s.audience;
+};
+
+const UPCOMING: ScheduleStatus[] = ["active", "paused"];
+const ENDED: ScheduleStatus[] = ["completed", "cancelled"];
 
 const fmt = (n: number) => n.toLocaleString();
 
@@ -376,6 +406,13 @@ export const NotificationsPage: React.FC = () => {
   const [route, setRoute] = useState("");
   const [showTest, setShowTest] = useState(false);
   const [testEmail, setTestEmail] = useState("");
+  const [when, setWhen] = useState<WhenState>(defaultWhen);
+  // The saved schedule being edited in the composer, if any.
+  const [editing, setEditing] = useState<PushSchedule | null>(null);
+
+  const [schedules, setSchedules] = useState<PushSchedule[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(true);
+  const [showEnded, setShowEnded] = useState(false);
 
   const [counts, setCounts] = useState<AudienceCount | null>(null);
   const [countLoading, setCountLoading] = useState(false);
@@ -434,6 +471,35 @@ export const NotificationsPage: React.FC = () => {
     loadHistory();
   }, [loadHistory]);
 
+  const loadSchedules = useCallback(
+    async (silent = false) => {
+      if (!silent) setSchedulesLoading(true);
+      try {
+        const res = await listSchedules(showEnded ? ENDED : UPCOMING, 1, 50);
+        setSchedules(res.schedules);
+      } catch (err) {
+        if (!silent) setError(err instanceof Error ? err.message : "Failed to load scheduled pushes.");
+      } finally {
+        if (!silent) setSchedulesLoading(false);
+      }
+    },
+    [showEnded]
+  );
+
+  useEffect(() => {
+    loadSchedules();
+  }, [loadSchedules]);
+
+  // Pick up sends a schedule fires while this page is open.
+  useEffect(() => {
+    if (!schedules.some((x) => x.status === "active")) return;
+    const handle = setInterval(() => {
+      loadSchedules(true);
+      loadHistory(true);
+    }, 60_000);
+    return () => clearInterval(handle);
+  }, [schedules, loadSchedules, loadHistory]);
+
   const countAudience: Exclude<BroadcastAudience, "selected"> = mode === "role" ? role : "all";
   useEffect(() => {
     if (mode === "people") return;
@@ -470,10 +536,14 @@ export const NotificationsPage: React.FC = () => {
   if (!t) blockers.push("Add a title");
   if (!b) blockers.push("Write a message");
   if (mode === "people" && picked.length === 0) blockers.push("Pick at least one recipient");
-  if (mode !== "people" && bulkActive) blockers.push("Wait for the current broadcast to finish");
+  if (mode !== "people" && bulkActive && when.mode === "now")
+    blockers.push("Wait for the current broadcast to finish");
+  const timingBlocker = whenBlocker(when, editing?.startAt);
+  if (timingBlocker) blockers.push(timingBlocker);
   if (mode !== "people" && reach?.users === 0) blockers.push("No one matches this audience");
   if (counts && !counts.fcmConfigured) blockers.push("Push isn't configured on the server");
   const canReview = blockers.length === 0 && !sending;
+  const scheduling = when.mode === "later";
 
   const audienceLabel =
     mode === "everyone"
@@ -504,28 +574,45 @@ export const NotificationsPage: React.FC = () => {
     }
   };
 
+  const resetComposer = () => {
+    setTitle("");
+    setBody("");
+    setPicked([]);
+    setRoute("");
+    setWhen(defaultWhen());
+    setEditing(null);
+  };
+
   const handleSend = async () => {
     setSending(true);
     setError(null);
+    const input = {
+      title: t,
+      body: b,
+      audience: mode === "people" ? ("selected" as const) : countAudience,
+      userIds: mode === "people" ? picked.map((p) => p._id) : undefined,
+      saveToInbox,
+      route: route || undefined
+    };
     try {
-      await createBroadcast({
-        title: t,
-        body: b,
-        audience: mode === "people" ? "selected" : countAudience,
-        userIds: mode === "people" ? picked.map((p) => p._id) : undefined,
-        saveToInbox,
-        route: route || undefined
-      });
+      if (scheduling) {
+        if (editing) await updateSchedule(editing._id, { ...input, ...toTiming(when) });
+        else await createSchedule({ ...input, ...toTiming(when) });
+        setConfirming(false);
+        setNotice(editing ? "Schedule updated." : `Scheduled: ${describeWhen(when)}.`);
+        resetComposer();
+        if (showEnded) setShowEnded(false);
+        else await loadSchedules(true);
+        return;
+      }
+      await createBroadcast(input);
       setConfirming(false);
       setNotice(
         mode === "people"
           ? `Sending to ${audienceLabel}. Track delivery in the history below.`
           : "Broadcast started — it's sending in the background. You can leave this page."
       );
-      setTitle("");
-      setBody("");
-      setPicked([]);
-      setRoute("");
+      resetComposer();
       if (page === 1) await loadHistory(true);
       else setPage(1);
     } catch (err) {
@@ -569,10 +656,67 @@ export const NotificationsPage: React.FC = () => {
     }
   };
 
-  const handleReuse = (item: PushBroadcast) => {
+  const handleReuse = (item: PushBroadcast | PushSchedule) => {
     setTitle(item.title);
     setBody(item.body);
     composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Load a saved schedule into the composer; "Review & save" then updates it.
+  const handleEdit = async (item: PushSchedule) => {
+    setBusyId(item._id);
+    setError(null);
+    try {
+      const { schedule, recipients } = await getSchedule(item._id);
+      setTitle(schedule.title);
+      setBody(schedule.body);
+      setRoute(schedule.data?.route ?? "");
+      setSaveToInbox(schedule.saveToInbox);
+      if (schedule.audience === "selected") {
+        setMode("people");
+        setPicked(recipients);
+      } else if (schedule.audience === "all") {
+        setMode("everyone");
+      } else {
+        setMode("role");
+        setRole(schedule.audience as RoleAudience);
+      }
+      setWhen(whenFromSchedule(schedule));
+      setEditing(schedule);
+      composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load that schedule.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const runScheduleAction = async (
+    item: PushSchedule,
+    action: (id: string) => Promise<unknown>,
+    done: string
+  ) => {
+    setBusyId(item._id);
+    setError(null);
+    try {
+      await action(item._id);
+      setNotice(done);
+      if (editing?._id === item._id && action === cancelSchedule) resetComposer();
+      await loadSchedules(true);
+    } catch (err) {
+      if (isPendingApprovalError(err)) {
+        setNotice(err.message);
+        return;
+      }
+      setError(err instanceof Error ? err.message : "Could not update the schedule.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleCancelSchedule = (item: PushSchedule) => {
+    if (!window.confirm(`Cancel “${item.title}”? No further sends will go out.`)) return;
+    runScheduleAction(item, cancelSchedule, "Schedule cancelled.");
   };
 
   /* ----- render ----- */
@@ -583,8 +727,8 @@ export const NotificationsPage: React.FC = () => {
           <p className="eyebrow">Engagement</p>
           <h2>Push Notifications</h2>
           <p className="subtitle-text">
-            Message everyone, a group, or a single person. Large sends go out in batches in the
-            background — you can leave this page while they deliver.
+            Message everyone, a group, or a single person — now, later, or on repeat. Large sends
+            go out in batches in the background — you can leave this page while they deliver.
           </p>
         </div>
       </div>
@@ -639,6 +783,17 @@ export const NotificationsPage: React.FC = () => {
 
       <div className="pn-layout">
         <section className="pn-card" ref={composeRef}>
+          {editing && (
+            <div className="pn-editing">
+              <Pencil size={14} />
+              <span>
+                Editing scheduled push <strong>“{editing.title}”</strong>
+              </span>
+              <button type="button" className="gy-link" onClick={resetComposer}>
+                Stop editing
+              </button>
+            </div>
+          )}
           {/* Step 1 — recipients */}
           <div className="pn-step">
             <div className="pn-step-head">
@@ -774,11 +929,20 @@ export const NotificationsPage: React.FC = () => {
             </label>
           </div>
 
-          {/* Step 3 — test & send */}
-          <div className="pn-step pn-step-last">
+          {/* Step 3 — when */}
+          <div className="pn-step">
             <div className="pn-step-head">
               <span className="pn-step-num">3</span>
-              <h3>Test & send</h3>
+              <h3>When should it go out?</h3>
+            </div>
+            <WhenStep value={when} onChange={setWhen} lockLater={!!editing} />
+          </div>
+
+          {/* Step 4 — test & send */}
+          <div className="pn-step pn-step-last">
+            <div className="pn-step-head">
+              <span className="pn-step-num">4</span>
+              <h3>Test & {scheduling ? "schedule" : "send"}</h3>
             </div>
 
             {showTest ? (
@@ -802,7 +966,9 @@ export const NotificationsPage: React.FC = () => {
 
             <div className="pn-send-row">
               <span className="pn-muted">
-                {blockers.length > 0 ? blockers[0] : `Ready to send to ${audienceLabel}`}
+                {blockers.length > 0
+                  ? blockers[0]
+                  : `Ready to ${scheduling ? "schedule for" : "send to"} ${audienceLabel}`}
               </span>
               <button
                 type="button"
@@ -810,7 +976,8 @@ export const NotificationsPage: React.FC = () => {
                 disabled={!canReview}
                 onClick={() => setConfirming(true)}
               >
-                <Send size={16} /> Review & send
+                {scheduling ? <CalendarClock size={16} /> : <Send size={16} />}{" "}
+                {editing ? "Review & save" : scheduling ? "Review & schedule" : "Review & send"}
               </button>
             </div>
           </div>
@@ -824,6 +991,38 @@ export const NotificationsPage: React.FC = () => {
           </p>
         </aside>
       </div>
+
+      {/* Scheduled */}
+      <div className="pn-history-head">
+        <h3 className="admin-section-title">Scheduled & repeating</h3>
+        <div className="admin-filter-row pn-roles">
+          <button
+            type="button"
+            className={`admin-chip ${!showEnded ? "is-active" : ""}`}
+            onClick={() => setShowEnded(false)}
+          >
+            Upcoming
+          </button>
+          <button
+            type="button"
+            className={`admin-chip ${showEnded ? "is-active" : ""}`}
+            onClick={() => setShowEnded(true)}
+          >
+            Ended
+          </button>
+        </div>
+      </div>
+      <ScheduledList
+        schedules={schedules}
+        loading={schedulesLoading}
+        busyId={busyId}
+        audienceText={scheduleAudienceText}
+        onEdit={handleEdit}
+        onReuse={handleReuse}
+        onPause={(item) => runScheduleAction(item, pauseSchedule, "Schedule paused.")}
+        onResume={(item) => runScheduleAction(item, resumeSchedule, "Schedule resumed.")}
+        onCancel={handleCancelSchedule}
+      />
 
       {/* History */}
       <div className="pn-history-head">
@@ -857,6 +1056,11 @@ export const NotificationsPage: React.FC = () => {
                     {item.audience === "selected" ? <UserPlus size={13} /> : <Users size={13} />}
                     {audienceText(item)}
                   </span>
+                  {item.scheduleId && (
+                    <span className="pn-item-aud" title="Sent by a scheduled push">
+                      <CalendarClock size={13} /> Scheduled
+                    </span>
+                  )}
                   <span className="pn-item-when" title={new Date(item.createdAt).toLocaleString()}>
                     {relativeTime(item.createdAt)}
                     {item.createdBy && ` · ${fullName(item.createdBy)}`}
@@ -962,7 +1166,9 @@ export const NotificationsPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pn-modal-head">
-              <h3 id="pn-confirm-title">Review before sending</h3>
+              <h3 id="pn-confirm-title">
+                {editing ? "Review changes" : scheduling ? "Review before scheduling" : "Review before sending"}
+              </h3>
               <button type="button" className="gy-icon-btn" onClick={() => setConfirming(false)} disabled={sending}>
                 <X size={18} />
               </button>
@@ -991,14 +1197,19 @@ export const NotificationsPage: React.FC = () => {
                 <dt>In-app inbox</dt>
                 <dd>{saveToInbox ? "Yes" : "No"}</dd>
               </div>
+              <div className="pn-summary-wide">
+                <dt>When</dt>
+                <dd title={describeWhen(when)}>{describeWhen(when)}</dd>
+              </div>
             </dl>
 
             {mode !== "people" && reach && reach.users > 1 && (
               <div className="gy-alert gy-alert-warn">
                 <AlertTriangle size={16} />
                 <span>
-                  This goes to {fmt(reach.users)} people and can't be unsent. You can stop it midway,
-                  but anyone already notified keeps the message.
+                  {scheduling
+                    ? `Each send goes to about ${fmt(reach.users)} people. You can pause or cancel the schedule any time before it fires.`
+                    : `This goes to ${fmt(reach.users)} people and can't be unsent. You can stop it midway, but anyone already notified keeps the message.`}
                 </span>
               </div>
             )}
@@ -1008,8 +1219,20 @@ export const NotificationsPage: React.FC = () => {
                 Keep editing
               </button>
               <button type="button" className="gy-btn gy-btn-primary" onClick={handleSend} disabled={sending} autoFocus>
-                {sending ? <Loader2 className="spin-icon" size={16} /> : <Send size={16} />}
-                {reach ? ` Send to ${fmt(reach.users)} ${reach.users === 1 ? "person" : "people"}` : " Send"}
+                {sending ? (
+                  <Loader2 className="spin-icon" size={16} />
+                ) : scheduling ? (
+                  <CalendarClock size={16} />
+                ) : (
+                  <Send size={16} />
+                )}
+                {editing
+                  ? " Save changes"
+                  : scheduling
+                    ? " Schedule"
+                    : reach
+                      ? ` Send to ${fmt(reach.users)} ${reach.users === 1 ? "person" : "people"}`
+                      : " Send"}
               </button>
             </div>
           </section>
