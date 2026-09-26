@@ -200,6 +200,8 @@ export type PushBroadcast = {
   batchesCompleted: number;
   attempts: number;
   lastError?: string | null;
+  /** Set when this send was made by a scheduled/repeating push. */
+  scheduleId?: string | null;
   createdBy?: { _id: string; firstName?: string; lastName?: string; email?: string } | null;
   startedAt?: string | null;
   completedAt?: string | null;
@@ -276,4 +278,86 @@ export async function cancelBroadcast(id: string): Promise<{ broadcast: PushBroa
 
 export async function retryBroadcast(id: string): Promise<{ broadcast: PushBroadcast }> {
   return adminRequest(`/api/admin/notifications/broadcasts/${id}/retry`, { method: "POST" });
+}
+
+/* ------------------ Scheduled / repeating push notifications ------------------ */
+
+export type ScheduleRepeat = "none" | "daily" | "weekly" | "monthly";
+export type ScheduleStatus = "active" | "paused" | "completed" | "cancelled";
+
+export type ScheduleTiming = {
+  /** ISO time of the first send; also fixes the time of day (IST). */
+  startAt: string;
+  repeat: ScheduleRepeat;
+  /** Every N days/weeks/months (1–30). */
+  interval?: number;
+  /** Weekly only: 0 = Sunday … 6 = Saturday, in IST. */
+  daysOfWeek?: number[];
+  endAt?: string | null;
+  maxRuns?: number | null;
+};
+
+export type PushSchedule = ScheduleTiming & {
+  _id: string;
+  title: string;
+  body: string;
+  audience: BroadcastAudience;
+  recipientPreview?: string[] | null;
+  saveToInbox: boolean;
+  data?: { route?: string } | null;
+  status: ScheduleStatus;
+  nextRunAt?: string | null;
+  runCount: number;
+  skippedCount: number;
+  lastRunAt?: string | null;
+  lastBroadcastId?: string | null;
+  lastError?: string | null;
+  /** Server-written label, e.g. "Weekly on Mon, Thu at 09:00 IST". */
+  description: string;
+  createdBy?: { _id: string; firstName?: string; lastName?: string; email?: string } | null;
+  createdAt: string;
+};
+
+export type ScheduleInput = BroadcastInput & ScheduleTiming;
+
+export async function listSchedules(
+  status: ScheduleStatus[] = [],
+  page = 1,
+  limit = 20
+): Promise<{ schedules: PushSchedule[]; pagination: Pagination }> {
+  const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (status.length) q.set("status", status.join(","));
+  return adminRequest(`/api/admin/notifications/schedules?${q.toString()}`);
+}
+
+export async function getSchedule(
+  id: string
+): Promise<{ schedule: PushSchedule & { userIds?: string[] }; recentSends: PushBroadcast[]; recipients: Recipient[] }> {
+  return adminRequest(`/api/admin/notifications/schedules/${id}`);
+}
+
+export async function createSchedule(input: ScheduleInput): Promise<{ schedule: PushSchedule }> {
+  return adminRequest(`/api/admin/notifications/schedules`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateSchedule(id: string, input: ScheduleInput): Promise<{ schedule: PushSchedule }> {
+  return adminRequest(`/api/admin/notifications/schedules/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function pauseSchedule(id: string): Promise<{ schedule: PushSchedule }> {
+  return adminRequest(`/api/admin/notifications/schedules/${id}/pause`, { method: "POST" });
+}
+
+export async function resumeSchedule(id: string): Promise<{ schedule: PushSchedule }> {
+  return adminRequest(`/api/admin/notifications/schedules/${id}/resume`, { method: "POST" });
+}
+
+export async function cancelSchedule(id: string): Promise<{ schedule: PushSchedule }> {
+  return adminRequest(`/api/admin/notifications/schedules/${id}`, { method: "DELETE" });
 }
