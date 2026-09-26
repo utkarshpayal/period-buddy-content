@@ -293,8 +293,8 @@ export const TeamPage: React.FC = () => {
                     <td>
                       <span className={`gy-pill ${STATUS_PILL[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                     </td>
-                    <td>{m.status === "invited" ? "—" : formatDate(m.lastLogin)}</td>
-                    <td className="admin-user-sub">{m.invitedBy?.name ?? "—"}</td>
+                    <td data-label="Last active">{m.status === "invited" ? "—" : formatDate(m.lastLogin)}</td>
+                    <td data-label="Invited by" className="admin-user-sub">{m.invitedBy?.name ?? "—"}</td>
                     <td>
                       <div className="admin-cell-actions">
                         {busyId === m.id && <Loader2 className="spin-icon" size={16} />}
@@ -379,17 +379,18 @@ const InviteDialog: React.FC<{
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <form className="gy-card gy-modal-panel ws-invite-dialog" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <div className="gy-card-head">
+      <form className="ws-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-title" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+        <div className="ws-dialog-head">
           <div>
-            <h3>Invite a teammate</h3>
-            <p className="admin-user-sub">They'll get an email with a link to set their password.</p>
+            <h3 id="invite-title">Invite a teammate</h3>
+            <p>They'll get an email with a link to set their password.</p>
           </div>
           <button type="button" className="gy-icon-btn" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
+        <div className="ws-dialog-body">
         {error && <div className="gy-alert gy-alert-error"><span>{error}</span></div>}
 
         <label className="ws-field">
@@ -405,7 +406,7 @@ const InviteDialog: React.FC<{
           <legend>Role</legend>
           {grouped.map(([dept, list]) => (
             <div key={dept} className="ws-role-group">
-              <p className="nav-section-label">{DEPARTMENT_LABEL[dept as Department] ?? dept}</p>
+              <p className="ws-role-dept">{DEPARTMENT_LABEL[dept as Department] ?? dept}</p>
               {list.map((r) => (
                 <label key={r.value} className={`ws-role-option ${role === r.value ? "is-selected" : ""}`}>
                   <input type="radio" name="role" value={r.value} checked={role === r.value} onChange={() => setRole(r.value)} />
@@ -418,6 +419,7 @@ const InviteDialog: React.FC<{
             </div>
           ))}
         </fieldset>
+        </div>
 
         <div className="ws-dialog-actions">
           <button type="button" className="gy-btn gy-btn-ghost" onClick={onClose}>Cancel</button>

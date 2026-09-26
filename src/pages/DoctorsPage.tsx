@@ -1,16 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Stethoscope,
-  UserPlus,
-  Loader2,
-  AlertCircle,
-  Mail,
-  RefreshCw,
-  Power,
-  Copy,
-  X,
-  Search,
-} from "lucide-react";
+import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, RefreshCw, Power, Copy, X, Search, UserX } from "lucide-react";
 import {
   AdminDoctor,
   inviteDoctor,
@@ -317,16 +306,18 @@ export const DoctorsPage: React.FC = () => {
         </div>
       )}
 
-      <label className="scheme-search app-filter-search" style={{ maxWidth: 360, marginBottom: 12 }}>
-        <Search size={16} />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, specialty, or email…"
-          aria-label="Search gynecologists"
-        />
-      </label>
+      <div className="app-filter-bar">
+        <label className="scheme-search app-filter-search">
+          <Search size={16} />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, specialty, or email…"
+            aria-label="Search gynecologists"
+          />
+        </label>
+      </div>
 
       {loading ? (
         <div className="gy-empty">
@@ -346,16 +337,22 @@ export const DoctorsPage: React.FC = () => {
         <div className="gy-doc-grid">
           {doctors.map((doc) => {
             const status = accountStatus(doc);
+            const account = typeof doc.userId === "object" ? doc.userId : undefined;
+            const invitePending = Boolean(account?.mustSetPassword);
+            const deactivated = account?.isActive === false;
             return (
               <article className="gy-card gy-doc-card" key={doc._id}>
                 <div className="gy-doc-top">
-                  <span className="gy-doc-avatar">{doc.avatarEmoji || "👩‍⚕️"}</span>
+                  <span className="gy-doc-avatar" aria-hidden="true">{doc.avatarEmoji || "👩‍⚕️"}</span>
                   <div className="gy-doc-id">
-                    <h4>{doc.name}</h4>
-                    <p>{doc.specialty}</p>
+                    <h4 title={doc.name}>{doc.name}</h4>
+                    <p title={doc.specialty}>{doc.specialty}</p>
                   </div>
                   <span className={`gy-pill ${status.cls}`}>{status.label}</span>
                 </div>
+                {(doc.hospital || doc.email) && (
+                  <p className="gy-doc-sub" title={doc.hospital || doc.email}>{doc.hospital || doc.email}</p>
+                )}
                 <dl className="gy-doc-meta">
                   <div>
                     <dt>Fee</dt>
@@ -370,21 +367,31 @@ export const DoctorsPage: React.FC = () => {
                     <dd>{doc.totalConsultations ?? 0}</dd>
                   </div>
                   <div>
-                    <dt>Availability</dt>
-                    <dd>{doc.isAvailable ? "Open" : "Paused"}</dd>
+                    <dt>Bookings</dt>
+                    <dd className={doc.isAvailable ? "is-open" : "is-paused"}>{doc.isAvailable ? "Open" : "Paused"}</dd>
                   </div>
                 </dl>
-                <div className="gy-doc-actions">
-                  <button className="gy-btn gy-btn-ghost" type="button" onClick={() => handleResend(doc._id)}>
-                    <RefreshCw size={14} /> Resend invite
-                  </button>
-                  <button className="gy-btn gy-btn-ghost" type="button" onClick={() => toggleAvailability(doc)}>
-                    <Power size={14} /> {doc.isAvailable ? "Pause" : "Resume"}
-                  </button>
-                  <button className="gy-btn gy-btn-danger" type="button" onClick={() => handleDeactivate(doc._id)}>
-                    Deactivate
-                  </button>
-                </div>
+                {!deactivated && (
+                  <div className="gy-doc-actions">
+                    <button className="gy-btn gy-btn-ghost" type="button" onClick={() => toggleAvailability(doc)}>
+                      <Power size={14} /> {doc.isAvailable ? "Pause" : "Resume"}
+                    </button>
+                    {invitePending && (
+                      <button className="gy-btn gy-btn-ghost" type="button" onClick={() => handleResend(doc._id)}>
+                        <RefreshCw size={14} /> Resend invite
+                      </button>
+                    )}
+                    <button
+                      className="gy-icon-btn gy-icon-btn-danger gy-doc-deactivate"
+                      type="button"
+                      onClick={() => handleDeactivate(doc._id)}
+                      title="Deactivate"
+                      aria-label={`Deactivate ${doc.name}`}
+                    >
+                      <UserX size={16} />
+                    </button>
+                  </div>
+                )}
               </article>
             );
           })}

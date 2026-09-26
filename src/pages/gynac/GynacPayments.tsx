@@ -175,7 +175,7 @@ export const GynacPayments: React.FC = () => {
                           <Avatar name={name} size="sm" /> {name}
                         </span>
                       </td>
-                      <td className="gx-muted">{formatDate(paidAt(p))}</td>
+                      <td data-label="Paid" className="gx-muted">{formatDate(paidAt(p))}</td>
                       <td><StatusBadge status={p.status} /></td>
                       <td className="num strong">{formatMoney(p.amountPaid, p.currency || currency)}</td>
                     </tr>

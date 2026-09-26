@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { LogOut, Menu, X } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { visibleSections } from "../navigation";
@@ -29,14 +29,15 @@ export const Sidebar: React.FC = () => {
 
   const link = ({ isActive }: { isActive: boolean }) => (isActive ? "type-button active" : "type-button");
 
+  // The logo goes to Home, like on the marketing site.
   const brand = (
-    <div className="brand-lockup">
-      <img className="sidebar-logo" src="/images/logo.png" alt="The Nura Care" />
+    <Link to="/" className="brand-lockup" aria-label={`${title} home`} onClick={close}>
+      <img className="sidebar-logo" src="/images/logo.png" alt="" />
       <div>
         <p className="eyebrow">The Nura Care</p>
         <h1>{title}</h1>
       </div>
-    </div>
+    </Link>
   );
 
   return (

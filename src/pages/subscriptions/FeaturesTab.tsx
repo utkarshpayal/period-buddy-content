@@ -317,8 +317,8 @@ export const FeaturesTab: React.FC = () => {
         </div>
       ) : (
         grouped.map(([category, list]) => (
-          <div key={category} style={{ marginBottom: 24 }}>
-            <p className="eyebrow" style={{ marginBottom: 8 }}>{category}</p>
+          <div key={category} className="sub-group">
+            <h3 className="sub-group-title">{category}</h3>
             <div className="scheme-app-list">
               {list.map((f) => {
                 const busy = busyId === f._id;
@@ -328,33 +328,20 @@ export const FeaturesTab: React.FC = () => {
                       <div className="scheme-app-info">
                         <div className="scheme-app-title-row">
                           <h3>{f.name}</h3>
-                          <span className={`gy-pill ${f.isPremium ? "gy-pill-plum" : "gy-pill-ok"}`}>
-                            {f.isPremium ? "Premium" : "Free"}
-                          </span>
                           {!f.isActive && <span className="gy-pill gy-pill-muted">Hidden</span>}
                         </div>
                         <p className="scheme-app-meta">Key: {f.key}</p>
                         {f.description && <p className="scheme-app-note">{f.description}</p>}
                       </div>
 
-                      <div className="scheme-app-actions" style={{ flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-                        <label className="gy-switch" title="Toggle free/premium">
-                          <input
-                            type="checkbox"
-                            checked={f.isPremium}
-                            disabled={busy}
-                            onChange={() => togglePremium(f)}
-                          />
-                          <span className="gy-switch-track" aria-hidden />
-                          <span>{f.isPremium ? "Premium" : "Free"}</span>
-                        </label>
-
+                      <div className="sub-item-actions">
                         {f.isPremium && (
-                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <div className="sub-item-price">
                             <input
                               type="number"
                               min={0}
                               className="gy-inline-input"
+                              aria-label={`${f.name} price`}
                               defaultValue={f.price}
                               disabled={busy}
                               onBlur={(e) => {
@@ -364,6 +351,7 @@ export const FeaturesTab: React.FC = () => {
                             />
                             <select
                               className="gy-inline-select"
+                              aria-label={`${f.name} billing cycle`}
                               value={f.billingCycle}
                               disabled={busy}
                               onChange={(e) => updateCycle(f, e.target.value as BillingCycle)}
@@ -376,20 +364,29 @@ export const FeaturesTab: React.FC = () => {
                             </select>
                           </div>
                         )}
-
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button type="button" className="gy-btn gy-btn-ghost" onClick={() => openEdit(f)}>
-                            <Pencil size={14} /> Edit
-                          </button>
-                          <button
+                        <label className="gy-switch" title="Free or premium">
+                          <input
+                            type="checkbox"
+                            checked={f.isPremium}
+                            disabled={busy}
+                            onChange={() => togglePremium(f)}
+                          />
+                          <span className="gy-switch-track" aria-hidden />
+                          <span>{f.isPremium ? "Premium" : "Free"}</span>
+                        </label>
+                        <button type="button" className="gy-btn gy-btn-ghost" onClick={() => openEdit(f)}>
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button
                             type="button"
-                            className="gy-btn gy-btn-danger"
+                            className="gy-icon-btn gy-icon-btn-danger"
                             disabled={busy}
                             onClick={() => handleDelete(f)}
+                            title="Delete"
+                            aria-label="Delete"
                           >
-                            <Trash2 size={14} /> Delete
+                            <Trash2 size={16} />
                           </button>
-                        </div>
                       </div>
                     </div>
                   </div>

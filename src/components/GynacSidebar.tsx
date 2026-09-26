@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import {
   LayoutGrid,
   CalendarCheck,
@@ -34,16 +34,21 @@ export const GynacSidebar: React.FC = () => {
   const link = ({ isActive }: { isActive: boolean }) =>
     isActive ? "type-button active" : "type-button";
 
+  // The logo goes to the dashboard, like on the marketing site.
+  const brand = (
+    <Link to="/" className="brand-lockup" aria-label="Clinician Portal home" onClick={close}>
+      <img className="sidebar-logo" src="/images/logo.png" alt="" />
+      <div>
+        <p className="eyebrow">The Nura Care</p>
+        <h1>Clinician Portal</h1>
+      </div>
+    </Link>
+  );
+
   return (
     <>
       <div className="mobile-navbar">
-        <div className="brand-lockup">
-          <img className="sidebar-logo" src="/images/logo.png" alt="The Nura Care" />
-          <div>
-            <p className="eyebrow">The Nura Care</p>
-            <h1>Clinician Portal</h1>
-          </div>
-        </div>
+        {brand}
         <button
           className="mobile-menu-btn"
           type="button"
@@ -58,13 +63,7 @@ export const GynacSidebar: React.FC = () => {
       {open && <div className="nav-backdrop" onClick={close} />}
 
       <aside className={`sidebar ${open ? "open" : ""}`}>
-      <div className="brand-lockup">
-        <img className="sidebar-logo" src="/images/logo.png" alt="The Nura Care" />
-        <div>
-          <p className="eyebrow">The Nura Care</p>
-          <h1>Clinician Portal</h1>
-        </div>
-      </div>
+      {brand}
 
       <nav className="type-nav" aria-label="Clinician navigation">
         <p className="nav-section-label">Overview</p>

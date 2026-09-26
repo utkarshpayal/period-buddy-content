@@ -1,4 +1,5 @@
 import type { WorkspaceAccess } from "../auth/access";
+import { uid } from "../lib/uid";
 
 export type AuthUser = {
   id?: string;
@@ -190,7 +191,7 @@ function parseAuthResponse(response: AuthResponse | undefined, payload: LoginPay
 export async function loginWithEmail(payload: LoginPayload): Promise<AuthResult> {
   if (!apiBaseUrl) {
     const session = {
-      token: `local-${crypto.randomUUID()}`,
+      token: `local-${uid()}`,
       user: { email: payload.email, role: "admin" }
     };
 

@@ -271,7 +271,7 @@ export const GynacDashboard: React.FC = () => {
                       </td>
                       <td><StatusBadge status={b.status} /></td>
                       <td className="num">{formatMoney(b.amountPaid, b.currency || currency)}</td>
-                      <td className="gx-muted">{timeAgo(b.createdAt)}</td>
+                      <td data-label="Booked" className="gx-muted">{timeAgo(b.createdAt)}</td>
                     </tr>
                   );
                 })}

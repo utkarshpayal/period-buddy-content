@@ -1,6 +1,6 @@
 import { isPendingApprovalError } from "../../api/approval";
 import React, { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Package, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Package, Pencil, Plus, Trash2, X, Check } from "lucide-react";
 import {
   BILLING_CYCLES,
   BillingCycle,
@@ -263,17 +263,22 @@ export const PlansTab: React.FC = () => {
 
               <div className="gy-field gy-field-full">
                 <span>Included features</span>
-                <div className="scheme-filter-chips">
-                  {features.map((f) => (
-                    <button
-                      key={f.key}
-                      type="button"
-                      className={`type-button ${form.features.includes(f.key) ? "active" : ""}`}
-                      onClick={() => toggleFeature(f.key)}
-                    >
-                      {f.name}
-                    </button>
-                  ))}
+                <div className="plan-feature-chips">
+                  {features.map((f) => {
+                    const on = form.features.includes(f.key);
+                    return (
+                      <button
+                        key={f.key}
+                        type="button"
+                        className={`plan-feature-chip ${on ? "active" : ""}`}
+                        aria-pressed={on}
+                        onClick={() => toggleFeature(f.key)}
+                      >
+                        {on ? <Check size={14} /> : <Plus size={14} />}
+                        {f.name}
+                      </button>
+                    );
+                  })}
                   {features.length === 0 && <span className="subtitle-text">Add features first.</span>}
                 </div>
               </div>
@@ -326,9 +331,6 @@ export const PlansTab: React.FC = () => {
                       </span>
                       {p.badge && <span className="gy-pill gy-pill-plum">{p.badge}</span>}
                       {p.isDefault && <span className="gy-pill gy-pill-muted">Free plan</span>}
-                      <span className={`gy-pill ${p.isActive ? "gy-pill-ok" : "gy-pill-muted"}`}>
-                        {p.isActive ? "Active" : "Hidden"}
-                      </span>
                     </div>
                     {p.description && <p className="scheme-app-note">{p.description}</p>}
                     <p className="scheme-app-meta">
@@ -338,23 +340,25 @@ export const PlansTab: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="scheme-app-actions">
-                    {busy ? (
-                      <Loader2 size={18} className="spin" />
-                    ) : (
-                      <>
-                        <label className="gy-switch" title="Active">
-                          <input type="checkbox" checked={p.isActive} onChange={() => toggleActive(p)} />
-                          <span className="gy-switch-track" aria-hidden />
-                        </label>
-                        <button type="button" className="gy-btn gy-btn-ghost" onClick={() => openEdit(p)}>
-                          <Pencil size={15} /> Edit
-                        </button>
-                        <button type="button" className="gy-btn gy-btn-danger" onClick={() => handleDelete(p)}>
-                          <Trash2 size={15} /> Delete
-                        </button>
-                      </>
-                    )}
+                  <div className="sub-item-actions">
+                    <label className="gy-switch" title="Show this plan in the app">
+                      <input type="checkbox" checked={p.isActive} disabled={busy} onChange={() => toggleActive(p)} />
+                      <span className="gy-switch-track" aria-hidden />
+                      <span>{p.isActive ? "Active" : "Hidden"}</span>
+                    </label>
+                    <button type="button" className="gy-btn gy-btn-ghost" onClick={() => openEdit(p)}>
+                      <Pencil size={14} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="gy-icon-btn gy-icon-btn-danger"
+                      disabled={busy}
+                      onClick={() => handleDelete(p)}
+                      title="Delete"
+                      aria-label="Delete"
+                    >
+                      {busy ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
+                    </button>
                   </div>
                 </div>
               </div>

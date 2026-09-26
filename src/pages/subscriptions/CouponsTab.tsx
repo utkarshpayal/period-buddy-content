@@ -346,16 +346,15 @@ export const CouponsTab: React.FC = () => {
             const busy = busyId === c._id;
             const expired = isExpired(c);
             const exhausted = isExhausted(c);
-            const effectivelyOff = !c.isActive || expired || exhausted;
             return (
               <div key={c._id} className="gy-card scheme-app-card">
                 <div className="scheme-app-main">
                   <div className="scheme-app-info">
                     <div className="scheme-app-title-row">
                       <h3>{c.code}</h3>
-                      <span className={`gy-pill ${effectivelyOff ? "gy-pill-muted" : "gy-pill-ok"}`}>
-                        {!c.isActive ? "Inactive" : expired ? "Expired" : exhausted ? "Limit reached" : "Active"}
-                      </span>
+                      {c.isActive && (expired || exhausted) && (
+                        <span className="gy-pill gy-pill-muted">{expired ? "Expired" : "Limit reached"}</span>
+                      )}
                     </div>
                     <p className="scheme-app-meta">
                       {discountLabel(c)} · Used {c.redeemedCount}
@@ -365,26 +364,25 @@ export const CouponsTab: React.FC = () => {
                     {c.description && <p className="scheme-app-note">{c.description}</p>}
                   </div>
 
-                  <div className="scheme-app-actions" style={{ flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-                    <label className="gy-switch" title="Toggle active">
+                  <div className="sub-item-actions">
+                    <label className="gy-switch" title="Allow this coupon to be redeemed">
                       <input type="checkbox" checked={c.isActive} disabled={busy} onChange={() => toggleActive(c)} />
                       <span className="gy-switch-track" aria-hidden />
                       <span>{c.isActive ? "Active" : "Inactive"}</span>
                     </label>
-
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button type="button" className="gy-btn gy-btn-ghost" onClick={() => openEdit(c)}>
-                        <Pencil size={14} /> Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="gy-btn gy-btn-danger"
-                        disabled={busy}
-                        onClick={() => handleDelete(c)}
-                      >
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    </div>
+                    <button type="button" className="gy-btn gy-btn-ghost" onClick={() => openEdit(c)}>
+                      <Pencil size={14} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="gy-icon-btn gy-icon-btn-danger"
+                      disabled={busy}
+                      onClick={() => handleDelete(c)}
+                      title="Delete"
+                      aria-label="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               </div>
