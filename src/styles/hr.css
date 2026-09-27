@@ -425,3 +425,4 @@
   .sign-card { padding: 26px 28px; }
   .sign-btn { justify-self: start; }
 }
+.hr-note { background: var(--brand-tint, #FCEEF3); border-radius: var(--radius-sm); font-size: 0.86rem; margin: 8px 0 0; padding: 10px 12px; }
