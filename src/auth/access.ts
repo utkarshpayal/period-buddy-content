@@ -27,7 +27,8 @@ export const PERMISSIONS = {
   DOCTORS_MANAGE: "doctors.manage",
   STAFF_MANAGE: "staff.manage",
   AUDIT_READ: "audit.read",
-  COMPANY_FILES_MANAGE: "company_files.manage"
+  COMPANY_FILES_MANAGE: "company_files.manage",
+  HR_MANAGE: "hr.manage"
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -158,7 +159,8 @@ const PERMISSION_INFO: Record<Permission, { area: string; label: string }> = {
   [P.DOCTORS_MANAGE]: { area: "Gynecologists", label: "Invite & manage" },
   [P.STAFF_MANAGE]: { area: "Team", label: "Invite & manage roles" },
   [P.AUDIT_READ]: { area: "Audit logs", label: "View" },
-  [P.COMPANY_FILES_MANAGE]: { area: "Company files", label: "Manage" }
+  [P.COMPANY_FILES_MANAGE]: { area: "Company files", label: "Manage" },
+  [P.HR_MANAGE]: { area: "People & letters", label: "Manage team records, letters & certificates" }
 };
 
 /** Group permission keys by area, in a stable order. Unknown keys (a newer

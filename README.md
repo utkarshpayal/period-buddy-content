@@ -7,6 +7,9 @@ Web dashboard for The Nura team and partner doctors, with two portals in one app
   (send now, scheduled or repeating),
   subscriptions (features, plans, coupons), company files, analytics, team and
   roles, approvals and audit logs.
+- **People & Letters** (Super Admin): your hires and interns, plus offer letters,
+  completion letters and certificates filled from Canva PDFs, emailed with an
+  online signing link. See [docs/hr-documents.md](docs/hr-documents.md).
 - **Clinician portal** (doctors): dashboard, bookings, availability, video
   consultations, payments, profile, reels.
 
@@ -15,7 +18,11 @@ backend at login (`src/auth/access.ts`). Roles: Super Admin, Content (super) adm
 App (super) admin, Clinical admin. Lower-tier staff's changes to live items go
 through **approval** by a higher tier.
 
-React 18 · TypeScript · Vite 6 · React Router 7. Backend:
+Public pages (no login): `/set-password` (invites) and `/sign/:token` (signing a
+letter sent from People & Letters).
+
+React 18 · TypeScript · Vite 6 · React Router 7 · pdf.js (template editor and signing page,
+loaded on demand). Backend:
 [period-buddy-be](https://github.com/utkarshpayal/period-buddy-be) (`/api/admin/*`, `/api/doctor/*`).
 
 ---
@@ -62,6 +69,7 @@ src/
 ├── main.tsx, App.tsx    Entry + app shell
 ├── pages/               One file per workspace page
 │   ├── subscriptions/   Features / plans / coupons / settings tabs
+│   ├── hr/              People & Letters, Letter Templates (field editor), send dialog
 │   └── gynac/           Clinician portal pages
 ├── components/          Sidebars, shared UI
 ├── api/                 Backend clients (auth, admin, content, company files…)
@@ -76,7 +84,7 @@ vercel.json          SPA rewrite for Vercel hosting
 Hosted on **Vercel** (`vercel.json` rewrites every path to `index.html` for client-side
 routing). Set `VITE_API_BASE_URL=https://www.backend.thenura.care` in the Vercel project's
 environment variables. The backend must list this site's origin in `ALLOWED_ORIGINS`,
-and its `ADMIN_APP_URL` must be this site's URL, since invite emails link to it.
+and its `ADMIN_APP_URL` must be this site's URL, since invite emails and letter-signing links point to it.
 
 ## Contributing
 
