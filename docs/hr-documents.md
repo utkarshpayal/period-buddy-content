@@ -27,7 +27,7 @@ There are two kinds of template, and you pick one per template:
 
 A field is a name in braces or brackets. The name is forgiving: `{{firstName}}`, `{{ First Name }}`, `{first name}`, `{{FIRSTNAME}}` and `[ First Name ]` all mean the same field.
 
-**Built-in fields** come from the member's record: `firstName`, `lastName`, `fullName`, `email`, `phone`, `designation`, `department`, `employmentType`, `startDate`, `endDate`, `compensation`, `location`, `managerName`, `address`, `today`, `companyName`, `documentNumber` (NURA/HR/2026/0007) and `documentSeq` (0007).
+**Built-in fields** come from the member's record: `firstName`, `lastName`, `fullName`, `email`, `phone`, `designation`, `department`, `employmentType`, `startDate`, `endDate`, `compensation`, `location`, `managerName`, `address`, `today`, `companyName`, `documentNumber` (NC/INT/2026/0007) and `documentSeq` (0007).
 
 **Common wordings map to them automatically:**
 
@@ -144,7 +144,7 @@ type HrTemplate = {
 
 type HrDocument = {
   _id: string;
-  number: string;                                        // "NURA/HR/2026/0007"
+  number: string;                                        // "NC/INT/2026/0007"
   member: { _id: string; fullName: string; email: string } | null;
   template: { _id: string; name: string } | null;
   templateName: string; category: TemplateCategory;
