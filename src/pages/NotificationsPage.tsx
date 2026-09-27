@@ -58,6 +58,7 @@ import {
   whenBlocker,
   whenFromSchedule
 } from "./notifications/schedule";
+import { EmojiButton, IconPicker, ImageField, insertAtCursor, pushIconFor, type BannerPick } from "./notifications/look";
 
 /* ------------------------------ Constants ------------------------------ */
 
@@ -177,24 +178,32 @@ const ENDED: ScheduleStatus[] = ["completed", "cancelled"];
 
 const fmt = (n: number) => n.toLocaleString();
 
-type Draft = { title: string; body: string };
+type Draft = { title: string; body: string; route: string; icon: string; image: string };
+
+const EMPTY_DRAFT: Draft = { title: "", body: "", route: "", icon: "", image: "" };
 
 const loadDraft = (): Draft => {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) {
       const d = JSON.parse(raw) as Partial<Draft>;
-      return { title: d.title ?? "", body: d.body ?? "" };
+      return {
+        title: d.title ?? "",
+        body: d.body ?? "",
+        route: d.route ?? "",
+        icon: d.icon ?? "",
+        image: d.image ?? ""
+      };
     }
   } catch {
     /* storage unavailable */
   }
-  return { title: "", body: "" };
+  return EMPTY_DRAFT;
 };
 
 const saveDraft = (d: Draft) => {
   try {
-    if (d.title || d.body) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+    if (d.title || d.body || d.route || d.icon || d.image) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
     else localStorage.removeItem(DRAFT_KEY);
   } catch {
     /* storage unavailable */
@@ -372,7 +381,14 @@ const RecipientPicker: React.FC<{
 
 /* ---------------------------- Phone preview ---------------------------- */
 
-const PhonePreview: React.FC<{ title: string; body: string }> = ({ title, body }) => (
+const PhonePreview: React.FC<{ title: string; body: string; icon: string; image: string }> = ({
+  title,
+  body,
+  icon,
+  image
+}) => {
+  const { Icon, color } = pushIconFor(icon);
+  return (
   <div className="pn-phone" aria-label="Notification preview">
     <div className="pn-phone-notch" />
     <div className="pn-phone-time">
@@ -386,9 +402,25 @@ const PhonePreview: React.FC<{ title: string; body: string }> = ({ title, body }
       </div>
       <div className="pn-notif-title">{title || "Your notification title"}</div>
       <div className="pn-notif-body">{body || "Your message will appear here."}</div>
+      {image.startsWith("https://") && <img className="pn-notif-image" src={image} alt="" />}
+    </div>
+    <p className="pn-phone-label">In the app&apos;s notification list</p>
+    <div className="pn-inapp">
+      <span className="pn-inapp-icon" style={{ background: `${color}1F`, color }}>
+        <Icon size={16} />
+      </span>
+      <div className="pn-inapp-text">
+        <div className="pn-inapp-head">
+          <strong>{title || "Your notification title"}</strong>
+          <span>now</span>
+        </div>
+        <span className="pn-inapp-body">{body || "Your message will appear here."}</span>
+        {image.startsWith("https://") && <img src={image} alt="" />}
+      </div>
     </div>
   </div>
-);
+  );
+};
 
 /* --------------------------------- Page -------------------------------- */
 
@@ -403,7 +435,9 @@ export const NotificationsPage: React.FC = () => {
   const [role, setRole] = useState<RoleAudience>("user");
   const [picked, setPicked] = useState<Recipient[]>([]);
   const [saveToInbox, setSaveToInbox] = useState(true);
-  const [route, setRoute] = useState("");
+  const [route, setRoute] = useState(initialDraft.route);
+  const [icon, setIcon] = useState(initialDraft.icon);
+  const [image, setImage] = useState(initialDraft.image);
   const [showTest, setShowTest] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [when, setWhen] = useState<WhenState>(defaultWhen);
@@ -430,8 +464,10 @@ export const NotificationsPage: React.FC = () => {
   useNoticeToast(notice, () => setNotice(null));
 
   const composeRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => saveDraft({ title, body }), [title, body]);
+  useEffect(() => saveDraft({ title, body, route, icon, image }), [title, body, route, icon, image]);
 
   // A user handed over from the Users page ("Send push notification").
   useEffect(() => {
@@ -535,6 +571,7 @@ export const NotificationsPage: React.FC = () => {
   const blockers: string[] = [];
   if (!t) blockers.push("Add a title");
   if (!b) blockers.push("Write a message");
+  if (image && !image.startsWith("https://")) blockers.push("Image link must start with https://");
   if (mode === "people" && picked.length === 0) blockers.push("Pick at least one recipient");
   if (mode !== "people" && bulkActive && when.mode === "now")
     blockers.push("Wait for the current broadcast to finish");
@@ -561,7 +598,14 @@ export const NotificationsPage: React.FC = () => {
     if (!testEmail.trim()) return setError("Enter the email of the account to test on.");
     setTesting(true);
     try {
-      await sendTestNotification({ title: t, body: b, email: testEmail.trim(), route: route || undefined });
+      await sendTestNotification({
+        title: t,
+        body: b,
+        email: testEmail.trim(),
+        route: route || undefined,
+        icon: icon || undefined,
+        image: image || undefined
+      });
       setNotice(`Test sent to ${testEmail.trim()} — check that phone.`);
     } catch (err) {
       if (isPendingApprovalError(err)) {
@@ -579,6 +623,8 @@ export const NotificationsPage: React.FC = () => {
     setBody("");
     setPicked([]);
     setRoute("");
+    setIcon("");
+    setImage("");
     setWhen(defaultWhen());
     setEditing(null);
   };
@@ -592,7 +638,9 @@ export const NotificationsPage: React.FC = () => {
       audience: mode === "people" ? ("selected" as const) : countAudience,
       userIds: mode === "people" ? picked.map((p) => p._id) : undefined,
       saveToInbox,
-      route: route || undefined
+      route: route || undefined,
+      icon: icon || undefined,
+      image: image || undefined
     };
     try {
       if (scheduling) {
@@ -659,7 +707,24 @@ export const NotificationsPage: React.FC = () => {
   const handleReuse = (item: PushBroadcast | PushSchedule) => {
     setTitle(item.title);
     setBody(item.body);
+    setRoute(item.data?.route ?? "");
+    setIcon(item.data?.icon ?? "");
+    setImage(item.data?.image ?? "");
+    setSaveToInbox(item.saveToInbox);
     composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Fill from a live App CMS banner: always its image, plus title / message /
+  // destination where the composer doesn't have one yet.
+  const handleUseBanner = (pick: BannerPick) => {
+    setImage(pick.image);
+    if (!title.trim()) setTitle(pick.title.slice(0, TITLE_MAX));
+    if (!body.trim() && pick.body) setBody(pick.body.slice(0, BODY_MAX));
+    if (!route && pick.route) {
+      // Banners use expo-router group paths ("/(app)/(dashboard)/tracker").
+      const path = pick.route.replace(/\/\([^)]*\)/g, "") || "/";
+      if (DESTINATIONS.some((d) => d.value === path)) setRoute(path);
+    }
   };
 
   // Load a saved schedule into the composer; "Review & save" then updates it.
@@ -671,6 +736,8 @@ export const NotificationsPage: React.FC = () => {
       setTitle(schedule.title);
       setBody(schedule.body);
       setRoute(schedule.data?.route ?? "");
+      setIcon(schedule.data?.icon ?? "");
+      setImage(schedule.data?.image ?? "");
       setSaveToInbox(schedule.saveToInbox);
       if (schedule.audience === "selected") {
         setMode("people");
@@ -868,14 +935,22 @@ export const NotificationsPage: React.FC = () => {
               <h3>Write the message</h3>
             </div>
 
-            <label className="pn-field">
+            <div className="pn-field">
               <span className="pn-label-row">
-                <span>Title</span>
-                <span className={`pn-count ${title.length > TITLE_SOFT ? "is-warn" : ""}`}>
-                  {title.length}/{TITLE_MAX}
+                <label htmlFor="pn-title">Title</label>
+                <span className="pn-label-tools">
+                  <EmojiButton
+                    label="Add emoji to the title"
+                    onPick={(e) => insertAtCursor(titleRef.current, title, e, TITLE_MAX, setTitle)}
+                  />
+                  <span className={`pn-count ${title.length > TITLE_SOFT ? "is-warn" : ""}`}>
+                    {title.length}/{TITLE_MAX}
+                  </span>
                 </span>
               </span>
               <input
+                id="pn-title"
+                ref={titleRef}
                 value={title}
                 maxLength={TITLE_MAX}
                 placeholder="e.g. Welcome to The Nura Care"
@@ -884,16 +959,24 @@ export const NotificationsPage: React.FC = () => {
               {title.length > TITLE_SOFT && (
                 <small className="pn-warn">Titles over ~{TITLE_SOFT} characters get cut off on most phones.</small>
               )}
-            </label>
+            </div>
 
-            <label className="pn-field">
+            <div className="pn-field">
               <span className="pn-label-row">
-                <span>Message</span>
-                <span className={`pn-count ${body.length > BODY_SOFT ? "is-warn" : ""}`}>
-                  {body.length}/{BODY_MAX}
+                <label htmlFor="pn-body">Message</label>
+                <span className="pn-label-tools">
+                  <EmojiButton
+                    label="Add emoji to the message"
+                    onPick={(e) => insertAtCursor(bodyRef.current, body, e, BODY_MAX, setBody)}
+                  />
+                  <span className={`pn-count ${body.length > BODY_SOFT ? "is-warn" : ""}`}>
+                    {body.length}/{BODY_MAX}
+                  </span>
                 </span>
               </span>
               <textarea
+                id="pn-body"
+                ref={bodyRef}
                 value={body}
                 rows={4}
                 maxLength={BODY_MAX}
@@ -903,7 +986,7 @@ export const NotificationsPage: React.FC = () => {
               {body.length > BODY_SOFT && (
                 <small className="pn-warn">Only the first ~{BODY_SOFT} characters show before the user expands it.</small>
               )}
-            </label>
+            </div>
 
             <label className="pn-field">
               <span className="pn-label-row">
@@ -918,6 +1001,21 @@ export const NotificationsPage: React.FC = () => {
               </select>
               <small className="pn-muted">The screen people land on when they tap the notification.</small>
             </label>
+
+            <div className="pn-field">
+              <span className="pn-label-row">
+                <span>Icon</span>
+              </span>
+              <IconPicker value={icon} onChange={setIcon} />
+            </div>
+
+            <div className="pn-field">
+              <span className="pn-label-row">
+                <span>Banner image</span>
+                <span className="pn-muted">Optional</span>
+              </span>
+              <ImageField value={image} onChange={setImage} onUseBanner={handleUseBanner} onError={setError} />
+            </div>
 
             <label className="gy-switch pn-inbox">
               <input type="checkbox" checked={saveToInbox} onChange={(e) => setSaveToInbox(e.target.checked)} />
@@ -985,7 +1083,7 @@ export const NotificationsPage: React.FC = () => {
 
         <aside className="pn-aside">
           <p className="pn-aside-label">Lock-screen preview</p>
-          <PhonePreview title={t} body={b} />
+          <PhonePreview title={t} body={b} icon={icon} image={image} />
           <p className="pn-aside-note">
             Appearance varies by device. Send a test to see it exactly as users will.
           </p>
@@ -1174,7 +1272,7 @@ export const NotificationsPage: React.FC = () => {
               </button>
             </div>
 
-            <PhonePreview title={t} body={b} />
+            <PhonePreview title={t} body={b} icon={icon} image={image} />
 
             <dl className="pn-summary">
               <div>
@@ -1192,6 +1290,14 @@ export const NotificationsPage: React.FC = () => {
               <div>
                 <dt>Opens</dt>
                 <dd>{DESTINATIONS.find((d) => d.value === route)?.label ?? route}</dd>
+              </div>
+              <div>
+                <dt>Icon</dt>
+                <dd>{icon ? pushIconFor(icon).label : "Default"}</dd>
+              </div>
+              <div>
+                <dt>Banner image</dt>
+                <dd>{image ? "Yes" : "No"}</dd>
               </div>
               <div>
                 <dt>In-app inbox</dt>

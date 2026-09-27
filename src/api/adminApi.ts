@@ -77,7 +77,8 @@ export async function adminRequest<T>(path: string, options: RequestInit = {}): 
   }
 
   const headers = new Headers(options.headers);
-  if (!headers.has("Content-Type") && options.body) {
+  // FormData sets its own multipart boundary.
+  if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   const token = getApiToken();
@@ -187,7 +188,7 @@ export type PushBroadcast = {
   recipientPreview?: string[];
   saveToInbox: boolean;
   /** Optional FCM data payload; `route` is the in-app screen a tap opens. */
-  data?: { route?: string } | null;
+  data?: PushData | null;
   status: BroadcastStatus;
   cancelRequested: boolean;
   totalUsers: number;
@@ -215,7 +216,16 @@ export type AudienceCount = {
   fcmConfigured: boolean;
 };
 
-export type BroadcastInput = {
+/** `route`: in-app screen a tap opens. `icon`: one of PUSH_ICONS. `image`: https big picture. */
+export type PushData = { route?: string; icon?: string; image?: string };
+
+/** Look of a push, sent alongside title/body. Blank = not set. */
+export type PushLook = {
+  icon?: string;
+  image?: string;
+};
+
+export type BroadcastInput = PushLook & {
   title: string;
   body: string;
   audience: BroadcastAudience;
@@ -246,7 +256,7 @@ export async function getAudienceCount(audience: Exclude<BroadcastAudience, "sel
   return adminRequest(`/api/admin/notifications/audience?audience=${audience}`);
 }
 
-export async function sendTestNotification(input: {
+export async function sendTestNotification(input: PushLook & {
   title: string;
   body: string;
   email: string;
@@ -256,6 +266,17 @@ export async function sendTestNotification(input: {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+/** Upload a push's big-picture image; returns its public https URL. */
+export async function uploadNotificationImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  const { url } = await adminRequest<{ url: string }>(`/api/admin/notifications/upload`, {
+    method: "POST",
+    body: form
+  });
+  return url;
 }
 
 export async function createBroadcast(input: BroadcastInput): Promise<{ broadcast: PushBroadcast }> {
@@ -304,7 +325,7 @@ export type PushSchedule = ScheduleTiming & {
   audience: BroadcastAudience;
   recipientPreview?: string[] | null;
   saveToInbox: boolean;
-  data?: { route?: string } | null;
+  data?: PushData | null;
   status: ScheduleStatus;
   nextRunAt?: string | null;
   runCount: number;
