@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   CreditCard,
   FileQuestion,
+  FilePen,
   FileText,
   Files,
   Film,
@@ -19,7 +20,8 @@ import {
   Settings,
   Stethoscope,
   Users,
-  UsersRound
+  UsersRound,
+  IdCard
 } from "lucide-react";
 import { PERMISSIONS as P, Permission } from "./auth/access";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
@@ -41,6 +43,8 @@ import { DoctorsPage } from "./pages/DoctorsPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { CompanyFilesPage } from "./pages/CompanyFilesPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { PeoplePage } from "./pages/hr/PeoplePage";
+import { TemplatesPage } from "./pages/hr/TemplatesPage";
 
 export type NavItem = {
   path: string;
@@ -115,6 +119,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/team", label: "Team & Access", icon: UsersRound, element: <TeamPage />, permissions: [P.STAFF_MANAGE], description: "Invite staff and manage roles" },
       { path: "/audit-logs", label: "Audit Logs", icon: ScrollText, element: <AuditLogsPage />, permissions: [P.AUDIT_READ], description: "Every privileged action, recorded" },
+      { path: "/people", label: "People & Letters", icon: IdCard, element: <PeoplePage />, permissions: [P.HR_MANAGE], description: "Hires, interns and the letters you send them" },
+      { path: "/letter-templates", label: "Letter Templates", icon: FilePen, element: <TemplatesPage />, permissions: [P.HR_MANAGE], description: "Canva letters and certificates, ready to fill" },
       { path: "/company-files", label: "Company Files", icon: Files, element: <CompanyFilesPage />, permissions: [P.COMPANY_FILES_MANAGE], description: "Internal documents" },
       { path: "/settings", label: "Account & Settings", icon: Settings, element: <SettingsPage />, permissions: [], description: "Your account and connection" }
     ]

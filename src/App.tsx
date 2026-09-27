@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import { ToastProvider } from "./components/Toast";
@@ -16,6 +16,14 @@ import { GynacReels } from "./pages/gynac/GynacReels";
 import { GynacAvailability } from "./pages/gynac/GynacAvailability";
 import { GynacProfile } from "./pages/gynac/GynacProfile";
 import { isAdminApiConfigured } from "./api/adminApi";
+
+// The signing page pulls in pdf.js, so it loads only when someone opens a link.
+const SignPage = lazy(() => import("./pages/SignPage").then((m) => ({ default: m.SignPage })));
+const signRoute = (
+  <Suspense fallback={null}>
+    <SignPage />
+  </Suspense>
+);
 
 function AdminApp() {
   return (
@@ -62,11 +70,13 @@ function AppContent() {
   const { isAuthenticated, role, access } = useAppContext();
 
   // Signed out: the only reachable screens are the login page and the public
-  // invite (set-password) flow. Every other path bounces to /login.
+  // invite (set-password) and document-signing flows. Every other path
+  // bounces to /login.
   if (!isAuthenticated) {
     return (
       <Routes>
         <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/sign/:token" element={signRoute} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
@@ -83,6 +93,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/set-password" element={<SetPasswordPage />} />
+      <Route path="/sign/:token" element={signRoute} />
       <Route path="*" element={portal} />
     </Routes>
   );

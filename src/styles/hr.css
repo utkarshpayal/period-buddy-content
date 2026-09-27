@@ -1,0 +1,427 @@
+/* =========================================================================
+   HR documents: People & Letters, Letter Templates (editor) and the public
+   /sign/:token page. Built on the tokens in tokens.css.
+   ========================================================================= */
+
+/* ------------------------------- Shared -------------------------------- */
+
+.hr-dialog.is-wide { max-width: 820px; }
+.hr-dialog .ws-field select,
+.hr-dialog .ws-field textarea,
+.hr-editor .ws-field select,
+.hr-editor .ws-field textarea {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font: inherit;
+  min-height: 44px;
+  padding: 10px 12px;
+  width: 100%;
+}
+.hr-dialog .ws-field textarea,
+.hr-editor .ws-field textarea { resize: vertical; line-height: 1.5; }
+.hr-dialog .ws-field select:focus,
+.hr-dialog .ws-field textarea:focus,
+.hr-editor .ws-field select:focus,
+.hr-editor .ws-field textarea:focus,
+.hr-editor .ws-field input:focus { border-color: var(--brand); box-shadow: var(--ring); outline: none; }
+.hr-editor .ws-field input {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  min-height: 40px;
+  padding: 8px 10px;
+  width: 100%;
+}
+.hr-editor .ws-field input[type="color"] { padding: 4px; }
+
+.hr-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hr-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hr-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hr-span-2 { grid-column: span 2; }
+@media (max-width: 640px) {
+  .hr-grid, .hr-grid-3 { grid-template-columns: 1fr; }
+  .hr-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hr-span-2 { grid-column: auto; }
+}
+
+.hr-row-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.hr-subhead {
+  color: var(--ink-2);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin: 6px 0 0;
+  text-transform: uppercase;
+}
+.hr-sign-note { align-items: center; display: inline-flex; gap: 6px; margin: 0; }
+.hr-click-row { cursor: pointer; }
+.hr-click-row:hover td { background: var(--surface-2); }
+
+.hr-check { align-items: flex-start; cursor: pointer; display: flex; gap: 10px; }
+.hr-check input { accent-color: var(--brand); margin-top: 3px; }
+.hr-check span { display: grid; gap: 2px; }
+.hr-check small { color: var(--ink-4); font-size: 0.8rem; }
+.hr-check.is-inline { align-items: center; color: var(--ink-2); font-size: 0.86rem; }
+.hr-check.is-inline input { margin-top: 0; }
+
+/* Custom fields in the member dialog */
+.hr-custom { border: 1px dashed var(--line-strong); border-radius: var(--radius-md); display: grid; gap: 10px; padding: 14px; }
+.hr-custom-head { display: grid; gap: 2px; }
+.hr-custom-head span { color: var(--ink-2); font-size: 0.85rem; font-weight: 700; }
+.hr-custom-head small { color: var(--ink-4); font-size: 0.8rem; }
+.hr-custom-row { display: grid; gap: 8px; grid-template-columns: 1fr 1.4fr auto; }
+.hr-custom-row input {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+.hr-custom > .gy-btn { justify-self: start; }
+
+/* ------------------------------- Drawer -------------------------------- */
+
+.hr-drawer-overlay { align-items: stretch; justify-content: flex-end; padding: 0; }
+.hr-drawer {
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 560px;
+  overflow: hidden;
+  width: 100%;
+}
+.hr-drawer-body { display: grid; gap: 16px; overflow-y: auto; padding: 18px 24px 32px; }
+.hr-details { display: grid; gap: 10px 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.hr-detail dt { color: var(--ink-4); font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.hr-detail dd { color: var(--ink); font-size: 0.9rem; margin: 2px 0 0; overflow-wrap: anywhere; }
+.hr-notes { background: var(--amber-tint); border-radius: var(--radius-sm); color: var(--amber-dark); font-size: 0.86rem; margin: 0; padding: 10px 12px; white-space: pre-wrap; }
+.hr-doc-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.hr-doc { border: 1px solid var(--line); border-radius: var(--radius-md); display: grid; gap: 6px; padding: 12px 14px; }
+.hr-doc-main { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.hr-doc .gy-btn { min-height: 32px; padding: 4px 10px; font-size: 0.8rem; }
+
+/* ----------------------------- Send dialog ----------------------------- */
+
+.hr-fields-table { border: 1px solid var(--line); border-radius: var(--radius-md); display: grid; overflow: hidden; }
+.hr-fields-head,
+.hr-fields-row { align-items: center; display: grid; gap: 12px; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); padding: 9px 14px; }
+.hr-fields-head { background: var(--surface-2); color: var(--ink-4); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
+.hr-fields-row { border-top: 1px solid var(--line-2); }
+.hr-fields-row.is-ask { background: var(--amber-tint); }
+.hr-field-key { color: var(--ink-2); display: grid; font-size: 0.86rem; font-weight: 700; }
+.hr-field-key code { color: var(--ink-4); font-size: 0.72rem; font-weight: 500; }
+.hr-field-value { color: var(--ink); font-size: 0.88rem; overflow-wrap: anywhere; }
+.hr-field-value em { color: var(--ink-5); }
+.hr-fields-row input { border: 1px solid var(--amber-line); border-radius: var(--radius-sm); font: inherit; min-height: 38px; padding: 6px 10px; }
+.hr-fields-table .hr-sign-note { padding: 10px 14px; border-top: 1px solid var(--line-2); }
+
+.hr-result { display: grid; gap: 6px; justify-items: center; padding: 12px 0; text-align: center; }
+.hr-result h4 { font-size: 1.05rem; margin: 6px 0 0; }
+.hr-result p { color: var(--ink-3); margin: 0; }
+.hr-result-icon { align-items: center; background: var(--teal-tint); border-radius: 50%; color: var(--teal); display: flex; height: 54px; justify-content: center; width: 54px; }
+
+/* PDF viewer modal */
+.hr-pdf-overlay { align-items: stretch; padding: 24px; }
+.hr-pdf-modal { background: var(--surface); border-radius: var(--radius-lg); display: flex; flex-direction: column; margin: auto; max-width: 980px; overflow: hidden; width: 100%; height: calc(100vh - 48px); }
+.hr-pdf-head { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 12px; justify-content: space-between; padding: 12px 16px; }
+.hr-pdf-frame { border: 0; flex: 1; width: 100%; background: var(--line-2); }
+
+/* ---------------------------- Template list ---------------------------- */
+
+.hr-template-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.hr-template-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(30, 24, 35, 0.05));
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+}
+.hr-template-card.is-archived { opacity: 0.65; }
+.hr-template-card h3 { font-size: 1rem; margin: 4px 0 0; }
+.hr-template-card p { margin: 0; }
+.hr-template-top { display: flex; gap: 6px; }
+.hr-template-actions { margin-top: 8px; }
+
+/* ------------------------------- Editor -------------------------------- */
+
+.hr-editor-overlay { padding: 0; align-items: stretch; }
+.hr-editor { background: var(--page); display: flex; flex-direction: column; height: 100vh; width: 100%; }
+.hr-editor-head {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 12px 22px;
+}
+.hr-editor-head h3 { font-size: 1.1rem; margin: 0; }
+.hr-editor-head .eyebrow { margin: 0; }
+.hr-editor-main { display: grid; flex: 1; grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); min-height: 0; }
+.hr-editor-side {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 18px 20px 40px;
+}
+.hr-editor-canvas { display: flex; flex-direction: column; min-width: 0; overflow-y: auto; padding: 18px 22px 60px; }
+@media (max-width: 900px) {
+  .hr-editor-main { grid-template-columns: 1fr; overflow-y: auto; }
+  .hr-editor-side { border-right: 0; overflow: visible; }
+  .hr-editor-canvas { overflow: visible; }
+}
+
+.hr-kind { border: 0; display: grid; gap: 8px; margin: 0; padding: 0; }
+.hr-kind legend { color: var(--ink-2); font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; padding: 0; }
+.hr-kind .ws-role-option span { color: var(--ink-4); font-size: 0.8rem; }
+.hr-upload { display: grid; gap: 6px; }
+.hr-upload-btn { cursor: pointer; justify-self: start; }
+
+.hr-field-panel { background: var(--brand-tint); border: 1px solid var(--brand-line); border-radius: var(--radius-md); display: grid; gap: 12px; padding: 14px; }
+.hr-field-panel-head { align-items: center; display: flex; justify-content: space-between; }
+.hr-field-panel-head .hr-subhead { margin: 0; }
+
+.hr-letter-settings,
+.hr-email,
+.hr-preview-with { display: grid; gap: 10px; }
+.hr-body-input { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85rem; }
+
+.hr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hr-chip {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 3px 10px;
+}
+.hr-chip:hover { border-color: var(--brand-line); color: var(--brand-dark); }
+.hr-chip.is-custom { border-style: dashed; }
+.hr-chip-custom input { border: 1px dashed var(--line-strong); border-radius: 999px; font-size: 0.76rem; padding: 3px 10px; width: 120px; }
+
+.hr-toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 12px; }
+.hr-toolbar .gx-tabs button { align-items: center; display: inline-flex; gap: 6px; }
+
+.hr-dropzone {
+  align-items: center;
+  background: var(--surface);
+  border: 2px dashed var(--brand-line);
+  border-radius: var(--radius-lg);
+  color: var(--ink-3);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  margin: auto;
+  max-width: 460px;
+  padding: 48px 24px;
+  text-align: center;
+  width: 100%;
+}
+.hr-dropzone svg { color: var(--brand); }
+.hr-dropzone strong { color: var(--ink); font-size: 1rem; }
+
+.hr-pages { display: grid; gap: 20px; justify-items: center; width: 100%; }
+.hr-approx { justify-self: stretch; margin: 0; }
+.hr-page { box-shadow: 0 6px 24px rgba(30, 24, 35, 0.14); line-height: 0; position: relative; background: #fff; }
+.hr-page canvas { display: block; }
+.hr-page-overlay { inset: 0; position: absolute; line-height: normal; }
+.hr-page-num { background: rgba(30, 24, 35, 0.7); border-radius: 999px; bottom: 8px; color: #fff; font-size: 0.7rem; line-height: 1; padding: 4px 8px; position: absolute; right: 8px; }
+.hr-overlay-hit { inset: 0; position: absolute; touch-action: none; }
+.is-adding .hr-overlay-hit { cursor: copy; }
+.is-drawing .hr-overlay-hit { cursor: crosshair; }
+
+.hr-field {
+  align-items: center;
+  background: rgba(194, 65, 111, 0.1);
+  border: 1px dashed var(--brand);
+  border-radius: 3px;
+  box-sizing: border-box;
+  cursor: move;
+  display: flex;
+  line-height: 1;
+  position: absolute;
+  touch-action: none;
+  user-select: none;
+  white-space: nowrap;
+}
+.hr-field.is-selected { background: rgba(194, 65, 111, 0.18); border-style: solid; box-shadow: 0 0 0 2px rgba(194, 65, 111, 0.25); }
+.hr-field-text { flex: 1; overflow: hidden; padding: 0 3px; text-overflow: ellipsis; }
+.hr-field-handle { background: var(--brand); border-radius: 2px; cursor: ew-resize; height: 70%; position: absolute; right: -4px; width: 7px; }
+
+.hr-sig-box {
+  align-items: center;
+  background: rgba(106, 91, 201, 0.12);
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--accent-dark);
+  cursor: move;
+  display: flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 4px;
+  justify-content: center;
+  position: absolute;
+  touch-action: none;
+  user-select: none;
+}
+.hr-sig-handle { background: var(--accent); border-radius: 3px; bottom: -5px; cursor: nwse-resize; height: 10px; position: absolute; right: -5px; width: 10px; }
+.hr-sig-box.is-static { cursor: default; height: 48px; margin-top: 12px; position: static; width: 170px; }
+
+.hr-letter-area { border: 1px dashed rgba(106, 91, 201, 0.6); box-sizing: border-box; color: var(--ink); overflow: hidden; position: absolute; }
+.hr-letter-text { white-space: pre-wrap; }
+.hr-letter-text mark { background: var(--brand-tint-2); border-radius: 3px; color: var(--brand-darker); padding: 0 2px; }
+
+/* ------------------------------ Sign page ------------------------------ */
+
+.sign-page {
+  background: linear-gradient(180deg, var(--brand-tint) 0%, var(--page) 320px);
+  align-content: start;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  min-height: 100vh;
+  padding: 18px 14px 40px;
+}
+.sign-brand { align-items: center; color: var(--brand-darker); display: flex; font-family: var(--font-display); font-weight: 800; gap: 10px; justify-self: center; }
+.sign-brand img { height: 34px; width: 34px; object-fit: contain; }
+.sign-card {
+  align-content: start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(30, 24, 35, 0.08);
+  display: grid;
+  gap: 10px;
+  max-width: 820px;
+  padding: 20px;
+  width: 100%;
+}
+.sign-card h1 { font-size: 1.35rem; margin: 0; }
+.sign-card h2 { align-items: center; display: flex; font-size: 1.1rem; gap: 8px; margin: 0; }
+.sign-card p { color: var(--ink-3); margin: 0; }
+.sign-center { justify-items: center; padding: 36px 22px; text-align: center; }
+.sign-eyebrow { color: var(--brand) !important; font-size: 0.76rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.sign-lead { font-size: 0.95rem; }
+.sign-status-icon { align-items: center; background: var(--teal-tint); border-radius: 50%; color: var(--teal); display: flex; height: 58px; justify-content: center; width: 58px; }
+.sign-status-icon.is-bad { background: var(--danger-tint); color: var(--danger); }
+
+.sign-btn {
+  align-items: center;
+  background: var(--brand);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  justify-self: stretch;
+  min-height: 50px;
+  padding: 0 22px;
+}
+.sign-btn:disabled { opacity: 0.6; cursor: default; }
+.sign-btn.is-ghost { background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-2); justify-self: start; min-height: 40px; }
+.sign-center .sign-btn { justify-self: center; }
+
+.sign-pages { display: grid; gap: 14px; justify-items: center; max-width: 820px; width: 100%; }
+.sign-page-sheet { background: #fff; box-shadow: 0 6px 22px rgba(30, 24, 35, 0.12); line-height: 0; position: relative; }
+.sign-page-sheet canvas { display: block; }
+.sign-box {
+  align-items: center;
+  background: rgba(194, 65, 111, 0.1);
+  border: 2px dashed var(--brand);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--brand-dark);
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 800;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  animation: sign-pulse 1.8s ease-in-out infinite;
+}
+.sign-box.has-signature { animation: none; background: transparent; border-color: transparent; }
+.sign-box img { max-height: 100%; max-width: 100%; object-fit: contain; }
+@keyframes sign-pulse { 50% { background: rgba(194, 65, 111, 0.2); } }
+
+.sign-form { gap: 14px; }
+.sign-pad { display: grid; gap: 8px; }
+.sign-tabs { background: var(--line-2); border-radius: 999px; display: flex; gap: 4px; padding: 4px; }
+.sign-tabs button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  gap: 6px;
+  justify-content: center;
+  min-height: 38px;
+}
+.sign-tabs button.is-active { background: var(--surface); box-shadow: 0 1px 3px rgba(30, 24, 35, 0.12); color: var(--brand-dark); }
+.sign-canvas {
+  background:
+    linear-gradient(transparent calc(100% - 42px), var(--line-strong) calc(100% - 42px), var(--line-strong) calc(100% - 41px), transparent calc(100% - 41px)),
+    var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  cursor: crosshair;
+  height: 180px;
+  touch-action: none;
+  width: 100%;
+}
+.sign-pad-foot { align-items: center; color: var(--ink-4); display: flex; font-size: 0.8rem; justify-content: space-between; }
+.sign-link { align-items: center; background: none; border: 0; color: var(--brand-dark); cursor: pointer; display: inline-flex; font: inherit; font-weight: 700; gap: 4px; }
+.sign-upload {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: grid;
+  font-size: 0.88rem;
+  justify-items: center;
+  min-height: 150px;
+  padding: 16px;
+  text-align: center;
+  gap: 10px;
+}
+.sign-upload img { max-height: 120px; max-width: 100%; }
+.sign-field { display: grid; gap: 6px; }
+.sign-field span { color: var(--ink-2); font-size: 0.86rem; font-weight: 700; }
+.sign-field input { border: 1px solid var(--line-strong); border-radius: 12px; font: inherit; font-size: 1rem; min-height: 48px; padding: 10px 14px; }
+.sign-field input:focus { border-color: var(--brand); box-shadow: var(--ring); outline: none; }
+.sign-agree { align-items: flex-start; color: var(--ink-3); display: flex; font-size: 0.86rem; gap: 10px; line-height: 1.45; }
+.sign-agree input { accent-color: var(--brand); height: 20px; margin: 1px 0 0; min-width: 20px; }
+.sign-error { align-items: center; background: var(--danger-tint); border-radius: 12px; color: var(--danger-dark); display: flex; font-size: 0.86rem; gap: 8px; padding: 10px 12px; }
+.sign-foot { color: var(--ink-4); font-size: 0.76rem; max-width: 820px; text-align: center; }
+
+@media (min-width: 720px) {
+  .sign-page { padding-top: 32px; }
+  .sign-card { padding: 26px 28px; }
+  .sign-btn { justify-self: start; }
+}
