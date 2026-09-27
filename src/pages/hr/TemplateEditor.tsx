@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Loader2, MousePointerClick, PenLine, Save, Trash2, Upload, X } from "lucide-react";
+import { Eye, Loader2, MousePointerClick, PenLine, Save, Sparkles, Trash2, Upload, X } from "lucide-react";
 import {
   Box,
   HrMember,
@@ -10,10 +10,11 @@ import {
   TemplateCategory,
   TemplateField,
   TemplateKind,
+  canonicalKey,
   fullName,
   hrApi
 } from "../../api/hrApi";
-import { LoadedPdf, loadPdf, renderPage } from "../../lib/pdf";
+import { LoadedPdf, detectPlaceholders, loadPdf, renderPage } from "../../lib/pdf";
 import { useToast } from "../../components/Toast";
 import { PdfModal, placeholderLabel, useHrMeta } from "./shared";
 
@@ -191,6 +192,77 @@ export const TemplateEditor: React.FC<{
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, preview]);
 
+  const [detectNote, setDetectNote] = useState<string | null>(null);
+
+  /**
+   * Place a field on every {{field}} / [ field ] typed into the design, covering
+   * the printed text so only the real value shows. A typed "Signature" spot
+   * becomes the signature box instead.
+   */
+  const findFields = async (p: LoadedPdf) => {
+    const lines = await detectPlaceholders(p);
+    const added: TemplateField[] = [];
+    let signatureBox: Box | null = null;
+    // "[ DD Month YYYY ]" means different dates in different places: read the words before it.
+    const keyFor = (name: string, before: string) => {
+      if (/^(d{1,2}\s*)?(month|mon|mm)(\s*y{2,4})?$|^date$/i.test(name.replace(/[^A-Za-z ]/g, "").trim())) {
+        if (/\bfrom\s*$/i.test(before)) return "startDate";
+        if (/\b(to|till|until|–|-)\s*$/i.test(before)) return "endDate";
+        return "today";
+      }
+      if (/^\d+$/.test(name)) return /ref|no\.?|number|\/\s*$/i.test(before) ? "documentSeq" : "";
+      return canonicalKey(name);
+    };
+    for (const line of lines) {
+      if (line.alone && /sign/i.test(line.placeholders[0].name) && !/signed/i.test(line.placeholders[0].name)) {
+        signatureBox = { page: line.page, x: line.x, y: Math.max(0, line.y - line.height * 2), width: Math.max(140, line.width), height: line.height * 3 };
+        continue;
+      }
+      let text = line.text;
+      const keys: string[] = [];
+      for (const ph of line.placeholders) {
+        const key = keyFor(ph.name, ph.before);
+        if (!key) continue;
+        keys.push(key);
+        text = text.replace(ph.raw, `{{${key}}}`);
+      }
+      // A line whose broken placeholder moved up still gets covered and redrawn.
+      if (!keys.length && !line.remainder) continue;
+      const clash = form.fields.some((f) => f.page === line.page && Math.abs(f.y - line.y) < 3);
+      if (clash) continue;
+      const width = line.centered
+        ? Math.min(line.pageWidth * 0.85, Math.max(line.width * 1.15, 300))
+        : Math.min(line.pageWidth - line.x - 20, Math.max(line.width * 1.3, 150));
+      const single = line.alone && keys.length === 1;
+      added.push({
+        id: uid(),
+        key: single ? keys[0] : "text",
+        ...(single ? {} : { text }),
+        page: line.page,
+        x: line.centered ? Math.max(0, line.x + line.width / 2 - width / 2) : line.x,
+        y: line.y,
+        width,
+        fontSize: Math.round(line.fontSize * 10) / 10,
+        font: line.serif ? "serif" : "sans",
+        bold: single,
+        color: single ? "#1B2E5A" : "#2C2F36",
+        align: line.centered ? "center" : "left",
+        cover: { x: Math.max(0, line.x - 1.5), y: Math.max(0, line.y - 1), width: line.width + 3, height: line.height + 2, color: "#FFFFFF" }
+      });
+    }
+    setForm((f) => ({
+      ...f,
+      fields: [...f.fields, ...added],
+      ...(signatureBox ? { requiresSignature: true, signatureBox } : {})
+    }));
+    if (added.length || signatureBox) setDirty(true);
+    setDetectNote(
+      added.length || signatureBox
+        ? `Found ${added.length} line${added.length === 1 ? "" : "s"} with fields${signatureBox ? " and a signature spot" : ""} and placed them. The printed text underneath is covered in white. Check each one's colour, size and font against your design.`
+        : "No {{fields}} or [ fields ] typed in this PDF. Click on the page to place fields yourself."
+    );
+  };
+
   const pickFile = async (f: File | null) => {
     if (!f) return;
     if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) return setError("Upload a PDF (in Canva: Share → Download → PDF Standard).");
@@ -202,6 +274,7 @@ export const TemplateEditor: React.FC<{
       setPdf(p);
       setFile(f);
       setDirty(true);
+      if (form.kind === "fixed") await findFields(p);
       if (!form.name.trim()) set("name", f.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " "));
     } catch {
       setError("That file couldn't be read as a PDF.");
@@ -505,12 +578,16 @@ export const TemplateEditor: React.FC<{
                       <PenLine size={14} /> Signature box
                     </button>
                   </div>
+                  <button type="button" className="gy-btn gy-btn-ghost" onClick={() => pdf && findFields(pdf)} disabled={!pdf}>
+                    <Sparkles size={14} /> Find fields in PDF
+                  </button>
                   <small className="admin-user-sub">
                     {tool === "field"
-                      ? "Click on the page to add a field. Drag to move, drag the right edge to resize."
+                      ? "Click on the page to add a field. Drag to move, drag the right edge to resize. Type {{First Name}} or [ Role Title ] in Canva and they're found for you."
                       : "Drag on the page to draw where the signature goes."}
                   </small>
                 </div>
+                {detectNote && <p className="hr-note">{detectNote}</p>}
                 <FixedCanvas
                   pdf={pdf}
                   fields={form.fields}
@@ -588,7 +665,16 @@ const FieldPanel: React.FC<{
           <option value="__custom">Custom field…</option>
         </select>
       </label>
-      {!known && (
+      <label className="ws-field">
+        <span>Or a line of text (optional)</span>
+        <input
+          value={field.text ?? ""}
+          placeholder="e.g. Ref: NC/CERT/{{documentNumber}}"
+          onChange={(e) => onChange({ text: e.target.value || undefined })}
+        />
+        <small className="admin-user-sub">Mix words and {"{{fields}}"}; replaces the single field above.</small>
+      </label>
+      {!known && !field.text && (
         <label className="ws-field">
           <span>Custom field name</span>
           <input
@@ -816,7 +902,7 @@ const FixedCanvas: React.FC<{
                         drag.current = { kind: "move", id: f.id, startX: e.clientX, startY: e.clientY, orig: f, scale };
                       }}
                     >
-                      <span className="hr-field-text">{placeholderLabel(f.key, meta)}</span>
+                      <span className="hr-field-text">{f.text || placeholderLabel(f.key, meta)}</span>
                       <span
                         className="hr-field-handle"
                         onPointerDown={(e) => {

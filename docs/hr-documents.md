@@ -25,13 +25,44 @@ There are two kinds of template, and you pick one per template:
 
 ## Fields (placeholders)
 
-A placeholder is written as `{{key}}`. The built-in keys come from the member's record:
+A field is a name in braces or brackets. The name is forgiving: `{{firstName}}`, `{{ First Name }}`, `{first name}`, `{{FIRSTNAME}}` and `[ First Name ]` all mean the same field.
 
-`firstName`, `lastName`, `fullName`, `email`, `phone`, `designation`, `department`, `employmentType`, `startDate`, `endDate`, `compensation`, `location`, `managerName`, `address`, `today`, `companyName` and `documentNumber`.
+**Built-in fields** come from the member's record: `firstName`, `lastName`, `fullName`, `email`, `phone`, `designation`, `department`, `employmentType`, `startDate`, `endDate`, `compensation`, `location`, `managerName`, `address`, `today`, `companyName`, `documentNumber` (NURA/HR/2026/0007) and `documentSeq` (0007).
 
-Dates are written out in words, for example "1 October 2026". Custom fields on a member are available as `{{custom.key}}`.
+**Common wordings map to them automatically:**
 
-If a template uses a key that the member doesn't have (for example `{{reportingTime}}`), the send dialog asks for it. The preview won't generate until every field has a value.
+| You type | Filled with |
+|---|---|
+| Name, Candidate Full Name, Intern name | full name |
+| Role, Role Title, Position | designation |
+| Team | department |
+| Mentor, Reporting to | manager |
+| Stipend, Salary | compensation |
+| Mode | location |
+| Date, Issued | today's date |
+| Ref, Ref No | document number |
+
+Dates are written out in words, for example "1 October 2026".
+
+**Custom fields** on a member work as `{{custom.duration}}` or just `{{duration}}`. A name that isn't on the member (for example `{{Reporting time}}`) is asked for in the send dialog, and the preview won't generate until every field has a value.
+
+### Fields typed into a Canva design (fixed designs)
+
+Text in an exported PDF can't be edited, so the portal doesn't rewrite it. Instead, when you upload a fixed-design PDF, the editor finds every `{{field}}`, `{field}` or `[ field ]` typed into it. For each line that contains one, it:
+
+- places a field there;
+- covers the printed line in white;
+- redraws the line with the real values in place, e.g. "…as [ Role Title ] at The Nura Care from [ DD Month YYYY ] to [ DD Month YYYY ]…".
+
+Details:
+
+- **Dates:** "[ DD Month YYYY ]" is read from the words before it: after "from" it's the start date, after "to" the end date, and after "Issued" or "Date" it's today.
+- **Ref numbers:** "Ref: NC/CERT/[ 0000 ]" becomes the running number.
+- **Signature spot:** a placeholder called "Signature" becomes the signature box.
+- **Existing templates:** use **Find fields in PDF** to run detection again.
+- **After detecting:** check each field's colour and font against your design. PDFs don't reveal those, so fields default to navy, sans.
+
+**Default templates:** `node src/scripts/seedHrTemplates.js --apply` (backend) adds The Nura Care's offer letter, completion letter, experience letter and certificate. They're built from the "(Portal template)" copies in the team Canva.
 
 ## Signing
 

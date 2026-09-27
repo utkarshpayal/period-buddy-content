@@ -56,6 +56,10 @@ export type HrMemberInput = Omit<HrMember, "_id" | "documentCount" | "createdAt"
 export type TemplateField = {
   id: string;
   key: string;
+  /** Optional line of text with {{keys}} in it, e.g. "Ref: NC/CERT/{{documentNumber}}". Wins over `key`. */
+  text?: string;
+  /** Painted first (usually white) to hide placeholder text printed in the PDF itself. */
+  cover?: { x: number; y: number; width: number; height: number; color?: string };
   page: number;
   x: number;
   y: number;
@@ -353,11 +357,12 @@ export const BUILT_IN_KEYS = [
   "address",
   "today",
   "companyName",
-  "documentNumber"
+  "documentNumber",
+  "documentSeq"
 ];
 
 /** Keys that are always available, whatever the member record holds. */
-const ALWAYS = new Set(["fullName", "firstName", "email", "employmentType", "today", "companyName", "documentNumber"]);
+const ALWAYS = new Set(["fullName", "firstName", "email", "employmentType", "today", "companyName", "documentNumber", "documentSeq"]);
 
 /**
  * What a member resolves for one placeholder key, or null when the send
@@ -365,10 +370,13 @@ const ALWAYS = new Set(["fullName", "firstName", "email", "employmentType", "tod
  * ("1 October 2026"); the server's own value wins in the PDF.
  */
 export function memberValue(member: HrMember, key: string, meta?: HrMeta | null): string | null {
-  if (key.startsWith("custom.")) {
-    const hit = member.customFields.find((f) => f.key === key.slice(7));
+  // Custom fields match however they were typed ("Duration", "duration"), as
+  // custom.duration or plain {{duration}} (the server does the same).
+  const custom = (name: string) => {
+    const hit = member.customFields.find((f) => camelKey(f.key) === camelKey(name));
     return hit?.value?.trim() ? hit.value : null;
-  }
+  };
+  if (key.startsWith("custom.")) return custom(key.slice(7));
   const date = (iso: string | null) =>
     iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : null;
   switch (key) {
@@ -385,11 +393,60 @@ export function memberValue(member: HrMember, key: string, meta?: HrMeta | null)
     case "companyName":
       return meta?.companyName ?? "The Nura Care";
     case "documentNumber":
+    case "documentSeq":
       return "Assigned when generated";
     default: {
       const v = (member as unknown as Record<string, unknown>)[key];
       if (typeof v === "string" && v.trim()) return v;
-      return ALWAYS.has(key) ? "" : null;
+      if (ALWAYS.has(key)) return "";
+      return custom(key);
     }
   }
+}
+
+/* ------------------------- Forgiving field names ------------------------- */
+// Mirrors period-buddy-be utils/hrValues.js canonicalKey(): what people type
+// in a Canva design ("First Name", "[ Candidate Full Name ]", "Stipend")
+// → the key the server fills. The server re-checks on save.
+const KEY_ALIASES: Record<string, string> = {
+  firstname: "firstName", first: "firstName", givenname: "firstName",
+  lastname: "lastName", surname: "lastName", familyname: "lastName",
+  fullname: "fullName", name: "fullName", candidatefullname: "fullName", candidatename: "fullName",
+  internname: "fullName", employeename: "fullName", recipientname: "fullName", membername: "fullName",
+  email: "email", emailaddress: "email", emailid: "email",
+  phone: "phone", mobile: "phone", phonenumber: "phone", mobilenumber: "phone", contact: "phone",
+  designation: "designation", role: "designation", roletitle: "designation", position: "designation",
+  jobtitle: "designation", positionheld: "designation",
+  department: "department", dept: "department", team: "department", departmentteam: "department",
+  employmenttype: "employmentType", type: "employmentType",
+  startdate: "startDate", joiningdate: "startDate", dateofjoining: "startDate", doj: "startDate", fromdate: "startDate",
+  enddate: "endDate", lastdate: "endDate", relievingdate: "endDate", todate: "endDate", lastworkingday: "endDate",
+  compensation: "compensation", stipend: "compensation", salary: "compensation", ctc: "compensation", pay: "compensation",
+  location: "location", mode: "location", workmode: "location", worklocation: "location",
+  manager: "managerName", managername: "managerName", mentor: "managerName", mentorname: "managerName",
+  reportingto: "managerName", reportingmanager: "managerName", supervisor: "managerName",
+  address: "address", addressline1: "address", recipientaddress: "address",
+  today: "today", date: "today", issuedate: "today", issued: "today", dateofissue: "today", currentdate: "today",
+  companyname: "companyName", company: "companyName", organisation: "companyName", organization: "companyName",
+  documentnumber: "documentNumber", ref: "documentNumber", refno: "documentNumber", reference: "documentNumber",
+  referencenumber: "documentNumber", docno: "documentNumber", certificatenumber: "documentNumber",
+  documentseq: "documentSeq", seq: "documentSeq", serial: "documentSeq", serialno: "documentSeq"
+};
+
+const camelKey = (s: string) =>
+  s
+    .trim()
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((w, i) => (i === 0 ? w.charAt(0).toLowerCase() + w.slice(1) : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join("");
+
+export function canonicalKey(raw: string): string {
+  const s = raw.trim();
+  const custom = /^custom\.(.+)$/i.exec(s);
+  if (custom) return `custom.${camelKey(custom[1])}`;
+  const alias = KEY_ALIASES[s.toLowerCase().replace(/[^a-z0-9]/g, "")];
+  if (alias) return alias;
+  const c = camelKey(s);
+  return /^[A-Za-z][A-Za-z0-9]*$/.test(c) ? c : "";
 }
