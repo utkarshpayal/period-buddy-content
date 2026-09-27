@@ -74,6 +74,10 @@ export type TemplateField = {
   /** Line spacing as a multiple of fontSize (multi-line values and wrap fields). */
   lineHeight?: number;
   boldColor?: string;
+  /** Wrap fields: lines there's room for; a longer paragraph eases its size down (to 80%). */
+  maxLines?: number;
+  /** Left blank when the member has no value, instead of being asked for. */
+  optional?: boolean;
 };
 
 export type Box = {
