@@ -69,9 +69,26 @@ export type TemplateField = {
   bold: boolean;
   color: string;
   align: "left" | "center" | "right";
+  /** A paragraph: wraps to `width` at full size; **bold** runs are drawn in `boldColor`. */
+  wrap?: boolean;
+  /** Line spacing as a multiple of fontSize (multi-line values and wrap fields). */
+  lineHeight?: number;
+  boldColor?: string;
 };
 
-export type Box = { page: number; x: number; y: number; width: number; height: number };
+export type Box = {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Signature box only: where the signing date is written (a design's "Date" line). */
+  dateX?: number;
+  dateY?: number;
+  /** Signature box only: where the "Signed electronically by …" note goes. */
+  noteX?: number;
+  noteY?: number;
+};
 
 export type LetterLayout = {
   marginTop: number;
