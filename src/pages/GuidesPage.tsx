@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { 
-  BookOpen, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Leaf, Sparkles, Heart, X
+  BookOpen, Search, Plus, Save, PencilLine, Trash2, Loader2, AlertCircle, Leaf, Sparkles, Heart, X,
+  Droplet, ShieldCheck, LayoutGrid, CheckCircle2, PlayCircle, Headphones
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
@@ -41,6 +43,72 @@ const emptyGuide = (): ContentItem => ({
   audioUrl: "",
   extendedGuide: []
 });
+
+/** The Ionicons names the Icon Tag picker offers, drawn with their closest lucide twin for the preview. */
+const PREVIEW_ICONS: Record<string, LucideIcon> = {
+  "heart-outline": Heart,
+  "water-outline": Droplet,
+  "leaf-outline": Leaf,
+  "shield-checkmark-outline": ShieldCheck,
+  "apps-outline": LayoutGrid,
+  "book-outline": BookOpen,
+};
+
+/**
+ * Mirrors the app's Sexual Wellbeing screen (The-Nura-App
+ * app/(app)/sexual-wellbeing.tsx): the guide as a row in the "Read" list,
+ * then the detail sheet's "What to know" points.
+ */
+const WellbeingAppPreview: React.FC<{ draft: ContentItem }> = ({ draft }) => {
+  const Icon = PREVIEW_ICONS[draft.icon || ""] ?? BookOpen;
+  const color = /^#[0-9a-f]{6}$/i.test(draft.color || "") ? draft.color! : "#d946a6";
+  const points = draft.body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const guidePoints = points.length > 0 ? points : draft.summary ? [draft.summary] : [];
+  const meta = [
+    draft.estimatedReadTime ? `${draft.estimatedReadTime} min read` : null,
+    `${guidePoints.length} key ${guidePoints.length === 1 ? "point" : "points"}`,
+  ].filter(Boolean).join("  ·  ");
+  return (
+    <div className="wb-preview">
+      <span className="wb-preview-label">In the app · Read list</span>
+      <div className="wb-row">
+        <div className="wb-cover" style={{ background: `${color}22` }}>
+          <Icon size={22} color={color} />
+        </div>
+        <div className="wb-row-text">
+          <strong>{draft.title || "Untitled guide"}</strong>
+          <p>{draft.summary || "Your summary shows here, up to two lines."}</p>
+          <span className="wb-meta">
+            {meta}
+            {draft.videoUrl ? <PlayCircle size={13} /> : null}
+            {draft.audioUrl ? <Headphones size={13} /> : null}
+          </span>
+        </div>
+      </div>
+
+      <span className="wb-preview-label">In the app · Detail sheet</span>
+      <div className="wb-sheet">
+        <div className="wb-sheet-head">
+          <div className="wb-cover is-small" style={{ background: `${color}22` }}>
+            <Icon size={18} color={color} />
+          </div>
+          <strong>{draft.title || "Untitled guide"}</strong>
+        </div>
+        <p className="wb-sheet-summary">{draft.summary || "No summary written."}</p>
+        <span className="wb-section">What to know</span>
+        <ul className="wb-points">
+          {guidePoints.length === 0 ? <li className="is-empty">Add guide points, one per line.</li> : null}
+          {guidePoints.map((line, idx) => (
+            <li key={idx}>
+              <CheckCircle2 size={16} />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+};
 
 export const GuidesPage: React.FC = () => {
   const { items, isLoading, isSaving, createItem, updateItem, deleteItem } = useAppContext();
@@ -415,25 +483,35 @@ export const GuidesPage: React.FC = () => {
             </div>
           </div>
 
-          <aside className="preview-pane" style={{ borderLeft: `5px solid ${draft.color}` }}>
-            <div className="preview-heading">
-              <span className={`status-chip ${draft.status}`}>{draft.status}</span>
-              <span style={{ color: draft.color }}>
-                {draft.type === "tip" ? "Sexual Wellbeing" : "Hygiene"}
-              </span>
-            </div>
-            <h4>{draft.title || "Untitled Wellbeing Resource"}</h4>
-            <p className="preview-summary">{draft.summary || "No summary written."}</p>
-            
-            <div className="preview-extended-list">
-              <strong>Extended Guide:</strong>
-              <ul>
-                {draft.body.split("\n").filter(Boolean).map((line, idx) => (
-                  <li key={idx}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          </aside>
+          {draft.type === "tip" ? (
+            <aside className="preview-pane">
+              <div className="preview-heading">
+                <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+                <span style={{ color: draft.color }}>Sexual Wellbeing</span>
+              </div>
+              <WellbeingAppPreview draft={draft} />
+            </aside>
+          ) : (
+            <aside className="preview-pane" style={{ borderLeft: `5px solid ${draft.color}` }}>
+              <div className="preview-heading">
+                <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+                <span style={{ color: draft.color }}>
+                  Hygiene
+                </span>
+              </div>
+              <h4>{draft.title || "Untitled Wellbeing Resource"}</h4>
+              <p className="preview-summary">{draft.summary || "No summary written."}</p>
+              
+              <div className="preview-extended-list">
+                <strong>Extended Guide:</strong>
+                <ul>
+                  {draft.body.split("\n").filter(Boolean).map((line, idx) => (
+                    <li key={idx}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            </aside>
+          )}
 
           <div className="modal-footer">
             <button className="modal-cancel" onClick={closeEditor} type="button">

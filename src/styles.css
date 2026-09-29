@@ -5198,3 +5198,25 @@ button:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
 }
+
+/* Guides editor: app-accurate preview of a Sexual Wellbeing guide (see WellbeingAppPreview). */
+.wb-preview { display: grid; gap: 10px; }
+.wb-preview-label { color: var(--ink-4); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.wb-row, .wb-sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 6px 18px rgba(30, 24, 35, 0.05); }
+.wb-row { display: flex; gap: 12px; padding: 14px; }
+.wb-cover { align-items: center; border-radius: 14px; display: flex; flex: none; height: 52px; justify-content: center; width: 52px; }
+.wb-cover.is-small { border-radius: 12px; height: 38px; width: 38px; }
+.wb-row-text { display: grid; gap: 3px; min-width: 0; }
+.wb-row-text strong { color: var(--ink); font-size: 0.95rem; line-height: 1.3; }
+.wb-row-text p { -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--ink-3); display: -webkit-box; font-size: 0.82rem; line-height: 1.4; margin: 0; overflow: hidden; }
+.wb-meta { align-items: center; color: var(--ink-4); display: flex; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; gap: 6px; margin-top: 4px; white-space: pre; }
+.wb-sheet { display: grid; gap: 10px; padding: 16px; }
+.wb-sheet-head { align-items: center; display: flex; gap: 10px; }
+.wb-sheet-head strong { color: var(--ink); font-size: 1.05rem; }
+.wb-sheet-summary { color: var(--ink-2); font-size: 0.88rem; line-height: 1.5; margin: 0; }
+.wb-section { border-left: 4px solid var(--teal); color: var(--ink); font-size: 0.85rem; font-weight: 800; padding-left: 7px; }
+.wb-points { border: 1px solid var(--line); border-radius: 14px; list-style: none; margin: 0; padding: 0 12px; }
+.wb-points li { align-items: flex-start; color: var(--ink); display: flex; font-size: 0.85rem; gap: 10px; line-height: 1.45; padding: 10px 0; }
+.wb-points li + li { border-top: 1px solid var(--line); }
+.wb-points li svg { color: var(--teal); flex: none; margin-top: 1px; }
+.wb-points li.is-empty { color: var(--ink-4); }
