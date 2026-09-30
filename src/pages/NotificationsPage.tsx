@@ -598,7 +598,7 @@ export const NotificationsPage: React.FC = () => {
     if (!testEmail.trim()) return setError("Enter the email of the account to test on.");
     setTesting(true);
     try {
-      await sendTestNotification({
+      const { detailsHidden } = await sendTestNotification({
         title: t,
         body: b,
         email: testEmail.trim(),
@@ -606,7 +606,11 @@ export const NotificationsPage: React.FC = () => {
         icon: icon || undefined,
         image: image || undefined
       });
-      setNotice(`Test sent to ${testEmail.trim()} — check that phone.`);
+      setNotice(
+        detailsHidden
+          ? `Test sent to ${testEmail.trim()}. That account hides notification details, so the phone shows "You have a new update" instead of your text.`
+          : `Test sent to ${testEmail.trim()} — check that phone.`
+      );
     } catch (err) {
       if (isPendingApprovalError(err)) {
         setNotice(err.message);
