@@ -261,7 +261,7 @@ export async function sendTestNotification(input: PushLook & {
   body: string;
   email: string;
   route?: string;
-}): Promise<{ messageId: string }> {
+}): Promise<{ messageId: string; detailsHidden?: boolean }> {
   return adminRequest(`/api/admin/notifications/test`, {
     method: "POST",
     body: JSON.stringify(input)
