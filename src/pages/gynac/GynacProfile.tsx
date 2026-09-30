@@ -3,6 +3,7 @@ import { Building2, Clock, Globe2, Loader2, Save, Star } from "lucide-react";
 import { DoctorProfile, formatMoney, getMyProfile, updateMyProfile } from "../../api/doctorApi";
 import { Card, ErrorState, PageHeader, PageSkeleton } from "../../components/ui";
 import { useNoticeToast } from "../../components/Toast";
+import { TwoStepSettings } from "../../components/TwoStepSettings";
 
 export const GynacProfile: React.FC = () => {
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
@@ -203,6 +204,9 @@ export const GynacProfile: React.FC = () => {
                 {profile.isAvailable ? "Available" : "Paused"}
               </span>
             </div>
+          </Card>
+          <Card title="Two-step sign-in">
+            <TwoStepSettings />
           </Card>
         </aside>
       </div>

@@ -1302,6 +1302,20 @@
   text-align: center;
 }
 
+.auth-foot .link-button {
+  background: none;
+  border: 0;
+  color: var(--ui-berry);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+}
+
+.auth-foot .link-button:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
   /* Phones and tablets: the brand panel becomes a compact header (logo and
      headline) and the form sits in a card overlapping its bottom edge. */
@@ -3668,3 +3682,15 @@
   color: var(--brand-dark);
 }
 
+
+/* Two-step sign-in (components/TwoStepSettings.tsx) */
+.twostep { display: grid; gap: 12px; }
+.twostep-status { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ui-ink); }
+.twostep-error { margin: 0; color: #b42318; font-size: 0.88rem; }
+.twostep-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.twostep-panel { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--ui-line); border-radius: 12px; }
+.twostep-panel p { margin: 0; }
+.twostep-qr { width: 200px; height: 200px; border-radius: 8px; background: #fff; }
+.twostep-key { word-break: break-all; font-size: 0.85rem; }
+.twostep-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 0; padding: 0; list-style: none; }
+.twostep-codes code { font-size: 0.95rem; letter-spacing: 0.04em; }

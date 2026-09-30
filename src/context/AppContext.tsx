@@ -2,7 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   getStoredAuthSession,
   loginWithEmail,
+  verifyLoginCode,
+  SecondStepRequired,
+  LoginChallenge,
   clearAuthSession,
+  revokeSessionOnServer,
   onUnauthorized,
   saveStoredUser,
   AuthSession
@@ -52,8 +56,13 @@ interface AppContextType {
   pendingContent: Map<string, ChangeRequest>;
   approvalSummary: ApprovalSummary;
   refreshApprovals: () => Promise<void>;
-  /** Resolves to null on success, or the error message to show. */
-  login: (credentials: { email: string; password: string }) => Promise<string | null>;
+  /**
+   * Resolves to null on success, the error message to show, or the emailed
+   * code step (staff and doctors, when the backend asks for it).
+   */
+  login: (credentials: { email: string; password: string }) => Promise<string | LoginChallenge | null>;
+  /** Second sign-in step. Resolves to null on success, or the error message. */
+  verifyCode: (challengeToken: string, code: string, email: string) => Promise<string | null>;
   logout: () => Promise<void>;
 }
 
@@ -247,7 +256,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const login = async (credentials: { email: string; password: string }): Promise<string | null> => {
+  const login = async (credentials: {
+    email: string;
+    password: string;
+  }): Promise<string | LoginChallenge | null> => {
     try {
       const result = await loginWithEmail(credentials);
       setAuthSession(result.session);
@@ -255,13 +267,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setApiMessage(result.message);
       return null;
     } catch (error) {
+      if (error instanceof SecondStepRequired) return error.challenge;
       const message = error instanceof Error ? error.message : "Unable to authenticate.";
       setApiMessage(message);
       return message;
     }
   };
 
+  const verifyCode = async (challengeToken: string, code: string, email: string): Promise<string | null> => {
+    try {
+      const result = await verifyLoginCode(challengeToken, code, email);
+      setAuthSession(result.session);
+      setSessionExpired(false);
+      setApiMessage(result.message);
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "Unable to verify the code.";
+    }
+  };
+
   const logout = async () => {
+    revokeSessionOnServer();
     clearAuthSession();
     setAuthSession(null);
     setItems([]);
@@ -293,6 +319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approvalSummary,
         refreshApprovals,
         login,
+        verifyCode,
         logout
       }}
     >

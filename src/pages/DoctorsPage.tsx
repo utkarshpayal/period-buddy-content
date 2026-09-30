@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, RefreshCw, Power, Copy, X, Search, UserX } from "lucide-react";
+import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, RefreshCw, Power, Copy, X, Search, UserX, KeyRound } from "lucide-react";
+import { twoFactorApi } from "../api/authApi";
 import {
   AdminDoctor,
   inviteDoctor,
@@ -134,6 +135,24 @@ export const DoctorsPage: React.FC = () => {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update doctor.");
+    }
+  };
+
+  const handleResetTwoStep = async (doc: AdminDoctor) => {
+    if (
+      !window.confirm(
+        `Reset ${doc.name}'s authenticator app? Do this only if they lost their phone and recovery codes. They'll sign in with emailed codes and can set up a new app.`
+      )
+    )
+      return;
+    setNotice(null);
+    setError(null);
+    try {
+      await twoFactorApi.resetDoctor(doc._id);
+      setNotice("Authenticator app reset.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reset the authenticator app.");
     }
   };
 
@@ -379,6 +398,11 @@ export const DoctorsPage: React.FC = () => {
                     {invitePending && (
                       <button className="gy-btn gy-btn-ghost" type="button" onClick={() => handleResend(doc._id)}>
                         <RefreshCw size={14} /> Resend invite
+                      </button>
+                    )}
+                    {account?.twoFactor?.totpEnabledAt && (
+                      <button className="gy-btn gy-btn-ghost" type="button" onClick={() => handleResetTwoStep(doc)}>
+                        <KeyRound size={14} /> Reset authenticator
                       </button>
                     )}
                     <button

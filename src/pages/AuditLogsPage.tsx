@@ -5,6 +5,7 @@ import { listAuditLogs, AuditLogEntry, Pagination } from "../api/adminApi";
 const ACTION_FILTERS = [
   { value: "", label: "All" },
   { value: "user.status_changed", label: "User status" },
+  { value: "user.viewed", label: "User viewed" },
   { value: "doctor.invited", label: "Gynac invited" },
   { value: "doctor.updated", label: "Gynac updated" },
   { value: "doctor.deactivated", label: "Gynac deactivated" },

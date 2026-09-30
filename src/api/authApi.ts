@@ -53,6 +53,11 @@ const loginEndpoint = import.meta.env.VITE_LOGIN_ENDPOINT ?? "/api/auth/login";
 const envApiToken = import.meta.env.DEV ? import.meta.env.VITE_API_TOKEN : undefined;
 const tokenStorageKey = "period-buddy-api-token";
 const userStorageKey = "period-buddy-auth-user";
+// Cookie sessions (backend utils/sessionCookie.js): the token lives in an
+// httpOnly cookie the page can't read. localStorage only keeps this marker
+// in place of the token, plus when the session ends.
+const COOKIE_SESSION = "cookie-session";
+const cookieExpiryKey = "period-buddy-session-expires";
 
 /* ------------------------- JWT expiry handling -------------------------- */
 
@@ -97,8 +102,26 @@ export function handleUnauthorized() {
   unauthorizedListeners.forEach((fn) => fn());
 }
 
+/** True while this browser is signed in with the httpOnly session cookie. */
+export function isCookieSession() {
+  return localStorage.getItem(tokenStorageKey) === COOKIE_SESSION;
+}
+
+function cookieSessionExpired() {
+  const expires = Number(localStorage.getItem(cookieExpiryKey) || 0);
+  return Boolean(expires) && Date.now() >= expires - 10_000;
+}
+
+/**
+ * The Bearer token to send, or "" when there is none. In a cookie session
+ * this is always "": requests carry the cookie (credentials: "include").
+ */
 export function getApiToken() {
   const stored = localStorage.getItem(tokenStorageKey);
+  if (stored === COOKIE_SESSION) {
+    if (cookieSessionExpired()) handleUnauthorized();
+    return "";
+  }
   if (stored) {
     if (isTokenExpired(stored)) {
       handleUnauthorized();
@@ -110,7 +133,10 @@ export function getApiToken() {
 }
 
 export function getStoredAuthSession(): AuthSession | null {
-  const token = getApiToken();
+  if (isCookieSession() && cookieSessionExpired()) clearAuthSession();
+  // In a cookie session the marker stands in for the token, so "signed in"
+  // checks (session.token) keep working.
+  const token = isCookieSession() ? COOKIE_SESSION : getApiToken();
   const user = getStoredUser();
 
   if (!token && !user) {
@@ -120,9 +146,31 @@ export function getStoredAuthSession(): AuthSession | null {
   return { token, user: user ?? undefined };
 }
 
+/**
+ * End this browser's session on the server too, so the token stops working
+ * now rather than when it expires. Fire and forget: signing out locally
+ * must never wait on (or fail because of) the network.
+ */
+export function revokeSessionOnServer() {
+  const cookie = isCookieSession();
+  const token = getApiToken();
+  if ((!token && !cookie) || !apiBaseUrl) return;
+  fetch(`${apiBaseUrl}/api/auth/logout`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Content-Type": "application/json"
+    },
+    body: "{}",
+    credentials: "include",
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 export function clearAuthSession() {
   localStorage.removeItem(tokenStorageKey);
   localStorage.removeItem(userStorageKey);
+  localStorage.removeItem(cookieExpiryKey);
 }
 
 function getStoredUser() {
@@ -140,7 +188,11 @@ function getStoredUser() {
   }
 }
 
-function saveAuthSession(session: AuthSession) {
+function saveAuthSession(session: AuthSession, cookieExpiresAt?: number) {
+  localStorage.removeItem(cookieExpiryKey);
+  if (session.token === COOKIE_SESSION && cookieExpiresAt) {
+    localStorage.setItem(cookieExpiryKey, String(cookieExpiresAt));
+  }
   if (session.token) {
     localStorage.setItem(tokenStorageKey, session.token);
   }
@@ -159,7 +211,21 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Authentication request failed.";
 }
 
-function parseAuthResponse(response: AuthResponse | undefined, payload: LoginPayload, fallbackMessage: string) {
+/**
+ * The backend set the session cookie. Check the browser really sends it
+ * back (it won't when this site runs on another domain, e.g. a preview
+ * deploy) before dropping the token.
+ */
+async function cookieWorks(): Promise<boolean> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/auth/profile`, { credentials: "include" });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function parseAuthResponse(response: AuthResponse | undefined, payload: LoginPayload, fallbackMessage: string) {
   const token =
     response?.token ??
     response?.accessToken ??
@@ -178,14 +244,88 @@ function parseAuthResponse(response: AuthResponse | undefined, payload: LoginPay
     response?.data?.user ??
     (response?.data as AuthUser | undefined) ??
     { email: payload.email };
-  const session: AuthSession = { token, user };
+  const cookieMode =
+    (user as { sessionMode?: string } | undefined)?.sessionMode === "cookie" && (await cookieWorks());
+  const expiresAt = token ? decodeJwtPayload(token)?.exp : undefined;
+  const session: AuthSession = { token: cookieMode ? COOKIE_SESSION : token, user };
 
-  saveAuthSession(session);
+  saveAuthSession(session, expiresAt ? expiresAt * 1000 : undefined);
 
   return {
     message: response?.message ?? fallbackMessage,
     session
   };
+}
+
+/** Staff and doctors confirm sign-in with an emailed code (backend STAFF_2FA_ENABLED). */
+export type LoginChallenge = {
+  challengeToken: string;
+  /** "totp": the code comes from their authenticator app (or a recovery code). */
+  method?: "email" | "totp";
+  sentTo?: string;
+  expiresInMinutes?: number;
+};
+
+export class SecondStepRequired extends Error {
+  challenge: LoginChallenge;
+  constructor(challenge: LoginChallenge, message: string) {
+    super(message);
+    this.challenge = challenge;
+  }
+}
+
+async function postAuth(path: string, body: unknown): Promise<AuthResponse | undefined> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    body: JSON.stringify(body),
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      // Ask for the session in an httpOnly cookie (only honoured for staff
+      // when the backend has STAFF_COOKIE_AUTH on).
+      "X-Session-Mode": "cookie"
+    },
+    method: "POST"
+  });
+
+  let parsed: AuthResponse | undefined;
+  try {
+    parsed = (await response.json()) as AuthResponse;
+  } catch {
+    parsed = undefined;
+  }
+
+  if (!response.ok) {
+    const validationMessages = parsed?.errors
+      ?.map((error) => error.message)
+      .filter(Boolean)
+      .join(" ");
+    throw new Error(
+      validationMessages ||
+        parsed?.message ||
+        `Authentication failed with ${response.status} ${response.statusText}`
+    );
+  }
+  return parsed;
+}
+
+/** Second step: the emailed code. Resolves like loginWithEmail. */
+export async function verifyLoginCode(challengeToken: string, code: string, email: string): Promise<AuthResult> {
+  try {
+    const body = await postAuth("/api/auth/login/verify-code", { challengeToken, code });
+    return await parseAuthResponse(body, { email, password: "" }, "Logged in successfully.");
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+}
+
+/** Email a new code for the same sign-in. */
+export async function resendLoginCode(challengeToken: string): Promise<string> {
+  try {
+    const body = await postAuth("/api/auth/login/resend-code", { challengeToken });
+    return body?.message ?? "We sent you a new code.";
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
 }
 
 export async function loginWithEmail(payload: LoginPayload): Promise<AuthResult> {
@@ -203,39 +343,71 @@ export async function loginWithEmail(payload: LoginPayload): Promise<AuthResult>
     };
   }
 
+  let body: AuthResponse | undefined;
   try {
-    const response = await fetch(`${apiBaseUrl}${loginEndpoint}`, {
-      body: JSON.stringify(payload),
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      method: "POST"
-    });
+    body = await postAuth(loginEndpoint, payload);
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
 
-    let body: AuthResponse | undefined;
+  const challenge = body?.data as (LoginChallenge & { twoFactorRequired?: boolean }) | undefined;
+  if (challenge?.twoFactorRequired && challenge.challengeToken) {
+    throw new SecondStepRequired(challenge, body?.message ?? "Enter the code we emailed you.");
+  }
 
-    try {
-      body = (await response.json()) as AuthResponse;
-    } catch {
-      body = undefined;
-    }
-
-    if (!response.ok) {
-      const validationMessages = body?.errors
-        ?.map((error) => error.message)
-        .filter(Boolean)
-        .join(" ");
-
-      throw new Error(
-        validationMessages ??
-          body?.message ??
-          `Authentication failed with ${response.status} ${response.statusText}`
-      );
-    }
-
-    return parseAuthResponse(body, payload, "Logged in successfully.");
+  try {
+    return await parseAuthResponse(body, payload, "Logged in successfully.");
   } catch (error) {
     throw new Error(getErrorMessage(error));
   }
 }
+
+/* ------------------- Two-step sign-in (authenticator app) ------------------ */
+
+export type TwoFactorStatus = {
+  /** Is a second step asked at sign-in for this account right now? */
+  required: boolean;
+  method: "email" | "totp";
+  totpEnabledAt: string | null;
+  recoveryCodesLeft: number;
+};
+
+/** Signed-in request to the API (Bearer token or the session cookie). */
+export async function authedRequest<T>(path: string, method = "GET", body?: unknown): Promise<T> {
+  const token = getApiToken();
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method,
+    credentials: "include",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {})
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  let parsed: { data?: T; message?: string } | undefined;
+  try {
+    parsed = await response.json();
+  } catch {
+    parsed = undefined;
+  }
+  if (response.status === 401 && path !== "/api/auth/2fa/totp/disable" && path !== "/api/auth/2fa/recovery-codes") {
+    handleUnauthorized();
+  }
+  if (!response.ok) throw new Error(parsed?.message || `Request failed (${response.status})`);
+  return parsed?.data as T;
+}
+
+export const twoFactorApi = {
+  status: () => authedRequest<TwoFactorStatus>("/api/auth/2fa"),
+  setup: () => authedRequest<{ secret: string; otpauthUrl: string }>("/api/auth/2fa/totp/setup", "POST", {}),
+  enable: (code: string) =>
+    authedRequest<{ recoveryCodes: string[] }>("/api/auth/2fa/totp/enable", "POST", { code }),
+  disable: (password: string) => authedRequest<null>("/api/auth/2fa/totp/disable", "POST", { password }),
+  newRecoveryCodes: (password: string) =>
+    authedRequest<{ recoveryCodes: string[] }>("/api/auth/2fa/recovery-codes", "POST", { password }),
+  /** Super Admin: a team member lost their phone and recovery codes. */
+  resetStaff: (userId: string) => authedRequest<null>(`/api/admin/staff/${encodeURIComponent(userId)}/reset-2fa`, "POST", {}),
+  /** doctors.manage: same for a doctor (the Doctor profile id). */
+  resetDoctor: (doctorId: string) =>
+    authedRequest<null>(`/api/doctor/admin/${encodeURIComponent(doctorId)}/reset-2fa`, "POST", {})
+};

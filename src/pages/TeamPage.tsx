@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Copy,
+  KeyRound,
   Loader2,
   MailPlus,
   RotateCw,
@@ -23,6 +24,7 @@ import {
 } from "../api/workspaceApi";
 import { DEPARTMENT_LABEL, Department, ROLE_META, StaffRole } from "../auth/access";
 import { useAppContext } from "../context/AppContext";
+import { twoFactorApi } from "../api/authApi";
 import { useToast } from "../components/Toast";
 
 const STATUS_PILL: Record<StaffMember["status"], string> = {
@@ -152,6 +154,19 @@ export const TeamPage: React.FC = () => {
       const res = await resendStaffInvite(m.id);
       setLastInviteUrl(res.inviteUrl);
       toast.success(res.inviteEmailDelivered ? `Invite re-sent to ${m.email}.` : "Email didn't send — copy the link below.");
+    });
+
+  const onResetTwoStep = (m: StaffMember) =>
+    run(m.id, async () => {
+      if (
+        !window.confirm(
+          `Reset ${m.name}'s authenticator app? Do this only if they lost their phone and recovery codes. They'll sign in with emailed codes and can set up a new app.`
+        )
+      )
+        return;
+      await twoFactorApi.resetStaff(m.id);
+      replace({ ...m, authenticator: false });
+      toast.success(`${m.name}'s authenticator app was reset.`);
     });
 
   const onRemove = (m: StaffMember) =>
@@ -312,6 +327,11 @@ export const TeamPage: React.FC = () => {
                           >
                             {m.status === "suspended" ? <ShieldCheck size={14} /> : <ShieldOff size={14} />}
                             {m.status === "suspended" ? "Restore" : "Suspend"}
+                          </button>
+                        )}
+                        {manageable && m.authenticator && (
+                          <button type="button" className="gy-icon-btn" title="Reset authenticator app" onClick={() => onResetTwoStep(m)}>
+                            <KeyRound size={16} />
                           </button>
                         )}
                         {manageable && (

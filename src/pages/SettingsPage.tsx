@@ -1,5 +1,7 @@
 import React from "react";
-import { Database, Shield, LogOut, CheckCircle2, AlertCircle } from "lucide-react";
+import { Database, Shield, LogOut, CheckCircle2, AlertCircle, KeyRound } from "lucide-react";
+import { TwoStepSettings } from "../components/TwoStepSettings";
+import { isAdminApiConfigured } from "../api/adminApi";
 import { useAppContext } from "../context/AppContext";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
@@ -83,6 +85,16 @@ export const SettingsPage: React.FC = () => {
             </div>
           )}
         </section>
+
+        {authSession && isAdminApiConfigured && (
+          <section className="settings-card">
+            <div className="card-title-row">
+              <KeyRound size={20} className="card-icon" />
+              <h3>Two-step sign-in</h3>
+            </div>
+            <TwoStepSettings />
+          </section>
+        )}
 
         <section className="settings-card">
           <div className="card-title-row">
