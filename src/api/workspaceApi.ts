@@ -25,6 +25,8 @@ export type StaffMember = {
   createdAt?: string;
   invitedBy: { id: string; name: string; email: string } | null;
   canManage: boolean;
+  /** Signs in with an authenticator app (absent from older backends). */
+  authenticator?: boolean;
 };
 
 export type AssignableRole = { value: string; label: string; department: string };

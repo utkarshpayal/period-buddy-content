@@ -185,6 +185,8 @@ export type AdminDoctor = Omit<DoctorProfile, "userId"> & {
         isActive?: boolean;
         mustSetPassword?: boolean;
         lastLogin?: string;
+        /** Set when they sign in with an authenticator app. */
+        twoFactor?: { totpEnabledAt?: string | null };
       }
     | string;
   createdAt?: string;
