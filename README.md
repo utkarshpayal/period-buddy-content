@@ -10,6 +10,9 @@ Web dashboard for The Nura team and partner doctors, with two portals in one app
 - **People & Letters** (Super Admin): your hires and interns, plus offer letters,
   completion letters and certificates filled from Canva PDFs, emailed with an
   online signing link. See [docs/hr-documents.md](docs/hr-documents.md).
+
+All docs: [docs/README.md](docs/README.md). How this fits with the app, API and
+CMS: the system [ARCHITECTURE.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/ARCHITECTURE.md).
 - **Clinician portal** (doctors): dashboard, bookings, availability, video
   consultations, payments, profile, reels.
 
