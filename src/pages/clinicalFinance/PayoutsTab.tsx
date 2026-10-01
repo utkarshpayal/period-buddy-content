@@ -15,7 +15,7 @@ import { Pagination, type PageInfo } from "../../components/Pagination";
 import { useToast } from "../../components/Toast";
 import { useAppContext } from "../../context/AppContext";
 import { PERMISSIONS } from "../../auth/access";
-import { EmptyRow, Field, Modal, Notice, Segmented } from "../../components/financeUi";
+import { EmptyRow, Field, Modal, Notice, Segmented, useLatestRequest } from "../../components/financeUi";
 import { ErrorAlert, Loading, PayoutPill, dateTime, errorText, inr } from "./shared";
 
 type Filter = "requested" | "inflight" | "success" | "problem" | "all";
@@ -47,21 +47,25 @@ export const PayoutsTab: React.FC = () => {
   const [details, setDetails] = useState<PayoutMethodDetails | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [reference, setReference] = useState("");
+  const list = useLatestRequest();
+  const detailsRequest = useLatestRequest();
 
   const load = useCallback(async () => {
+    const token = list.begin();
     setLoading(true);
     setError(null);
     try {
       const statuses = FILTERS.find((f) => f.value === filter)?.statuses;
       const result = await listPayouts({ page, status: statuses });
+      if (!list.isLatest(token)) return;
       setRows(result.payouts);
       setPagination(result.pagination);
     } catch (err) {
-      setError(errorText(err, "Could not load withdrawals."));
+      if (list.isLatest(token)) setError(errorText(err, "Could not load withdrawals."));
     } finally {
-      setLoading(false);
+      if (list.isLatest(token)) setLoading(false);
     }
-  }, [filter, page]);
+  }, [filter, page, list]);
 
   useEffect(() => {
     load();
@@ -77,6 +81,7 @@ export const PayoutsTab: React.FC = () => {
     try {
       const updated = await approvePayout(p._id);
       replaceRow(p._id, updated);
+      load();
       if (updated.status === "failed") toast.error(`Cashfree refused it: ${updated.failureReason ?? "unknown reason"}. The money is back in the doctor's wallet.`);
       else toast.success(updated.status === "success" ? "Paid." : "Approved and sent to Cashfree.");
     } catch (err) {
@@ -88,15 +93,30 @@ export const PayoutsTab: React.FC = () => {
   };
 
   const openPay = async (p: AdminPayout) => {
+    // A late answer for a dialog opened earlier must never show its bank
+    // details under this payout's name.
+    const token = detailsRequest.begin();
     setPaying(p);
     setDetails(null);
     setDetailsError(null);
     setReference("");
     try {
-      setDetails(await getPayoutMethodDetails(p._id));
+      const result = await getPayoutMethodDetails(p._id);
+      if (detailsRequest.isLatest(token)) setDetails(result);
     } catch (err) {
-      setDetailsError(errorText(err, "Could not load the bank details."));
+      if (detailsRequest.isLatest(token)) setDetailsError(errorText(err, "Could not load the bank details."));
     }
+  };
+
+  const closePay = () => {
+    detailsRequest.begin();
+    setPaying(null);
+    setDetails(null);
+  };
+
+  const openReject = (p: AdminPayout) => {
+    setRejectNote("");
+    setRejecting(p);
   };
 
   const submitPaid = async (e: React.FormEvent) => {
@@ -108,7 +128,8 @@ export const PayoutsTab: React.FC = () => {
       const updated = await markPayoutPaid(paying._id, reference.trim());
       replaceRow(paying._id, updated);
       toast.success("Marked as paid. The doctor has been emailed.");
-      setPaying(null);
+      closePay();
+      load();
     } catch (err) {
       toast.error(errorText(err, "Could not mark it as paid."));
     } finally {
@@ -127,6 +148,7 @@ export const PayoutsTab: React.FC = () => {
       toast.success("Declined. The doctor was emailed and the amount is back in their wallet.");
       setRejecting(null);
       setRejectNote("");
+      load();
     } catch (err) {
       toast.error(errorText(err, "Could not decline."));
     } finally {
@@ -216,6 +238,11 @@ export const PayoutsTab: React.FC = () => {
                       {canManage && (
                         <td className="actions">
                           <div>
+                            {p.provider === "manual" && p.status === "approved" && (
+                              <button type="button" className="cf-btn cf-btn-primary cf-btn-sm" disabled={busy} onClick={() => openPay(p)}>
+                                <BadgeIndianRupee size={14} /> Pay &amp; mark paid
+                              </button>
+                            )}
                             {p.status === "requested" && (
                               <>
                                 {p.provider === "manual" ? (
@@ -227,7 +254,7 @@ export const PayoutsTab: React.FC = () => {
                                     {busy ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />} Approve
                                   </button>
                                 )}
-                                <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" disabled={busy} onClick={() => setRejecting(p)}>
+                                <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" disabled={busy} onClick={() => openReject(p)}>
                                   Decline
                                 </button>
                               </>
@@ -256,11 +283,11 @@ export const PayoutsTab: React.FC = () => {
         <Modal
           title={`Pay ${inr(paying.amount)}`}
           subtitle={`To ${paying.doctor?.name ?? "this doctor"}`}
-          onClose={() => setPaying(null)}
+          onClose={closePay}
           onSubmit={submitPaid}
           footer={
             <>
-              <button className="cf-btn cf-btn-secondary" type="button" onClick={() => setPaying(null)}>Cancel</button>
+              <button className="cf-btn cf-btn-secondary" type="button" onClick={closePay}>Cancel</button>
               <button className="cf-btn cf-btn-primary" type="submit" disabled={busyId === paying._id || !details}>
                 {busyId === paying._id ? <Loader2 size={16} className="spin" /> : <CheckCircle2 size={16} />} Mark as paid
               </button>

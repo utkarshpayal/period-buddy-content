@@ -166,7 +166,7 @@ const AddMethodDialog: React.FC<{ cooldownHours: number; onClose: () => void; on
     e.preventDefault();
     setError(null);
     const name = form.accountHolderName.trim();
-    if (!/^[A-Za-z][A-Za-z .]{1,99}$/.test(name)) return setError("Enter the account holder's name as on the account (letters and spaces).");
+    if (!/^[A-Za-z][A-Za-z .'-]{1,99}$/.test(name)) return setError("Enter the account holder's name as on the account.");
     let payload: NewPayoutMethod;
     if (type === "bank") {
       const acc = form.accountNumber.replace(/[\s-]/g, "");

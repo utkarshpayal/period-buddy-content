@@ -67,6 +67,9 @@ export const SettingsTab: React.FC = () => {
   const saveRules = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form || !settings) return;
+    const empty = (Object.keys(form) as (keyof Form)[]).find((k) => form[k].trim() === "");
+    // Number("") is 0: an emptied field must not quietly remove a hold or a security wait.
+    if (empty) return toast.error("Fill in every field before saving.");
     const n = (v: string) => Number(v);
     const int = (v: string, min: number, max: number) => Number.isInteger(n(v)) && n(v) >= min && n(v) <= max;
     const commission = n(form.defaultCommissionPercent);
