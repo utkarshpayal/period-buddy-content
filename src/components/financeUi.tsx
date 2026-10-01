@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { AlertCircle, AlertTriangle, Info, Search, X } from "lucide-react";
 
 /*
@@ -6,6 +6,25 @@ import { AlertCircle, AlertTriangle, Info, Search, X } from "lucide-react";
  * Commission & Payouts in the Admin Workspace and Earnings & Wallet in the
  * clinician portal. Presentational only.
  */
+
+/**
+ * "Latest request wins": `begin()` returns a token, and `isLatest(token)` is
+ * false once a newer request has started (or the component unmounted), so a
+ * slow, out-of-date response is dropped instead of overwriting newer state.
+ */
+export function useLatestRequest() {
+  const seq = useRef(0);
+  useEffect(() => () => {
+    seq.current += 1;
+  }, []);
+  const begin = useCallback(() => {
+    seq.current += 1;
+    return seq.current;
+  }, []);
+  const isLatest = useCallback((token: number) => token === seq.current, []);
+  // Stable identity: loaders list it as a dependency.
+  return useMemo(() => ({ begin, isLatest }), [begin, isLatest]);
+}
 
 export const SearchField: React.FC<{
   value: string;

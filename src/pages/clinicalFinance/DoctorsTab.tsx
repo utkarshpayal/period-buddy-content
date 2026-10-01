@@ -5,7 +5,7 @@ import { Pagination, type PageInfo } from "../../components/Pagination";
 import { useToast } from "../../components/Toast";
 import { useAppContext } from "../../context/AppContext";
 import { PERMISSIONS } from "../../auth/access";
-import { EmptyRow, Field, Modal, Pill, SearchField } from "../../components/financeUi";
+import { EmptyRow, Field, Modal, Pill, SearchField, useLatestRequest } from "../../components/financeUi";
 import { ErrorAlert, Loading, errorText, inr } from "./shared";
 
 export const DoctorsTab: React.FC = () => {
@@ -27,6 +27,7 @@ export const DoctorsTab: React.FC = () => {
   const [adjustFor, setAdjustFor] = useState<DoctorWalletRow | null>(null);
   const [adjust, setAdjust] = useState({ direction: "credit" as "credit" | "debit", amount: "", note: "" });
   const [saving, setSaving] = useState(false);
+  const list = useLatestRequest();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -37,18 +38,26 @@ export const DoctorsTab: React.FC = () => {
   }, [search]);
 
   const load = useCallback(async () => {
+    const token = list.begin();
     setLoading(true);
     setError(null);
     try {
       const result = await listDoctorWallets({ page, search: debounced });
+      if (!list.isLatest(token)) return; // a newer search already answered
       setRows(result.doctors);
       setPagination(result.pagination);
     } catch (err) {
-      setError(errorText(err, "Could not load doctors."));
+      if (list.isLatest(token)) setError(errorText(err, "Could not load doctors."));
     } finally {
-      setLoading(false);
+      if (list.isLatest(token)) setLoading(false);
     }
-  }, [page, debounced]);
+  }, [page, debounced, list]);
+
+  const openAdjust = (d: DoctorWalletRow) => {
+    // Never carry a half-typed debit or note over to another doctor.
+    setAdjust({ direction: "credit", amount: "", note: "" });
+    setAdjustFor(d);
+  };
 
   useEffect(() => {
     load();
@@ -155,7 +164,7 @@ export const DoctorsTab: React.FC = () => {
                           <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" onClick={() => openRate(d)}>
                             <Pencil size={13} /> Rate
                           </button>
-                          <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" onClick={() => setAdjustFor(d)}>
+                          <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" onClick={() => openAdjust(d)}>
                             <PlusCircle size={13} /> Adjust
                           </button>
                         </div>
