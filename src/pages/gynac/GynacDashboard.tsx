@@ -53,7 +53,9 @@ function monthlyEarnings(payments: PaymentsData | null) {
     const d = new Date(at);
     const bucket = months.find((m) => m.key === `${d.getFullYear()}-${d.getMonth()}`);
     if (!bucket) return;
-    if (p.earning && p.earning.status !== "reversed") bucket.total += p.earning.net;
+    // No `earning` field at all = an API from before wallets: use the gross.
+    if (p.earning === undefined) bucket.total += p.amountPaid ?? 0;
+    else if (p.earning && p.earning.status !== "reversed") bucket.total += p.earning.net;
   });
   return months;
 }

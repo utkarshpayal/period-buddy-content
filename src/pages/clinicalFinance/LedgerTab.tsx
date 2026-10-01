@@ -5,7 +5,7 @@ import { Pagination, type PageInfo } from "../../components/Pagination";
 import { useToast } from "../../components/Toast";
 import { useAppContext } from "../../context/AppContext";
 import { PERMISSIONS } from "../../auth/access";
-import { EmptyRow, Field, Modal, Pill } from "../../components/financeUi";
+import { EmptyRow, Field, Modal, Pill, useLatestRequest } from "../../components/financeUi";
 import { ErrorAlert, Loading, dateTime, earningState, errorText, inr } from "./shared";
 
 type StatusFilter = "" | "on_hold" | "available" | "reversed";
@@ -26,20 +26,28 @@ export const LedgerTab: React.FC = () => {
   const [reversing, setReversing] = useState<LedgerEarning | null>(null);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const list = useLatestRequest();
 
   const load = useCallback(async () => {
+    const token = list.begin();
     setLoading(true);
     setError(null);
     try {
       const result = await listEarnings({ page, status: status || undefined, type: type || undefined });
+      if (!list.isLatest(token)) return;
       setRows(result.earnings);
       setPagination(result.pagination);
     } catch (err) {
-      setError(errorText(err, "Could not load the ledger."));
+      if (list.isLatest(token)) setError(errorText(err, "Could not load the ledger."));
     } finally {
-      setLoading(false);
+      if (list.isLatest(token)) setLoading(false);
     }
-  }, [page, status, type]);
+  }, [page, status, type, list]);
+
+  const openReverse = (e: LedgerEarning) => {
+    setReason("");
+    setReversing(e);
+  };
 
   useEffect(() => {
     load();
@@ -127,7 +135,7 @@ export const LedgerTab: React.FC = () => {
                       {canManage && (
                         <td className="actions">
                           {e.status === "active" && (
-                            <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" onClick={() => setReversing(e)} title="Remove this from the doctor's wallet">
+                            <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" onClick={() => openReverse(e)} title="Remove this from the doctor's wallet">
                               <Undo2 size={13} /> Reverse
                             </button>
                           )}

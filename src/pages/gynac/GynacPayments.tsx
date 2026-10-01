@@ -14,7 +14,7 @@ import {
 import { Avatar, ErrorState, PageHeader, PageSkeleton, formatDate } from "../../components/ui";
 import { Pagination, type PageInfo } from "../../components/Pagination";
 import { useToast } from "../../components/Toast";
-import { EmptyRow, Kpi, Notice, Pill, SearchField, Segmented, type PillTone } from "../../components/financeUi";
+import { EmptyRow, Kpi, Notice, Pill, SearchField, Segmented, useLatestRequest, type PillTone } from "../../components/financeUi";
 import { PayoutMethodsCard, WithdrawDialog, WithdrawalsCard, isCoolingDown } from "./GynacWallet";
 
 // Table rows per page. Totals, the session count and the CSV export always
@@ -45,9 +45,13 @@ const inRange = (iso: string | undefined, range: Range) => {
 };
 
 /** What the doctor gets for a session, after commission. Every paid session
- * (past ones included) gets an earning; one paid a moment ago may not have
- * it yet, so show nothing rather than the gross. */
-const netOf = (p: Row) => (p.earning && p.earning.status !== "reversed" ? p.earning.net : 0);
+ * (past ones included) gets an earning; one paid a moment ago may not have it
+ * yet (`earning: null`), so that shows nothing rather than the gross. An API
+ * from before wallets sends no `earning` field at all: show the gross then. */
+const netOf = (p: Row) => {
+  if (p.earning === undefined) return p.amountPaid ?? 0;
+  return p.earning && p.earning.status !== "reversed" ? p.earning.net : 0;
+};
 
 const earningLabel = (e?: Earning | null): { text: string; tone: PillTone } => {
   if (!e) return { text: "Adding…", tone: "muted" };
@@ -72,18 +76,21 @@ export const GynacPayments: React.FC = () => {
   const [range, setRange] = useState<Range>("all");
   const [search, setSearch] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const walletRequest = useLatestRequest();
 
   const loadWallet = useCallback(async () => {
+    const token = walletRequest.begin();
     try {
       const [w, p] = await Promise.all([getWallet(), getMyPayouts(payoutPage)]);
+      if (!walletRequest.isLatest(token)) return;
       setWallet(w);
       setPayouts(p.payouts);
       setPayoutPagination(p.pagination);
       setWalletError(null);
     } catch (err) {
-      setWalletError(err instanceof Error ? err.message : "Could not load your wallet.");
+      if (walletRequest.isLatest(token)) setWalletError(err instanceof Error ? err.message : "Could not load your wallet.");
     }
-  }, [payoutPage]);
+  }, [payoutPage, walletRequest]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -356,8 +363,9 @@ export const GynacPayments: React.FC = () => {
                   ? `The withdrawal failed: ${payout.failureReason ?? "unknown reason"}. The money is back in your wallet.`
                   : `Withdrawal of ${formatMoney(payout.amount)} is on its way.`
             );
-            setPayoutPage(1);
-            loadWallet();
+            // Changing the page reloads by itself; on page 1 reload directly.
+            if (payoutPage !== 1) setPayoutPage(1);
+            else loadWallet();
           }}
         />
       )}
