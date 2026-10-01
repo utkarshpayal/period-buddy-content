@@ -5,6 +5,7 @@ import "./styles/tokens.css";
 import "./styles.css";
 import "./styles/portal.css";
 import "./styles/hr.css";
+import "./styles/finance.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

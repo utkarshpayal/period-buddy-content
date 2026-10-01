@@ -39,7 +39,8 @@ const greeting = () => {
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 };
 
-/** Earnings bucketed into the last 6 calendar months (oldest first). */
+/** Earnings after commission, bucketed into the last 6 calendar months
+ * (oldest first). */
 function monthlyEarnings(payments: PaymentsData | null) {
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
@@ -51,7 +52,8 @@ function monthlyEarnings(payments: PaymentsData | null) {
     if (!at) return;
     const d = new Date(at);
     const bucket = months.find((m) => m.key === `${d.getFullYear()}-${d.getMonth()}`);
-    if (bucket) bucket.total += p.amountPaid ?? 0;
+    if (!bucket) return;
+    if (p.earning && p.earning.status !== "reversed") bucket.total += p.earning.net;
   });
   return months;
 }
@@ -161,9 +163,13 @@ export const GynacDashboard: React.FC = () => {
         <StatCard
           tone="teal"
           icon={<Wallet size={20} />}
-          label="Total earnings"
-          value={formatMoney(stats.totalEarnings, currency)}
-          hint={`${stats.paidSessions} paid sessions`}
+          label={data?.wallet ? "Your earnings" : "Total earnings"}
+          value={formatMoney(data?.wallet ? data.wallet.lifetimeNet : stats.totalEarnings, currency)}
+          hint={
+            data?.wallet
+              ? `After commission · ${formatMoney(data.wallet.withdrawable, currency)} ready to withdraw`
+              : `${stats.paidSessions} paid sessions`
+          }
         />
         <StatCard
           tone="plum"

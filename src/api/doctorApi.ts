@@ -139,15 +139,114 @@ export type DashboardData = {
     paidSessions: number;
     currency?: string;
   };
+  /** Net of commission (newer API only). */
+  wallet?: Wallet;
   recentBookings: Consultation[];
+};
+
+/** A session's split: gross paid by the patient, platform commission, the
+ * doctor's net, and when it can be withdrawn (null = session not completed). */
+export type Earning = {
+  _id: string;
+  type: "consultation" | "adjustment";
+  consultationId?: string;
+  currency: string;
+  gross: number;
+  commissionPercent: number;
+  commission: number;
+  net: number;
+  status: "active" | "reversed";
+  paidAt?: string;
+  completedAt?: string;
+  availableAt?: string | null;
+  reversalReason?: string;
+  note?: string;
+  createdAt?: string;
 };
 
 export type PaymentsData = {
   total: number;
   count: number;
   currency?: string;
-  payments: Consultation[];
+  /** Net of commission / commission, over every tracked session. */
+  net?: number;
+  commission?: number;
+  payments: (Consultation & { earning?: Earning | null })[];
 };
+
+export type Wallet = {
+  currency: string;
+  /** Can be negative after an admin debit. */
+  available: number;
+  withdrawable: number;
+  onHold: number;
+  inFlight: number;
+  withdrawn: number;
+  lifetimeGross: number;
+  lifetimeCommission: number;
+  lifetimeNet: number;
+  nextReleaseAt?: string | null;
+  openPayouts: number;
+};
+
+export type PayoutMethod = {
+  _id: string;
+  type: "bank" | "upi";
+  accountHolderName: string;
+  display: string;
+  ifsc?: string;
+  vpa?: string;
+  last4?: string;
+  isDefault: boolean;
+  usableFrom?: string;
+  createdAt?: string;
+};
+
+export type PayoutStatus =
+  | "requested"
+  | "approved"
+  | "processing"
+  | "success"
+  | "failed"
+  | "rejected"
+  | "cancelled"
+  | "reversed";
+
+export type Payout = {
+  _id: string;
+  amount: number;
+  currency: string;
+  status: PayoutStatus;
+  method?: { type?: string; display?: string; accountHolderName?: string };
+  utr?: string;
+  failureReason?: string;
+  reviewNote?: string;
+  createdAt?: string;
+  approvedAt?: string;
+  completedAt?: string;
+  events?: { at: string; status: string; by: string; note?: string }[];
+};
+
+export type WalletData = {
+  wallet: Wallet;
+  rules: {
+    commissionPercent: number;
+    holdDays: number;
+    minWithdrawal: number;
+    maxWithdrawal: number;
+    payoutsEnabled: boolean;
+    requireApproval: boolean;
+    newMethodCooldownHours: number;
+    /** "manual": the Nura team transfers it by hand; "cashfree": sent automatically. */
+    provider?: "manual" | "cashfree";
+  };
+  methods: PayoutMethod[];
+  adjustments: Earning[];
+};
+
+export type NewPayoutMethod =
+  | { type: "bank"; accountHolderName: string; accountNumber: string; confirmAccountNumber: string; ifsc: string; password: string }
+  | { type: "upi"; accountHolderName: string; vpa: string; password: string };
 
 export type AvailabilitySlot = {
   _id?: string;
@@ -360,6 +459,34 @@ export const cancelConsultation = (id: string) =>
 
 export const getPayments = () => request<PaymentsData>("/api/doctor/payments");
 
+/* ------------------------------ Doctor: wallet -------------------------- */
+
+export const getWallet = () => request<WalletData>("/api/doctor/wallet");
+
+export const getMyPayouts = (page = 1, limit = 10) =>
+  request<{ payouts: Payout[]; pagination: PageInfo }>(`/api/doctor/wallet/payouts?page=${page}&limit=${limit}`);
+
+/** `idempotencyKey` must stay the same across retries of one request, so a
+ * double click or a retried timeout can never create two withdrawals. */
+export const requestWithdrawal = (payload: { amount: number; methodId: string }, idempotencyKey: string) =>
+  request<Payout>("/api/doctor/wallet/payouts", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(payload)
+  });
+
+export const cancelWithdrawal = (id: string) =>
+  request<Payout>(`/api/doctor/wallet/payouts/${id}/cancel`, { method: "POST" });
+
+export const addPayoutMethod = (method: NewPayoutMethod) =>
+  request<PayoutMethod>("/api/doctor/wallet/methods", { method: "POST", body: JSON.stringify(method) });
+
+export const removePayoutMethod = (id: string) =>
+  request<PayoutMethod>(`/api/doctor/wallet/methods/${id}`, { method: "DELETE" });
+
+export const setDefaultPayoutMethod = (id: string) =>
+  request<PayoutMethod>(`/api/doctor/wallet/methods/${id}/default`, { method: "POST" });
+
 /* ---------------------------- Doctor: availability ---------------------- */
 
 export const getAvailability = () =>
@@ -455,5 +582,11 @@ export function patientName(patient?: Patient | string): string {
 export function formatMoney(amount?: number, currency = "INR"): string {
   const symbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£" };
   const symbol = symbols[currency] ?? `${currency} `;
-  return `${symbol}${(amount ?? 0).toLocaleString()}`;
+  const value = amount ?? 0;
+  const text = Math.abs(value).toLocaleString(currency === "INR" ? "en-IN" : undefined, { maximumFractionDigits: 2 });
+  return `${value < 0 ? "−" : ""}${symbol}${text}`;
 }
+
+/** A fresh key for one withdrawal attempt (see requestWithdrawal). */
+export const newIdempotencyKey = () =>
+  (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`).replace(/[^A-Za-z0-9_-]/g, "");

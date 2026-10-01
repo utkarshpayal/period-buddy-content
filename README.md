@@ -6,7 +6,9 @@ Web dashboard for The Nura team and partner doctors, with two portals in one app
   users, doctors, government schemes and applications, push notifications
   (send now, scheduled or repeating),
   subscriptions (features, plans, coupons), company files, analytics, team and
-  roles, approvals and audit logs.
+  roles, approvals and audit logs. Clinical Admins also set the commission on
+  consultations and pay gynecologists' withdrawals (**Commission & Payouts**,
+  see [docs/doctor-payouts.md](docs/doctor-payouts.md)).
 - **People & Letters** (Super Admin): your hires and interns, plus offer letters,
   completion letters and certificates filled from Canva PDFs, emailed with an
   online signing link. See [docs/hr-documents.md](docs/hr-documents.md).
@@ -14,7 +16,7 @@ Web dashboard for The Nura team and partner doctors, with two portals in one app
 All docs: [docs/README.md](docs/README.md). How this fits with the app, API and
 CMS: the system [ARCHITECTURE.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/ARCHITECTURE.md).
 - **Clinician portal** (doctors): dashboard, bookings, availability, video
-  consultations, payments, profile, reels.
+  consultations, earnings & wallet (withdraw to UPI or bank), profile, reels.
 
 What each staff member sees depends on their role's **permissions**, sent by the
 backend at login (`src/auth/access.ts`). Roles: Super Admin, Content (super) admin,

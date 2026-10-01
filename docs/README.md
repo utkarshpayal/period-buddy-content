@@ -7,6 +7,7 @@ the root and covers setup, scripts, project structure and deployment.
 |---|---|
 | [../README.md](../README.md) | What the three portals (Admin Workspace, People & Letters, clinician portal) do, env vars, scripts, project structure, deployment. |
 | [hr-documents.md](hr-documents.md) | People & Letters: templates from Canva PDFs, filling, emailing and online signing. |
+| [doctor-payouts.md](doctor-payouts.md) | Commission on consultations, gynecologists' wallets and withdrawals (manual or Cashfree Payouts). |
 
 ## Access and security
 

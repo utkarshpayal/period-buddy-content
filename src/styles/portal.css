@@ -3694,3 +3694,6 @@
 .twostep-key { word-break: break-all; font-size: 0.85rem; }
 .twostep-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 0; padding: 0; list-style: none; }
 .twostep-codes code { font-size: 0.95rem; letter-spacing: 0.04em; }
+
+
+.gx-badge.status-failed { background: var(--ui-red-50); color: var(--ui-red); }
