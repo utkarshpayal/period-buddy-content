@@ -79,7 +79,7 @@ export const GynacSidebar: React.FC = () => {
         <p className="nav-section-label">Practice</p>
         <NavLink to="/payments" className={link} onClick={close}>
           <Wallet size={18} />
-          Payments
+          Earnings & Wallet
         </NavLink>
         <NavLink to="/availability" className={link} onClick={close}>
           <Clock size={18} />

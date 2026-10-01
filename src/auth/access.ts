@@ -25,6 +25,9 @@ export const PERMISSIONS = {
   APP_APPROVE: "app.approve",
   DOCTORS_READ: "doctors.read",
   DOCTORS_MANAGE: "doctors.manage",
+  // Doctor commission, earnings and withdrawals: Clinical Admin + Super Admin only.
+  PAYOUTS_READ: "payouts.read",
+  PAYOUTS_MANAGE: "payouts.manage",
   STAFF_MANAGE: "staff.manage",
   AUDIT_READ: "audit.read",
   COMPANY_FILES_MANAGE: "company_files.manage",
@@ -91,7 +94,7 @@ export const ROLE_META: Record<StaffRole, { label: string; department: Departmen
     label: "Clinical Admin",
     department: "clinical",
     level: 2,
-    permissions: [P.DOCTORS_READ, P.DOCTORS_MANAGE]
+    permissions: [P.DOCTORS_READ, P.DOCTORS_MANAGE, P.PAYOUTS_READ, P.PAYOUTS_MANAGE]
   }
 };
 
@@ -157,6 +160,8 @@ const PERMISSION_INFO: Record<Permission, { area: string; label: string }> = {
   [P.APP_APPROVE]: { area: "Approvals", label: "Approve app changes" },
   [P.DOCTORS_READ]: { area: "Gynecologists", label: "View" },
   [P.DOCTORS_MANAGE]: { area: "Gynecologists", label: "Invite & manage" },
+  [P.PAYOUTS_READ]: { area: "Commission & payouts", label: "View" },
+  [P.PAYOUTS_MANAGE]: { area: "Commission & payouts", label: "Set commission, approve withdrawals" },
   [P.STAFF_MANAGE]: { area: "Team", label: "Invite & manage roles" },
   [P.AUDIT_READ]: { area: "Audit logs", label: "View" },
   [P.COMPANY_FILES_MANAGE]: { area: "Company files", label: "Manage" },
