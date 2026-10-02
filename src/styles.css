@@ -2039,11 +2039,6 @@ img.media-upload-preview {
   margin-bottom: 0;
   min-width: 0;
 }
-.gy-doc-top {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
-}
 /* Doctor profile photo (components/DoctorPhoto.tsx) */
 .doc-photo {
   align-items: center;
@@ -2089,42 +2084,117 @@ img.media-upload-preview {
   right: -2px;
   width: 20px;
 }
-.gy-doc-id { flex: 1 1 auto; min-width: 0; }
-.gy-doc-id h4,
-.gy-doc-id p,
-.gy-doc-sub {
+.gy-doc-id { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; justify-items: start; }
+.gy-doc-card { gap: 16px; padding: 20px; transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+.gy-doc-card:hover { box-shadow: var(--shadow-md); }
+.gy-doc-card.is-deactivated { background: var(--surface-2); }
+.gy-doc-card.is-deactivated .doc-photo { filter: grayscale(1); opacity: 0.7; }
+.gy-doc-head { align-items: flex-start; display: flex; gap: 14px; }
+.gy-doc-id .gy-pill { margin-top: 6px; }
+.doc-photo-md { height: 56px; width: 56px; }
+.doc-photo-md .doc-photo-initials { font-size: 1.1rem; }
+
+.gy-doc-menu { flex: 0 0 auto; margin: -6px -6px 0 0; position: relative; }
+.gy-menu {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  min-width: 210px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+}
+.gy-menu button {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 0.86rem;
+  gap: 10px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.gy-menu button:hover, .gy-menu button:focus-visible { background: var(--surface-2); outline: none; }
+.gy-menu button.is-warn { color: var(--amber-dark, var(--amber)); }
+.gy-menu button.is-danger { color: var(--danger); }
+.gy-menu button.is-danger:hover { background: var(--danger-tint); }
+.gy-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
+
+.gy-doc-contact { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.gy-doc-contact li {
+  align-items: center;
+  color: var(--ink-3);
+  display: flex;
+  font-size: 0.84rem;
+  gap: 8px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.gy-doc-id h4 { font-size: 1.02rem; margin: 2px 0 0; }
-.gy-doc-id p { color: var(--ink-3); font-size: 0.85rem; margin: 2px 0 0; }
-.gy-doc-top .gy-pill { flex: 0 0 auto; margin-top: 2px; }
-.gy-doc-sub { color: var(--ink-4); font-size: 0.84rem; margin: -4px 0 0; }
-.gy-doc-meta {
-  background: var(--surface-2);
+.gy-doc-contact svg { color: var(--ink-4); flex: 0 0 auto; }
+.gy-doc-contact a { color: inherit; overflow: hidden; text-decoration: none; text-overflow: ellipsis; }
+.gy-doc-contact a:hover { color: var(--brand); text-decoration: underline; }
+
+.gy-doc-stats {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   display: grid;
-  gap: 12px 16px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
   margin: 0;
-  padding: 12px 14px;
+  overflow: hidden;
 }
-.gy-doc-meta dt { color: var(--ink-4); font-size: 0.8rem; }
-.gy-doc-meta dd { color: var(--ink); font-weight: 700; margin: 2px 0 0; }
-.gy-doc-meta dd.is-open { color: var(--teal); }
-.gy-doc-meta dd.is-paused { color: var(--amber); }
-.gy-doc-actions {
+.gy-doc-stats > div { padding: 10px 11px; }
+.gy-doc-stats > div + div { border-left: 1px solid var(--line); }
+.gy-doc-stats dt { color: var(--ink-4); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.gy-doc-stats dd {
   align-items: center;
-  border-top: 1px solid var(--line);
+  color: var(--ink);
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  gap: 3px;
+  margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.gy-doc-actions .gy-doc-deactivate { margin-left: auto; }
+.gy-doc-stats dd small { color: var(--ink-4); font-weight: 600; }
+.gy-doc-star { color: var(--amber); fill: var(--amber); flex: 0 0 auto; }
+.gy-doc-muted { color: var(--ink-4); font-weight: 600; }
+
+.gy-doc-foot { display: flex; margin-top: auto; }
+.gy-doc-foot .gy-btn { justify-content: center; width: 100%; }
+.gy-doc-contact li.gy-doc-seen svg { color: var(--ink-4); }
+.gy-doc-contact li.gy-doc-seen svg.lucide-circle-check-big,
+.gy-doc-contact li.gy-doc-seen svg.lucide-check-circle-2 { color: var(--teal); }
+.gy-doc-seen svg { color: var(--teal); }
+
+.gy-delete-panel { max-width: 520px; }
+.gy-delete-lead { color: var(--ink); font-weight: 600; margin: 0 0 6px; }
+.gy-delete-list { color: var(--ink-2); display: grid; font-size: 0.88rem; gap: 6px; margin: 0 0 12px; padding-left: 20px; }
+.gy-delete-note {
+  background: var(--amber-tint);
+  border-radius: var(--radius-sm);
+  color: var(--amber-dark, var(--ink-2));
+  font-size: 0.82rem;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+.gy-delete-panel .gy-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.gy-doc-id h4,
+.gy-doc-id p,
+.gy-doc-id h4 { font-size: 1.02rem; margin: 2px 0 0; }
+.gy-doc-id p { color: var(--ink-3); font-size: 0.85rem; margin: 2px 0 0; }
+.gy-doc-sub { color: var(--ink-4); font-size: 0.84rem; margin: -4px 0 0; }
 
 /* ---- Filters / chips ---- */
 .gy-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }

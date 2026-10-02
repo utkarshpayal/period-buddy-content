@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, RefreshCw, Power, Copy, X, Search, UserX, KeyRound, Camera } from "lucide-react";
+import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, Copy, X, Search, Trash2 } from "lucide-react";
 import { twoFactorApi } from "../api/authApi";
 import {
   AdminDoctor,
@@ -8,10 +8,13 @@ import {
   resendInvite,
   updateDoctorByAdmin,
   deactivateDoctor,
-  uploadDoctorAvatar,
-  formatMoney
+  deleteDoctorAccount,
+  reactivateDoctor,
+  removeDoctorAvatar,
+  uploadDoctorAvatar
 } from "../api/doctorApi";
-import { DoctorAvatar, PhotoPicker, photoFileError } from "../components/DoctorPhoto";
+import { PhotoPicker, photoFileError } from "../components/DoctorPhoto";
+import { DoctorCard } from "../components/DoctorCard";
 import { useAppContext } from "../context/AppContext";
 import { useNoticeToast } from "../components/Toast";
 import { Pagination, type PageInfo } from "../components/Pagination";
@@ -46,6 +49,10 @@ export const DoctorsPage: React.FC = () => {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoTarget, setPhotoTarget] = useState<AdminDoctor | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  // Permanent delete asks the admin to type the doctor's name first.
+  const [deleteTarget, setDeleteTarget] = useState<AdminDoctor | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Server-side paging (20 per page) + search over name/specialty/email.
   const [page, setPage] = useState(1);
@@ -140,12 +147,12 @@ export const DoctorsPage: React.FC = () => {
     }
   };
 
-  const handleResend = async (id: string) => {
+  const handleResend = async (doc: AdminDoctor) => {
     setNotice(null);
     setError(null);
     setInviteUrl(null);
     try {
-      const result = await resendInvite(id);
+      const result = await resendInvite(doc._id);
       setNotice(
         result.inviteEmailDelivered
           ? "Invite email resent."
@@ -213,22 +220,80 @@ export const DoctorsPage: React.FC = () => {
     }
   };
 
-  const handleDeactivate = async (id: string) => {
-    if (!window.confirm("Deactivate this gynecologist and disable their login?")) return;
+  const handleDeactivate = async (doc: AdminDoctor) => {
+    if (
+      !window.confirm(
+        `Deactivate ${doc.name}? Their login stops working, they're hidden from booking, and open consultations are cancelled (patients are told). You can reactivate them later.`
+      )
+    )
+      return;
+    setNotice(null);
+    setError(null);
     try {
-      await deactivateDoctor(id);
+      await deactivateDoctor(doc._id);
+      setNotice(`${doc.name} was deactivated.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not deactivate doctor.");
     }
   };
 
-  const accountStatus = (doc: AdminDoctor) => {
-    const u = typeof doc.userId === "object" ? doc.userId : undefined;
-    if (!u) return { label: "No account", cls: "gy-pill-muted" };
-    if (u.mustSetPassword) return { label: "Invite pending", cls: "gy-pill-warn" };
-    if (u.isActive === false) return { label: "Deactivated", cls: "gy-pill-muted" };
-    return { label: "Active", cls: "gy-pill-ok" };
+  const handleReactivate = async (doc: AdminDoctor) => {
+    setNotice(null);
+    setError(null);
+    try {
+      const result = await reactivateDoctor(doc._id);
+      setNotice(
+        result.needsInvite
+          ? `${doc.name} is active again. They never set a password, so resend their invite.`
+          : `${doc.name} is active again. Bookings are paused until you resume them.`
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reactivate doctor.");
+    }
+  };
+
+  const handleRemovePhoto = async (doc: AdminDoctor) => {
+    if (!window.confirm(`Remove ${doc.name}'s profile photo?`)) return;
+    setError(null);
+    setPhotoBusyId(doc._id);
+    try {
+      await removeDoctorAvatar(doc._id);
+      setDoctors((list) => list.map((d) => (d._id === doc._id ? { ...d, avatarUrl: null } : d)));
+      setNotice(`Photo removed for ${doc.name}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove the photo.");
+    } finally {
+      setPhotoBusyId(null);
+    }
+  };
+
+  const closeDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirm("");
+  };
+
+  const handleDelete = async () => {
+    const doc = deleteTarget;
+    if (!doc || deleteConfirm.trim() !== doc.name.trim()) return;
+    setDeleting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await deleteDoctorAccount(doc._id);
+      setNotice(`${doc.name} was deleted.`);
+      setDeleteTarget(null);
+      setDeleteConfirm("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete doctor.");
+      setDeleteTarget(null);
+      setDeleteConfirm("");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -423,83 +488,73 @@ export const DoctorsPage: React.FC = () => {
         </div>
       ) : (
         <div className="gy-doc-grid">
-          {doctors.map((doc) => {
-            const status = accountStatus(doc);
-            const account = typeof doc.userId === "object" ? doc.userId : undefined;
-            const invitePending = Boolean(account?.mustSetPassword);
-            const deactivated = account?.isActive === false;
-            return (
-              <article className="gy-card gy-doc-card" key={doc._id}>
-                <div className="gy-doc-top">
-                  <button
-                    className="gy-doc-photo-btn"
-                    type="button"
-                    onClick={() => changePhoto(doc)}
-                    disabled={photoBusyId === doc._id}
-                    title={doc.avatarUrl ? "Change photo" : "Add photo"}
-                    aria-label={`${doc.avatarUrl ? "Change" : "Add"} photo for ${doc.name}`}
-                  >
-                    <DoctorAvatar name={doc.name} url={doc.avatarUrl} />
-                    <span className="gy-doc-photo-badge">
-                      {photoBusyId === doc._id ? <Loader2 className="spin-icon" size={11} /> : <Camera size={11} />}
-                    </span>
-                  </button>
-                  <div className="gy-doc-id">
-                    <h4 title={doc.name}>{doc.name}</h4>
-                    <p title={doc.specialty}>{doc.specialty}</p>
-                  </div>
-                  <span className={`gy-pill ${status.cls}`}>{status.label}</span>
-                </div>
-                {(doc.hospital || doc.email) && (
-                  <p className="gy-doc-sub" title={doc.hospital || doc.email}>{doc.hospital || doc.email}</p>
-                )}
-                <dl className="gy-doc-meta">
-                  <div>
-                    <dt>Fee</dt>
-                    <dd>{formatMoney(doc.pricePerSession, doc.currency)}</dd>
-                  </div>
-                  <div>
-                    <dt>Experience</dt>
-                    <dd>{doc.experience || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>Sessions</dt>
-                    <dd>{doc.totalConsultations ?? 0}</dd>
-                  </div>
-                  <div>
-                    <dt>Bookings</dt>
-                    <dd className={doc.isAvailable ? "is-open" : "is-paused"}>{doc.isAvailable ? "Open" : "Paused"}</dd>
-                  </div>
-                </dl>
-                {!deactivated && (
-                  <div className="gy-doc-actions">
-                    <button className="gy-btn gy-btn-ghost" type="button" onClick={() => toggleAvailability(doc)}>
-                      <Power size={14} /> {doc.isAvailable ? "Pause" : "Resume"}
-                    </button>
-                    {invitePending && (
-                      <button className="gy-btn gy-btn-ghost" type="button" onClick={() => handleResend(doc._id)}>
-                        <RefreshCw size={14} /> Resend invite
-                      </button>
-                    )}
-                    {account?.twoFactor?.totpEnabledAt && (
-                      <button className="gy-btn gy-btn-ghost" type="button" onClick={() => handleResetTwoStep(doc)}>
-                        <KeyRound size={14} /> Reset authenticator
-                      </button>
-                    )}
-                    <button
-                      className="gy-icon-btn gy-icon-btn-danger gy-doc-deactivate"
-                      type="button"
-                      onClick={() => handleDeactivate(doc._id)}
-                      title="Deactivate"
-                      aria-label={`Deactivate ${doc.name}`}
-                    >
-                      <UserX size={16} />
-                    </button>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+          {doctors.map((doc) => (
+            <DoctorCard
+              key={doc._id}
+              doc={doc}
+              busy={photoBusyId === doc._id}
+              actions={{
+                onToggleBookings: toggleAvailability,
+                onResendInvite: handleResend,
+                onResetTwoStep: handleResetTwoStep,
+                onChangePhoto: changePhoto,
+                onRemovePhoto: handleRemovePhoto,
+                onDeactivate: handleDeactivate,
+                onReactivate: handleReactivate,
+                onDelete: (d) => {
+                  setDeleteConfirm("");
+                  setDeleteTarget(d);
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={closeDelete}>
+          <section
+            className="gy-card gy-modal-panel gy-delete-panel"
+            role="alertdialog"
+            aria-labelledby="delete-doctor-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="gy-card-head">
+              <h3 id="delete-doctor-title">Delete {deleteTarget.name}?</h3>
+              <button className="gy-icon-btn" onClick={closeDelete} type="button" aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="gy-delete-lead">This can't be undone. It will:</p>
+            <ul className="gy-delete-list">
+              <li>Delete their login account and sign them out everywhere</li>
+              <li>Remove them from booking and cancel open consultations (patients are told; paid ones are flagged for refund)</li>
+              <li>Hide their reels and remove their profile photo</li>
+            </ul>
+            <p className="gy-delete-note">
+              Past consultations and earnings stay for your records. Deleting is blocked while their wallet still holds money or a payout is open. To pause them instead, use Deactivate.
+            </p>
+            <label className="gy-field">
+              <span>
+                Type <strong>{deleteTarget.name}</strong> to confirm
+              </span>
+              <input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} autoFocus />
+            </label>
+            <div className="gy-form-actions">
+              <button className="gy-btn gy-btn-ghost" type="button" onClick={closeDelete} disabled={deleting}>
+                Cancel
+              </button>
+              <button
+                className="gy-btn gy-btn-danger"
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirm.trim() !== deleteTarget.name.trim()}
+              >
+                {deleting ? <Loader2 className="spin-icon" size={16} /> : <Trash2 size={16} />}
+                Delete permanently
+              </button>
+            </div>
+          </section>
         </div>
       )}
 

@@ -598,6 +598,14 @@ export const uploadDoctorAvatar = (id: string, file: File) =>
 export const removeDoctorAvatar = (id: string) =>
   request<AdminDoctor>(`/api/doctor/admin/${id}/avatar`, { method: "DELETE" });
 
+/** Undo a deactivation. Bookings stay paused; `needsInvite` when they never set a password. */
+export const reactivateDoctor = (id: string) =>
+  request<{ doctor: AdminDoctor; needsInvite: boolean }>(`/api/doctor/admin/${id}/reactivate`, { method: "POST" });
+
+/** Delete a doctor for good (refused while their wallet holds money). */
+export const deleteDoctorAccount = (id: string) =>
+  request<{ _id: string }>(`/api/doctor/admin/${id}/account`, { method: "DELETE" });
+
 /* ------------------------------- Helpers -------------------------------- */
 
 export function patientName(patient?: Patient | string): string {
