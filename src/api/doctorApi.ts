@@ -56,7 +56,9 @@ export type DoctorProfile = {
   email?: string;
   name: string;
   specialty: string;
+  /** Average of patients' session ratings; only meaningful when ratingCount > 0. */
   rating?: number;
+  ratingCount?: number;
   pricePerSession: number;
   currency?: string;
   /** @deprecated replaced by avatarUrl */
@@ -130,6 +132,7 @@ export type DashboardData = {
     avatarEmoji?: string;
     avatarUrl?: string | null;
     rating?: number;
+    ratingCount?: number;
     isAvailable?: boolean;
   };
   stats: {

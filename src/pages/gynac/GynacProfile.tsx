@@ -214,12 +214,11 @@ export const GynacProfile: React.FC = () => {
               <div>
                 <h3>{profile.name || "Your name"}</h3>
                 <p>{profile.specialty || "Specialty"}</p>
-                {profile.rating ? (
-                  <span className="gx-inline-meta">
-                    <Star size={13} className="gx-star" /> {profile.rating.toFixed(1)}
-                    {profile.totalConsultations ? ` · ${profile.totalConsultations} consultations` : ""}
-                  </span>
-                ) : null}
+                <span className="gx-inline-meta">
+                  <Star size={13} className="gx-star" />{" "}
+                  {profile.ratingCount && profile.rating ? `${profile.rating.toFixed(1)} (${profile.ratingCount})` : "New"}
+                  {profile.totalConsultations ? ` · ${profile.totalConsultations} consultations` : ""}
+                </span>
               </div>
             </div>
             <ul className="gx-doctor-facts">

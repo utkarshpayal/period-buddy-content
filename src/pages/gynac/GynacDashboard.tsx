@@ -129,11 +129,10 @@ export const GynacDashboard: React.FC = () => {
         subtitle={
           <span className="gx-inline-meta">
             <Stethoscope size={14} /> {doctor.specialty}
-            {doctor.rating ? (
-              <>
-                <span className="gx-dot-sep" /> <Star size={14} className="gx-star" /> {doctor.rating.toFixed(1)} rating
-              </>
-            ) : null}
+            <span className="gx-dot-sep" /> <Star size={14} className="gx-star" />{" "}
+            {doctor.ratingCount && doctor.rating
+              ? `${doctor.rating.toFixed(1)} from ${doctor.ratingCount} patient rating${doctor.ratingCount === 1 ? "" : "s"}`
+              : "No ratings yet"}
           </span>
         }
         actions={
