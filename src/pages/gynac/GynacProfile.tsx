@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Building2, Clock, Globe2, Loader2, Save, Star } from "lucide-react";
-import { DoctorProfile, formatMoney, getMyProfile, updateMyProfile } from "../../api/doctorApi";
+import {
+  DoctorProfile,
+  formatMoney,
+  getMyProfile,
+  removeMyAvatar,
+  updateMyProfile,
+  uploadMyAvatar
+} from "../../api/doctorApi";
+import { DoctorAvatar, PhotoPicker } from "../../components/DoctorPhoto";
 import { Card, ErrorState, PageHeader, PageSkeleton } from "../../components/ui";
 import { useNoticeToast } from "../../components/Toast";
 import { TwoStepSettings } from "../../components/TwoStepSettings";
@@ -14,6 +22,7 @@ export const GynacProfile: React.FC = () => {
   useNoticeToast(notice, () => setNotice(null));
   const [languagesText, setLanguagesText] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,6 +43,22 @@ export const GynacProfile: React.FC = () => {
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
   };
 
+  // The photo saves on its own, straight away, so it doesn't wait on (or
+  // discard) unsaved text edits.
+  const changePhoto = async (action: () => Promise<DoctorProfile>, done: string) => {
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const updated = await action();
+      setProfile((prev) => (prev ? { ...prev, avatarUrl: updated.avatarUrl ?? null } : prev));
+      setNotice(done);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update your photo.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -49,7 +74,6 @@ export const GynacProfile: React.FC = () => {
         bio: profile.bio,
         experience: profile.experience,
         hospital: profile.hospital,
-        avatarEmoji: profile.avatarEmoji,
         languages: languagesText.split(",").map((l) => l.trim()).filter(Boolean)
       });
       setProfile(updated);
@@ -98,11 +122,19 @@ export const GynacProfile: React.FC = () => {
                 <span>Specialty</span>
                 <input value={profile.specialty} onChange={(e) => set({ specialty: e.target.value })} required />
               </label>
-              <label className="gx-field">
-                <span>Avatar emoji</span>
-                <input value={profile.avatarEmoji ?? ""} maxLength={4} onChange={(e) => set({ avatarEmoji: e.target.value })} />
-                <small>Shown on your card in the app.</small>
-              </label>
+              <div className="gx-field gx-field-full">
+                <span>Profile photo</span>
+                <PhotoPicker
+                  name={profile.name || "Doctor"}
+                  url={profile.avatarUrl}
+                  busy={photoBusy}
+                  hint="Shown on your card in the app. A clear, friendly headshot works best. Up to 5 MB."
+                  avatarClassName="doc-photo-lg"
+                  onPick={(file) => changePhoto(() => uploadMyAvatar(file), "Photo updated.")}
+                  onRemove={() => changePhoto(removeMyAvatar, "Photo removed.")}
+                  onError={setError}
+                />
+              </div>
               <label className="gx-field">
                 <span>Experience</span>
                 <input value={profile.experience ?? ""} placeholder="e.g. 12 years" onChange={(e) => set({ experience: e.target.value })} />
@@ -178,7 +210,7 @@ export const GynacProfile: React.FC = () => {
           <p className="gx-eyebrow">Patient view</p>
           <Card className="gx-doctor-card">
             <div className="gx-doctor-card-top">
-              <span className="gx-doctor-emoji" aria-hidden>{profile.avatarEmoji || "👩‍⚕️"}</span>
+              <DoctorAvatar name={profile.name || "Doctor"} url={profile.avatarUrl} className="doc-photo-lg" />
               <div>
                 <h3>{profile.name || "Your name"}</h3>
                 <p>{profile.specialty || "Specialty"}</p>

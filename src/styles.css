@@ -2044,16 +2044,50 @@ img.media-upload-preview {
   display: flex;
   gap: 12px;
 }
-.gy-doc-avatar {
+/* Doctor profile photo (components/DoctorPhoto.tsx) */
+.doc-photo {
   align-items: center;
   background: var(--brand-tint);
-  border-radius: var(--radius-md);
-  display: flex;
+  border-radius: 50%;
+  color: var(--brand);
+  display: inline-flex;
   flex: 0 0 auto;
-  font-size: 1.4rem;
+  font-weight: 700;
   height: 48px;
   justify-content: center;
+  overflow: hidden;
   width: 48px;
+}
+.doc-photo img { height: 100%; object-fit: cover; width: 100%; }
+.doc-photo-initials { font-size: 0.95rem; letter-spacing: 0.02em; }
+.doc-photo-lg { height: 72px; width: 72px; }
+.doc-photo-lg .doc-photo-initials { font-size: 1.35rem; }
+.doc-photo-picker { align-items: center; display: flex; gap: 14px; }
+.doc-photo-picker-body { display: grid; gap: 6px; }
+.doc-photo-picker-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.doc-photo-picker small { color: var(--ink-3, var(--ink-2)); font-size: 0.75rem; }
+.gy-doc-photo-btn {
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+.gy-doc-photo-btn:disabled { cursor: progress; opacity: 0.6; }
+.gy-doc-photo-btn .gy-doc-photo-badge {
+  align-items: center;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  border-radius: 50%;
+  bottom: -2px;
+  color: var(--ink-2);
+  display: flex;
+  height: 20px;
+  justify-content: center;
+  position: absolute;
+  right: -2px;
+  width: 20px;
 }
 .gy-doc-id { flex: 1 1 auto; min-width: 0; }
 .gy-doc-id h4,

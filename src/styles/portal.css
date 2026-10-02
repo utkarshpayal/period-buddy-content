@@ -2866,18 +2866,6 @@
   gap: 14px;
 }
 
-.gx-doctor-emoji {
-  align-items: center;
-  background: var(--ui-berry-50);
-  border-radius: 18px;
-  display: inline-flex;
-  flex: 0 0 auto;
-  font-size: 2rem;
-  height: 64px;
-  justify-content: center;
-  width: 64px;
-}
-
 .gx-doctor-card h3 {
   font-size: 1.08rem;
   margin: 0;

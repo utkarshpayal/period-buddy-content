@@ -59,7 +59,10 @@ export type DoctorProfile = {
   rating?: number;
   pricePerSession: number;
   currency?: string;
+  /** @deprecated replaced by avatarUrl */
   avatarEmoji?: string;
+  /** Profile photo shown to patients; set with uploadMyAvatar / uploadDoctorAvatar. */
+  avatarUrl?: string | null;
   bio?: string;
   languages?: string[];
   experience?: string;
@@ -125,6 +128,7 @@ export type DashboardData = {
     name: string;
     specialty: string;
     avatarEmoji?: string;
+    avatarUrl?: string | null;
     rating?: number;
     isAvailable?: boolean;
   };
@@ -310,7 +314,8 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}): Prom
   }
 
   const headers = new Headers(options.headers);
-  if (!headers.has("Content-Type") && options.body) {
+  // FormData sets its own multipart boundary.
+  if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   const token = getApiToken();
@@ -386,6 +391,19 @@ export const updateMyProfile = (updates: Partial<DoctorProfile>) =>
     method: "PUT",
     body: JSON.stringify(updates)
   });
+
+const photoForm = (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+};
+
+/** Upload the signed-in doctor's profile photo (image, up to 5 MB). */
+export const uploadMyAvatar = (file: File) =>
+  request<DoctorProfile>("/api/doctor/me/avatar", { method: "POST", body: photoForm(file) });
+
+export const removeMyAvatar = () =>
+  request<DoctorProfile>("/api/doctor/me/avatar", { method: "DELETE" });
 
 export const getDashboard = () => request<DashboardData>("/api/doctor/dashboard");
 
@@ -537,7 +555,6 @@ export const inviteDoctor = (payload: {
   languages?: string[];
   experience?: string;
   hospital?: string;
-  avatarEmoji?: string;
 }) =>
   request<{ doctor: AdminDoctor; inviteEmailDelivered: boolean; inviteUrl?: string }>(
     "/api/doctor/invite",
@@ -570,6 +587,13 @@ export const resendInvite = (id: string) =>
 
 export const deactivateDoctor = (id: string) =>
   request<AdminDoctor>(`/api/doctor/admin/${id}`, { method: "DELETE" });
+
+/** Admin: set a doctor's profile photo (image, up to 5 MB). */
+export const uploadDoctorAvatar = (id: string, file: File) =>
+  request<AdminDoctor>(`/api/doctor/admin/${id}/avatar`, { method: "POST", body: photoForm(file) });
+
+export const removeDoctorAvatar = (id: string) =>
+  request<AdminDoctor>(`/api/doctor/admin/${id}/avatar`, { method: "DELETE" });
 
 /* ------------------------------- Helpers -------------------------------- */
 

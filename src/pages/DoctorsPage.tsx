@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, RefreshCw, Power, Copy, X, Search, UserX, KeyRound } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Stethoscope, UserPlus, Loader2, AlertCircle, Mail, RefreshCw, Power, Copy, X, Search, UserX, KeyRound, Camera } from "lucide-react";
 import { twoFactorApi } from "../api/authApi";
 import {
   AdminDoctor,
@@ -8,8 +8,10 @@ import {
   resendInvite,
   updateDoctorByAdmin,
   deactivateDoctor,
+  uploadDoctorAvatar,
   formatMoney
 } from "../api/doctorApi";
+import { DoctorAvatar, PhotoPicker, photoFileError } from "../components/DoctorPhoto";
 import { useAppContext } from "../context/AppContext";
 import { useNoticeToast } from "../components/Toast";
 import { Pagination, type PageInfo } from "../components/Pagination";
@@ -37,6 +39,13 @@ export const DoctorsPage: React.FC = () => {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  // Photo chosen in the invite form; uploaded once the doctor exists.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  // Changing an existing doctor's photo from their card.
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoTarget, setPhotoTarget] = useState<AdminDoctor | null>(null);
+  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
 
   // Server-side paging (20 per page) + search over name/specialty/email.
   const [page, setPage] = useState(1);
@@ -52,6 +61,16 @@ export const DoctorsPage: React.FC = () => {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
 
   const load = async (targetPage = page) => {
     setLoading(true);
@@ -96,13 +115,22 @@ export const DoctorsPage: React.FC = () => {
           ? form.languages.split(",").map((l) => l.trim()).filter(Boolean)
           : undefined
       });
+      let photoNote = "";
+      if (photoFile && result.doctor?._id) {
+        try {
+          await uploadDoctorAvatar(result.doctor._id, photoFile);
+        } catch {
+          photoNote = " The photo didn't upload — add it from their card.";
+        }
+      }
       setNotice(
-        result.inviteEmailDelivered
+        (result.inviteEmailDelivered
           ? `Invitation emailed to ${form.email}.`
-          : `Doctor created. Email delivery is not configured — share the invite link below.`
+          : `Doctor created. Email delivery is not configured — share the invite link below.`) + photoNote
       );
       if (result.inviteUrl) setInviteUrl(result.inviteUrl);
       setForm(emptyForm);
+      setPhotoFile(null);
       setShowForm(false);
       await load();
     } catch (err) {
@@ -126,6 +154,35 @@ export const DoctorsPage: React.FC = () => {
       if (result.inviteUrl) setInviteUrl(result.inviteUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not resend invite.");
+    }
+  };
+
+  const changePhoto = (doc: AdminDoctor) => {
+    setPhotoTarget(doc);
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const doc = photoTarget;
+    if (!file || !doc) return;
+    const problem = photoFileError(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    setPhotoBusyId(doc._id);
+    try {
+      const updated = await uploadDoctorAvatar(doc._id, file);
+      setDoctors((list) => list.map((d) => (d._id === doc._id ? { ...d, avatarUrl: updated.avatarUrl } : d)));
+      setNotice(`Photo updated for ${doc.name}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not upload the photo.");
+    } finally {
+      setPhotoBusyId(null);
+      setPhotoTarget(null);
     }
   };
 
@@ -229,6 +286,18 @@ export const DoctorsPage: React.FC = () => {
             </button>
           </div>
           <form className="gy-form-grid" onSubmit={handleInvite}>
+            <div className="gy-field gy-field-full">
+              <span>Profile photo</span>
+              <PhotoPicker
+                name={form.name || "Doctor"}
+                url={photoPreview}
+                hint="Shown to patients in the app. JPG, PNG or WebP, up to 5 MB."
+                avatarClassName="doc-photo-lg"
+                onPick={setPhotoFile}
+                onRemove={() => setPhotoFile(null)}
+                onError={setError}
+              />
+            </div>
             <label className="gy-field">
               <span>Full name *</span>
               <input
@@ -362,7 +431,19 @@ export const DoctorsPage: React.FC = () => {
             return (
               <article className="gy-card gy-doc-card" key={doc._id}>
                 <div className="gy-doc-top">
-                  <span className="gy-doc-avatar" aria-hidden="true">{doc.avatarEmoji || "👩‍⚕️"}</span>
+                  <button
+                    className="gy-doc-photo-btn"
+                    type="button"
+                    onClick={() => changePhoto(doc)}
+                    disabled={photoBusyId === doc._id}
+                    title={doc.avatarUrl ? "Change photo" : "Add photo"}
+                    aria-label={`${doc.avatarUrl ? "Change" : "Add"} photo for ${doc.name}`}
+                  >
+                    <DoctorAvatar name={doc.name} url={doc.avatarUrl} />
+                    <span className="gy-doc-photo-badge">
+                      {photoBusyId === doc._id ? <Loader2 className="spin-icon" size={11} /> : <Camera size={11} />}
+                    </span>
+                  </button>
                   <div className="gy-doc-id">
                     <h4 title={doc.name}>{doc.name}</h4>
                     <p title={doc.specialty}>{doc.specialty}</p>
@@ -421,6 +502,8 @@ export const DoctorsPage: React.FC = () => {
           })}
         </div>
       )}
+
+      <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handlePhotoChosen} />
 
       <Pagination pagination={pagination} onPageChange={setPage} disabled={loading} itemLabel="gynecologists" />
     </div>
