@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PhoneOff, Video } from "lucide-react";
 import { declineIncomingCall, getWebSocketUrl, isDoctorApiConfigured } from "../api/doctorApi";
+import { startRingTone } from "../lib/ringTone";
 import { getOpenConsultation, publishDoctorEvent, reconnectDelay, type DoctorPersonalEvent } from "../lib/doctorEvents";
 import { Avatar } from "./ui";
 import { useToast } from "./Toast";
@@ -10,53 +11,6 @@ import { useToast } from "./Toast";
 const RING_TIMEOUT_MS = 45 * 1000;
 
 type Ringing = { consultationId: string; callerName: string; callerAvatarUrl?: string | null };
-
-/**
- * A two-tone phone ring made with Web Audio (no sound file). Browsers may keep
- * the audio context suspended until the page has had a click; then the ring is
- * silent but the modal still shows.
- */
-function startRingTone(): () => void {
-  const Ctx: typeof AudioContext | undefined =
-    window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctx) return () => undefined;
-  let ctx: AudioContext;
-  try {
-    ctx = new Ctx();
-  } catch {
-    return () => undefined;
-  }
-  ctx.resume?.().catch(() => undefined);
-
-  const beep = (at: number) => {
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(0.18, at + 0.03);
-    gain.gain.setValueAtTime(0.18, at + 0.36);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
-    gain.connect(ctx.destination);
-    for (const freq of [440, 480]) {
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      osc.start(at);
-      osc.stop(at + 0.42);
-    }
-  };
-  const ring = () => {
-    if (ctx.state === "closed") return;
-    const now = ctx.currentTime;
-    beep(now);
-    beep(now + 0.6);
-  };
-  ring();
-  const timer = window.setInterval(ring, 2400);
-  return () => {
-    window.clearInterval(timer);
-    ctx.close().catch(() => undefined);
-  };
-}
 
 /**
  * Global incoming-call listener for signed-in doctors, mounted once in the
