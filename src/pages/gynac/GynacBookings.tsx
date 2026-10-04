@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Loader2,
   AlertCircle,
@@ -18,13 +18,18 @@ import {
   Search,
   MessagesSquare,
   Inbox,
-  Pill
+  Pill,
+  Star,
+  Clock,
+  WifiOff,
+  RotateCcw
 } from "lucide-react";
 import {
   Consultation,
   ConsultationMessage,
   ConsultationStatus,
   PatientOverview,
+  getConsultation,
   getConsultationsPage,
   getConsultationMessages,
   getConsultationPatient,
@@ -34,8 +39,11 @@ import {
   cancelConsultation,
   patientName,
   formatMoney,
-  getWebSocketUrl
+  formatSlot,
+  getWebSocketUrl,
+  startVideoCall
 } from "../../api/doctorApi";
+import { reconnectDelay, setOpenConsultation, subscribeDoctorEvents } from "../../lib/doctorEvents";
 import { Avatar, EmptyState, PageHeader, StatusBadge, Tabs, timeAgo } from "../../components/ui";
 import { useToast } from "../../components/Toast";
 import { ConsultationCall, ConsultationCallHandle } from "./ConsultationCall";
@@ -62,6 +70,21 @@ const dayLabel = (iso?: string) => {
   return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 };
 
+const CANCELLED_BY: Record<string, string> = {
+  patient: "Cancelled by the patient",
+  doctor: "Cancelled by you",
+  system: "Cancelled automatically"
+};
+
+/** A server response merged into the row we have, keeping the populated patient. */
+const mergeBooking = (old: Consultation, updated: Consultation): Consultation => ({
+  ...old,
+  ...updated,
+  userId: typeof updated.userId === "object" && updated.userId ? updated.userId : old.userId
+});
+
+type SocketState = "connecting" | "open" | "reconnecting";
+
 /**
  * Collapses a message list so the same message never renders twice. The load,
  * WebSocket broadcast, and send response can all carry overlapping messages, so
@@ -83,7 +106,7 @@ function dedupeMessages(messages: ConsultationMessage[]): ConsultationMessage[] 
 export const GynacBookings: React.FC = () => {
   const toast = useToast();
   const location = useLocation();
-  const openOnLoad = (location.state as { open?: string } | null)?.open;
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [bookings, setBookings] = useState<Consultation[]>([]);
@@ -104,9 +127,27 @@ export const GynacBookings: React.FC = () => {
   const [rxText, setRxText] = useState("");
   const [rxSaving, setRxSaving] = useState(false);
 
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [startingCall, setStartingCall] = useState(false);
+
+  // Live room connection for the open booking.
+  const [socketState, setSocketState] = useState<SocketState>("connecting");
+  /** Set when the server refuses the room (the session is no longer live). */
+  const [roomClosed, setRoomClosed] = useState<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const callRef = useRef<ConsultationCallHandle | null>(null);
+  const selectedRef = useRef<Consultation | null>(null);
+  selectedRef.current = selected;
+  const bookingsRef = useRef<Consultation[]>([]);
+  bookingsRef.current = bookings;
+  /** True once the server confirmed we joined the open booking's room. */
+  const roomJoinedRef = useRef(false);
+  /** A call to start as soon as the room is joined (answering a ring). */
+  const pendingCallRef = useRef<string | null>(null);
 
   // Paged 20 at a time ("Load more" at the bottom of the list); the patient
   // search runs on the server so it covers every booking, not just the
@@ -129,28 +170,40 @@ export const GynacBookings: React.FC = () => {
       search: debouncedSearch || undefined,
     });
 
-  const loadBookings = async () => {
+  /** Applies a server copy of one booking to the list and the open conversation. */
+  const applyUpdate = (updated: Consultation) => {
+    setSelected((prev) => (prev && prev._id === updated._id ? mergeBooking(prev, updated) : prev));
+    setBookings((prev) => prev.map((b) => (b._id === updated._id ? mergeBooking(b, updated) : b)));
+  };
+
+  /** `silent` refreshes in place (live events) without the loading spinner. */
+  const loadBookings = async (silent = false) => {
     const generation = ++loadGeneration.current;
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const { consultations: list, pagination } = await fetchBookingsPage(1);
       if (generation !== loadGeneration.current) return;
       setBookings(list);
       setBookingsPage(1);
       setHasMoreBookings(Boolean(pagination?.hasNextPage));
-      // Arriving from the dashboard's "Up next" list opens that booking.
-      if (openOnLoad && !selected) {
-        const target = list.find((b) => b._id === openOnLoad);
-        if (target) openChat(target);
-      }
+      // Keep the open conversation in step with the fresh copy.
+      setSelected((prev) => {
+        if (!prev) return prev;
+        const fresh = list.find((b) => b._id === prev._id);
+        return fresh ? mergeBooking(prev, fresh) : prev;
+      });
     } catch (err) {
       if (generation !== loadGeneration.current) return;
-      setError(err instanceof Error ? err.message : "Failed to load bookings.");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load bookings.");
     } finally {
       if (generation === loadGeneration.current) setLoading(false);
     }
   };
+  const loadBookingsRef = useRef(loadBookings);
+  loadBookingsRef.current = loadBookings;
 
   const loadMoreBookings = async () => {
     if (loadingMoreBookings || !hasMoreBookings) return;
@@ -178,22 +231,79 @@ export const GynacBookings: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, debouncedSearch]);
 
+  // New, cancelled or completed bookings (personal socket, see GynacIncomingCall).
+  useEffect(
+    () =>
+      subscribeDoctorEvents((evt) => {
+        if (evt.event === "consultation_booked" || evt.event === "consultation_cancelled" || evt.event === "consultation_completed") {
+          loadBookingsRef.current(true);
+        }
+      }),
+    []
+  );
+
+  /** Loads a booking's chat log; drops the answer if another booking was opened meanwhile. */
+  const loadMessages = async (bookingId: string, showSpinner: boolean) => {
+    if (showSpinner) setMsgLoading(true);
+    try {
+      const list = await getConsultationMessages(bookingId);
+      if (selectedRef.current?._id !== bookingId) return;
+      setMessages((prev) => dedupeMessages(showSpinner ? list : [...prev, ...list]));
+    } catch (err) {
+      if (selectedRef.current?._id === bookingId && showSpinner) {
+        toast.error(err instanceof Error ? err.message : "Failed to load messages.");
+      }
+    } finally {
+      if (showSpinner && selectedRef.current?._id === bookingId) setMsgLoading(false);
+    }
+  };
+
   const openChat = async (booking: Consultation) => {
+    selectedRef.current = booking;
     setSelected(booking);
+    setMessages([]);
     setRxText(booking.prescription ?? "");
     // Reset the patient panel for the newly-selected booking.
     setPatient(null);
     setPatientError(null);
     setShowPatient(false);
-    setMsgLoading(true);
-    try {
-      setMessages(dedupeMessages(await getConsultationMessages(booking._id)));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load messages.");
-    } finally {
-      setMsgLoading(false);
-    }
+    await loadMessages(booking._id, true);
   };
+
+  /** Opens a booking by id (dashboard link or an answered ring), fetching it if not loaded. */
+  const openById = async (id: string, autoCall: boolean) => {
+    if (autoCall) pendingCallRef.current = id;
+    if (selectedRef.current?._id === id) {
+      if (autoCall && roomJoinedRef.current) {
+        pendingCallRef.current = null;
+        beginCall();
+      }
+      return;
+    }
+    let target = bookingsRef.current.find((b) => b._id === id);
+    if (!target) {
+      try {
+        target = await getConsultation(id);
+      } catch {
+        /* reported below */
+      }
+    }
+    if (!target) {
+      pendingCallRef.current = null;
+      toast.error("Could not find that booking.");
+      return;
+    }
+    openChat(target);
+  };
+
+  // `navigate("/bookings", { state: { open, call } })` from the dashboard or the ringer.
+  useEffect(() => {
+    const state = location.state as { open?: string; call?: boolean } | null;
+    if (!state?.open) return;
+    navigate(location.pathname, { replace: true, state: null });
+    openById(state.open, Boolean(state.call));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -203,49 +313,134 @@ export const GynacBookings: React.FC = () => {
   // (`consultation_<id>`) for live chat and to send/receive WebRTC call
   // signaling — the same room the patient app joins, so an inbound call from
   // the patient surfaces right here (ConsultationCall handles `call_request`).
+  // Reconnects with backoff, re-joins and refetches the chat after a drop.
   useEffect(() => {
     if (!selected) return;
-    const roomId = `consultation_${selected._id}`;
-    let closed = false;
-    let socket: WebSocket;
-    try {
-      socket = new WebSocket(getWebSocketUrl());
-    } catch {
-      return;
-    }
-    socketRef.current = socket;
+    const bookingId = selected._id;
+    const roomId = `consultation_${bookingId}`;
+    let disposed = false;
+    let attempt = 0;
+    let everOpened = false;
+    let refused = false;
+    let retryTimer: number | undefined;
+    let socket: WebSocket | null = null;
 
-    socket.onopen = () => {
-      if (closed) return;
-      socket.send(JSON.stringify({ type: "join", room: roomId }));
+    setRoomClosed(null);
+    setSocketState("connecting");
+    roomJoinedRef.current = false;
+
+    const schedule = () => {
+      if (disposed || refused) return;
+      setSocketState("reconnecting");
+      window.clearTimeout(retryTimer);
+      retryTimer = window.setTimeout(connect, reconnectDelay(attempt++));
     };
 
-    socket.onmessage = (event) => {
-      let data: any;
+    function connect() {
+      if (disposed) return;
+      let ws: WebSocket;
       try {
-        data = JSON.parse(event.data);
+        ws = new WebSocket(getWebSocketUrl());
       } catch {
+        schedule();
         return;
       }
-      if (data?.type === "message" && data.room === roomId && Array.isArray(data.messages)) {
-        // Merge in any new messages we don't already have (dedupe by _id).
-        setMessages((prev) => dedupeMessages([...prev, ...data.messages]));
-      } else if (data?.type && data.room === roomId) {
-        // Everything else on this room is call signaling — hand it to the call UI.
-        callRef.current?.handleSignal(data);
-      }
-    };
+      socket = ws;
+      socketRef.current = ws;
+
+      ws.onopen = () => {
+        if (disposed) return;
+        ws.send(JSON.stringify({ type: "join", room: roomId }));
+      };
+
+      ws.onmessage = (event) => {
+        let data: any;
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        // Personal-room events are handled by the portal-wide listener.
+        if (data?.room !== roomId) return;
+
+        if (data.type === "joined") {
+          attempt = 0;
+          roomJoinedRef.current = true;
+          setOpenConsultation(bookingId);
+          setSocketState("open");
+          // Catch up on anything sent while we were away.
+          if (everOpened) loadMessages(bookingId, false);
+          everOpened = true;
+          if (pendingCallRef.current === bookingId) {
+            pendingCallRef.current = null;
+            beginCall();
+          }
+          return;
+        }
+        if (data.type === "error") {
+          // The server only lets us in while the session is paid/active.
+          refused = true;
+          roomJoinedRef.current = false;
+          pendingCallRef.current = null;
+          setOpenConsultation(null);
+          setRoomClosed(data.message || "This session has ended.");
+          loadBookingsRef.current(true);
+          return;
+        }
+        if (data.type === "message" && Array.isArray(data.messages)) {
+          // Merge in any new messages we don't already have (dedupe by _id).
+          setMessages((prev) => dedupeMessages([...prev, ...data.messages]));
+          return;
+        }
+        if (data.type === "message" && data.event) {
+          if (data.event === "consultation_cancelled" || data.event === "consultation_completed") {
+            const status: ConsultationStatus = data.event === "consultation_cancelled" ? "cancelled" : "completed";
+            applyUpdate({ ...(selectedRef.current as Consultation), _id: bookingId, status });
+            loadBookingsRef.current(true);
+          } else if (data.event === "call_started") {
+            if (selectedRef.current?.status === "paid") applyUpdate({ ...selectedRef.current, status: "active" });
+          } else if (data.event === "prescription_updated") {
+            loadBookingsRef.current(true);
+          }
+          return;
+        }
+        if (data.type && data.type !== "message" && data.type !== "left") {
+          // Everything else on this room is call signaling — hand it to the call UI.
+          callRef.current?.handleSignal(data);
+        }
+      };
+
+      ws.onclose = () => {
+        if (socketRef.current === ws) socketRef.current = null;
+        roomJoinedRef.current = false;
+        if (!disposed) setOpenConsultation(null);
+        schedule();
+      };
+      ws.onerror = () => {
+        /* onclose follows */
+      };
+    }
+
+    connect();
 
     return () => {
-      closed = true;
-      try {
-        socket.send(JSON.stringify({ type: "leave", room: roomId }));
-      } catch {
-        /* socket may not be open yet */
+      disposed = true;
+      window.clearTimeout(retryTimer);
+      roomJoinedRef.current = false;
+      setOpenConsultation(null);
+      const ws = socket;
+      if (ws) {
+        ws.onclose = null;
+        try {
+          ws.send(JSON.stringify({ type: "leave", room: roomId }));
+        } catch {
+          /* socket may not be open yet */
+        }
+        ws.close();
+        if (socketRef.current === ws) socketRef.current = null;
       }
-      socket.close();
-      if (socketRef.current === socket) socketRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?._id]);
 
   // Core send used by both the chat sheet form and the in-call chat panel.
@@ -258,10 +453,7 @@ export const GynacBookings: React.FC = () => {
       setMessages((prev) => dedupeMessages([...prev, msg]));
       // A reply moves a 'paid' booking to 'active'.
       if (selected.status === "paid") {
-        setSelected({ ...selected, status: "active" });
-        setBookings((prev) =>
-          prev.map((b) => (b._id === selected._id ? { ...b, status: "active" } : b))
-        );
+        applyUpdate({ ...selected, status: "active" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send message.");
@@ -282,35 +474,48 @@ export const GynacBookings: React.FC = () => {
     if (!selected) return;
     setShowPatient(true);
     if (patient || patientLoading) return; // already loaded / loading
+    const bookingId = selected._id;
     setPatientLoading(true);
     setPatientError(null);
     try {
-      setPatient(await getConsultationPatient(selected._id));
+      const overview = await getConsultationPatient(bookingId);
+      if (selectedRef.current?._id === bookingId) setPatient(overview);
     } catch (err) {
-      setPatientError(
-        err instanceof Error ? err.message : "Could not load patient records."
-      );
+      if (selectedRef.current?._id === bookingId) {
+        setPatientError(err instanceof Error ? err.message : "Could not load patient records.");
+      }
     } finally {
       setPatientLoading(false);
     }
   };
 
-  const beginCall = () => {
-    if (!selected) return;
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+  /** Marks the session active on the server, then starts the in-page call. */
+  async function beginCall() {
+    const booking = selectedRef.current;
+    if (!booking || startingCall) return;
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN || !roomJoinedRef.current) {
       toast.show("Still connecting to the consultation room. Try again in a moment.", "info");
       return;
     }
-    callRef.current?.startCall();
-  };
+    if (callRef.current?.isBusy()) return;
+    setStartingCall(true);
+    try {
+      await startVideoCall(booking._id);
+      if (booking.status === "paid") applyUpdate({ ...booking, status: "active" });
+      if (selectedRef.current?._id !== booking._id) return;
+      callRef.current?.startCall();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not start the call.");
+    } finally {
+      setStartingCall(false);
+    }
+  }
 
   const saveRx = async () => {
     if (!selected || !rxText.trim()) return;
     setRxSaving(true);
     try {
-      const updated = await setPrescription(selected._id, rxText.trim());
-      setSelected(updated);
-      setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
+      applyUpdate(await setPrescription(selected._id, rxText.trim()));
       setShowRx(false);
       toast.success("Prescription saved and shared with the patient.");
     } catch (err) {
@@ -324,28 +529,33 @@ export const GynacBookings: React.FC = () => {
     if (!selected) return;
     try {
       if (!window.confirm("Mark this consultation as completed? Chat will close for this session.")) return;
-      const updated = await completeConsultation(selected._id);
-      setSelected(updated);
+      applyUpdate(await completeConsultation(selected._id));
       toast.success("Consultation completed.");
-      setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not complete session.");
     }
   };
 
-  const abort = async () => {
-    if (!selected) return;
-    if (!window.confirm("Cancel this consultation?")) return;
+  const openCancel = () => {
+    setCancelReason("");
+    setShowCancel(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!selected || cancelling) return;
+    setCancelling(true);
     try {
-      const updated = await cancelConsultation(selected._id);
-      setSelected(updated);
-      setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
+      applyUpdate(await cancelConsultation(selected._id, cancelReason));
+      setShowCancel(false);
+      toast.success("Consultation cancelled. The patient has been notified and their refund is queued.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not cancel session.");
+    } finally {
+      setCancelling(false);
     }
   };
 
-  const isLive = Boolean(selected && ["paid", "active"].includes(selected.status));
+  const isLive = Boolean(selected && ["paid", "active"].includes(selected.status) && !roomClosed);
   // Patient records (and the prescription editor) should only be reachable
   // while the session is actually live — once a booking is completed or
   // cancelled, both close back down rather than staying open indefinitely.
@@ -433,9 +643,19 @@ export const GynacBookings: React.FC = () => {
                         <strong>{name}</strong>
                         <time>{timeAgo(b.updatedAt || b.createdAt)}</time>
                       </span>
+                      {b.scheduledFor && (
+                        <span className="gx-inbox-item-slot">
+                          <Clock size={12} /> {formatSlot(b.scheduledFor, b.slotEndsAt)}
+                        </span>
+                      )}
                       <span className="gx-inbox-item-bottom">
                         <StatusBadge status={b.status} />
-                        <span className="gx-muted">{formatMoney(b.amountPaid, b.currency)}</span>
+                        <span className="gx-muted">
+                          {formatMoney(b.amountPaid)}
+                          {b.status === "cancelled" && b.refundStatus
+                            ? ` · ${b.refundStatus === "processed" ? "Refunded" : "Refund due"}`
+                            : ""}
+                        </span>
                       </span>
                     </span>
                   </button>
@@ -472,9 +692,15 @@ export const GynacBookings: React.FC = () => {
                 <div className="gx-conv-title">
                   <strong>{selectedName}</strong>
                   <span>
-                    <StatusBadge status={selected.status} /> {formatMoney(selected.amountPaid, selected.currency)} · booked{" "}
-                    {timeAgo(selected.createdAt)}
+                    <StatusBadge status={selected.status} /> {formatMoney(selected.amountPaid)} ·{" "}
+                    {selected.scheduledFor ? formatSlot(selected.scheduledFor, selected.slotEndsAt) : `booked ${timeAgo(selected.createdAt)}`}
                   </span>
+                  {["paid", "active"].includes(selected.status) && !roomClosed && socketState !== "open" && (
+                    <span className="gx-conn-state" role="status">
+                      {socketState === "reconnecting" ? <WifiOff size={12} /> : <Loader2 className="spin-icon" size={12} />}
+                      {socketState === "reconnecting" ? "Reconnecting to live chat…" : "Connecting…"}
+                    </span>
+                  )}
                 </div>
                 <div className="gx-conv-actions">
                   {isConnected && (
@@ -485,8 +711,8 @@ export const GynacBookings: React.FC = () => {
                   <button className="gx-btn gx-btn-ghost" type="button" onClick={() => setShowRx(true)} disabled={!isLive}>
                     <Pill size={16} /> <span className="gx-hide-sm">Prescription</span>
                   </button>
-                  <button className="gx-btn gx-btn-primary" type="button" onClick={beginCall} disabled={!isLive}>
-                    <Video size={16} /> <span className="gx-hide-sm">Video call</span>
+                  <button className="gx-btn gx-btn-primary" type="button" onClick={beginCall} disabled={!isLive || startingCall}>
+                    {startingCall ? <Loader2 className="spin-icon" size={16} /> : <Video size={16} />} <span className="gx-hide-sm">Video call</span>
                   </button>
                 </div>
               </header>
@@ -502,10 +728,34 @@ export const GynacBookings: React.FC = () => {
                     <button className="gx-btn gx-btn-sm gx-btn-success" type="button" onClick={finish}>
                       <CheckCircle2 size={14} /> Complete
                     </button>
-                    <button className="gx-btn gx-btn-sm gx-btn-quiet-danger" type="button" onClick={abort}>
+                    <button className="gx-btn gx-btn-sm gx-btn-quiet-danger" type="button" onClick={openCancel}>
                       <XCircle size={14} /> Cancel
                     </button>
                   </span>
+                </div>
+              )}
+
+              {roomClosed && ["paid", "active"].includes(selected.status) && (
+                <div className="gx-conv-bar">
+                  <span>This session is no longer live, so chat and calls are closed.</span>
+                </div>
+              )}
+
+              {selected.status === "cancelled" && (
+                <div className="gx-rx-pinned gx-cancel-pinned">
+                  <XCircle size={16} />
+                  <div>
+                    <strong>{CANCELLED_BY[selected.cancelledBy ?? ""] ?? "Cancelled"}</strong>
+                    {selected.cancelReason && <p>“{selected.cancelReason}”</p>}
+                    {selected.refundStatus && (
+                      <p>
+                        <RotateCcw size={12} />{" "}
+                        {selected.refundStatus === "processed"
+                          ? `${formatMoney(selected.amountPaid)} refunded to the patient.`
+                          : `Refund of ${formatMoney(selected.amountPaid)} is being processed.`}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -523,6 +773,19 @@ export const GynacBookings: React.FC = () => {
                   )}
                 </div>
               )}
+
+              {selected.rating ? (
+                <div className="gx-rx-pinned gx-rating-pinned">
+                  <Star size={16} />
+                  <div>
+                    <strong>
+                      Patient rated this session {selected.rating}/5{" "}
+                      <span aria-hidden>{"★".repeat(selected.rating)}{"☆".repeat(5 - selected.rating)}</span>
+                    </strong>
+                    {selected.feedback && <p>“{selected.feedback}”</p>}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="gx-messages" ref={scrollRef}>
                 {msgLoading ? (
@@ -686,6 +949,41 @@ export const GynacBookings: React.FC = () => {
               </div>
             ) : null}
           </aside>
+        </div>
+      )}
+
+      {showCancel && selected && (
+        <div className="gx-overlay is-centered" onClick={() => !cancelling && setShowCancel(false)}>
+          <div className="gx-dialog" role="dialog" aria-label="Cancel consultation" onClick={(e) => e.stopPropagation()}>
+            <div className="gx-drawer-head">
+              <span><XCircle size={16} /> Cancel consultation with {selectedName}?</span>
+              <button className="gx-icon-btn" type="button" aria-label="Close" onClick={() => setShowCancel(false)} disabled={cancelling}>
+                <X size={18} />
+              </button>
+            </div>
+            <p className="gx-muted">
+              {selectedName.split(" ")[0]} will be notified straight away and refunded {formatMoney(selected.amountPaid)} in full.
+              Chat and calls for this session close.
+            </p>
+            <textarea
+              className="gx-textarea"
+              rows={3}
+              maxLength={500}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason (optional, shared with the patient) — e.g. I'm unwell today, please rebook"
+              autoFocus
+            />
+            <div className="gx-dialog-actions">
+              <button className="gx-btn gx-btn-ghost" type="button" onClick={() => setShowCancel(false)} disabled={cancelling}>
+                Keep booking
+              </button>
+              <button className="gx-btn gx-btn-quiet-danger" type="button" onClick={confirmCancel} disabled={cancelling}>
+                {cancelling ? <Loader2 className="spin-icon" size={16} /> : <XCircle size={16} />}
+                Cancel and refund
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

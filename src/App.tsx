@@ -4,6 +4,7 @@ import { AppProvider, useAppContext } from "./context/AppContext";
 import { ToastProvider } from "./components/Toast";
 import { Sidebar } from "./components/Sidebar";
 import { GynacSidebar } from "./components/GynacSidebar";
+import { GynacIncomingCall } from "./components/GynacIncomingCall";
 import { RequireAccess } from "./components/RequireAccess";
 import { ALL_NAV_ITEMS } from "./navigation";
 import { LoginPage } from "./pages/LoginPage";
@@ -50,6 +51,8 @@ function GynacApp() {
   return (
     <div className="app-shell gynac-shell">
       <GynacSidebar />
+      {/* Rings on every portal page when a patient calls. */}
+      <GynacIncomingCall />
       <main className="workspace-main-content">
         <Routes>
           <Route path="/" element={<GynacDashboard />} />

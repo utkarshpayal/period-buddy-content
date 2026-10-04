@@ -150,6 +150,14 @@ export const DoctorCard: React.FC<{ doc: AdminDoctor; busy?: boolean; actions: D
                   <RefreshCw size={15} /> Resend invite
                 </button>
               )}
+              {/* Active doctors get this as the primary button; an invited one
+                  still needs it (e.g. to pause before they first sign in). */}
+              {status.key === "pending" && (
+                <button role="menuitem" type="button" onClick={run(actions.onToggleBookings)}>
+                  {doc.isAvailable ? <Pause size={15} /> : <Play size={15} />}{" "}
+                  {doc.isAvailable ? "Pause bookings" : "Resume bookings"}
+                </button>
+              )}
               {account?.twoFactor?.totpEnabledAt && !deactivated && (
                 <button role="menuitem" type="button" onClick={run(actions.onResetTwoStep)}>
                   <KeyRound size={15} /> Reset authenticator
@@ -203,7 +211,7 @@ export const DoctorCard: React.FC<{ doc: AdminDoctor; busy?: boolean; actions: D
       <dl className="gy-doc-stats">
         <div>
           <dt>Fee</dt>
-          <dd>{formatMoney(doc.pricePerSession, doc.currency)}</dd>
+          <dd>{formatMoney(doc.pricePerSession)}</dd>
         </div>
         <div>
           <dt>Rating</dt>

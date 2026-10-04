@@ -119,7 +119,7 @@ export const AnalyticsPage: React.FC = () => {
               icon={<IndianRupee size={17} />}
               tone="amber"
               label="Revenue (paid)"
-              value={data.consultations.revenue.toLocaleString()}
+              value={`₹${data.consultations.revenue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`}
             />
           </div>
 

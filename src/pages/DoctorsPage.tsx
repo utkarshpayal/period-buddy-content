@@ -11,7 +11,11 @@ import {
   deleteDoctorAccount,
   reactivateDoctor,
   removeDoctorAvatar,
-  uploadDoctorAvatar
+  uploadDoctorAvatar,
+  isValidSessionFee,
+  MAX_SESSION_FEE,
+  MIN_SESSION_FEE,
+  SESSION_FEE_ERROR
 } from "../api/doctorApi";
 import { PhotoPicker, photoFileError } from "../components/DoctorPhoto";
 import { DoctorCard } from "../components/DoctorCard";
@@ -24,7 +28,6 @@ const emptyForm = {
   email: "",
   specialty: "Gynecologist",
   pricePerSession: "",
-  currency: "INR",
   experience: "",
   hospital: "",
   languages: "",
@@ -49,6 +52,17 @@ export const DoctorsPage: React.FC = () => {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoTarget, setPhotoTarget] = useState<AdminDoctor | null>(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  // Card whose account action (pause, deactivate, reactivate…) is in flight.
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  const withBusy = (fn: (doc: AdminDoctor) => Promise<void>) => async (doc: AdminDoctor) => {
+    if (actionBusyId) return;
+    setActionBusyId(doc._id);
+    try {
+      await fn(doc);
+    } finally {
+      setActionBusyId(null);
+    }
+  };
   // Permanent delete asks the admin to type the doctor's name first.
   const [deleteTarget, setDeleteTarget] = useState<AdminDoctor | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -60,14 +74,24 @@ export const DoctorsPage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  // A new search always starts from page 1: the search term and the page
+  // change in the same update, so the old page is never loaded for the new
+  // search (and the stale-response guard below drops anything in flight).
+  const onSearchChange = (value: string) => setSearch(value);
 
   useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
+    const next = search.trim();
+    if (next === debouncedSearch) return;
+    const t = setTimeout(() => {
+      setDebouncedSearch(next);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  // Only the newest list request may update the page (search/page races).
+  const loadGeneration = useRef(0);
 
   useEffect(() => {
     if (!photoFile) {
@@ -80,10 +104,12 @@ export const DoctorsPage: React.FC = () => {
   }, [photoFile]);
 
   const load = async (targetPage = page) => {
+    const generation = ++loadGeneration.current;
     setLoading(true);
     setError(null);
     try {
       const res = await listDoctorsForAdminPage({ page: targetPage, search: debouncedSearch });
+      if (generation !== loadGeneration.current) return;
       if (res.doctors.length === 0 && targetPage > 1) {
         setPage(targetPage - 1);
         return;
@@ -91,9 +117,10 @@ export const DoctorsPage: React.FC = () => {
       setDoctors(res.doctors);
       setPagination(res.pagination);
     } catch (err) {
+      if (generation !== loadGeneration.current) return;
       setError(err instanceof Error ? err.message : "Failed to load gynecologists.");
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   };
 
@@ -104,6 +131,10 @@ export const DoctorsPage: React.FC = () => {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidSessionFee(Number(form.pricePerSession))) {
+      setError(SESSION_FEE_ERROR);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setNotice(null);
@@ -114,7 +145,6 @@ export const DoctorsPage: React.FC = () => {
         email: form.email.trim(),
         specialty: form.specialty.trim(),
         pricePerSession: Number(form.pricePerSession),
-        currency: form.currency,
         experience: form.experience.trim() || undefined,
         hospital: form.hospital.trim() || undefined,
         bio: form.bio.trim() || undefined,
@@ -391,27 +421,19 @@ export const DoctorsPage: React.FC = () => {
               />
             </label>
             <label className="gy-field">
-              <span>Price / session *</span>
+              <span>Session fee (₹ INR) *</span>
               <input
                 type="number"
-                min={0}
+                min={MIN_SESSION_FEE}
+                max={MAX_SESSION_FEE}
+                step="any"
+                inputMode="decimal"
+                aria-label="Session fee in Indian rupees"
                 value={form.pricePerSession}
                 onChange={(e) => setForm({ ...form, pricePerSession: e.target.value })}
                 placeholder="800"
                 required
               />
-            </label>
-            <label className="gy-field">
-              <span>Currency</span>
-              <select
-                value={form.currency}
-                onChange={(e) => setForm({ ...form, currency: e.target.value })}
-              >
-                <option value="INR">INR (₹)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-              </select>
             </label>
             <label className="gy-field">
               <span>Experience</span>
@@ -465,7 +487,7 @@ export const DoctorsPage: React.FC = () => {
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search name, specialty, or email…"
             aria-label="Search gynecologists"
           />
@@ -492,15 +514,15 @@ export const DoctorsPage: React.FC = () => {
             <DoctorCard
               key={doc._id}
               doc={doc}
-              busy={photoBusyId === doc._id}
+              busy={photoBusyId === doc._id || actionBusyId === doc._id}
               actions={{
-                onToggleBookings: toggleAvailability,
-                onResendInvite: handleResend,
-                onResetTwoStep: handleResetTwoStep,
+                onToggleBookings: withBusy(toggleAvailability),
+                onResendInvite: withBusy(handleResend),
+                onResetTwoStep: withBusy(handleResetTwoStep),
                 onChangePhoto: changePhoto,
                 onRemovePhoto: handleRemovePhoto,
-                onDeactivate: handleDeactivate,
-                onReactivate: handleReactivate,
+                onDeactivate: withBusy(handleDeactivate),
+                onReactivate: withBusy(handleReactivate),
                 onDelete: (d) => {
                   setDeleteConfirm("");
                   setDeleteTarget(d);

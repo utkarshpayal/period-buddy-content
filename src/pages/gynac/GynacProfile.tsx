@@ -6,7 +6,11 @@ import {
   getMyProfile,
   removeMyAvatar,
   updateMyProfile,
-  uploadMyAvatar
+  uploadMyAvatar,
+  isValidSessionFee,
+  MAX_SESSION_FEE,
+  MIN_SESSION_FEE,
+  SESSION_FEE_ERROR
 } from "../../api/doctorApi";
 import { DoctorAvatar, PhotoPicker } from "../../components/DoctorPhoto";
 import { Card, ErrorState, PageHeader, PageSkeleton } from "../../components/ui";
@@ -62,6 +66,10 @@ export const GynacProfile: React.FC = () => {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+    if (!isValidSessionFee(Number(profile.pricePerSession))) {
+      setError(SESSION_FEE_ERROR);
+      return;
+    }
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -70,7 +78,6 @@ export const GynacProfile: React.FC = () => {
         name: profile.name,
         specialty: profile.specialty,
         pricePerSession: Number(profile.pricePerSession),
-        currency: profile.currency,
         bio: profile.bio,
         experience: profile.experience,
         hospital: profile.hospital,
@@ -148,20 +155,19 @@ export const GynacProfile: React.FC = () => {
               <label className="gx-field">
                 <span>Consultation fee</span>
                 <div className="gx-input-group">
-                  <select value={profile.currency ?? "INR"} onChange={(e) => set({ currency: e.target.value })} aria-label="Currency">
-                    <option value="INR">₹ INR</option>
-                    <option value="USD">$ USD</option>
-                    <option value="EUR">€ EUR</option>
-                    <option value="GBP">£ GBP</option>
-                  </select>
+                  <span className="gx-input-prefix" aria-hidden>₹ INR</span>
                   <input
                     type="number"
-                    min={0}
+                    min={MIN_SESSION_FEE}
+                    max={MAX_SESSION_FEE}
+                    step="any"
+                    inputMode="decimal"
                     value={profile.pricePerSession}
                     onChange={(e) => set({ pricePerSession: Number(e.target.value) })}
-                    aria-label="Price per session"
+                    aria-label="Price per session in Indian rupees"
                   />
                 </div>
+                <small>Between ₹1 and ₹1,00,000. All fees are charged in Indian rupees.</small>
               </label>
               <label className="gx-field">
                 <span>Hospital / clinic</span>
@@ -229,7 +235,7 @@ export const GynacProfile: React.FC = () => {
             {profile.bio && <p className="gx-doctor-bio">{profile.bio}</p>}
             <div className="gx-doctor-cta">
               <span>
-                <strong>{formatMoney(profile.pricePerSession, profile.currency || "INR")}</strong> / session
+                <strong>{formatMoney(profile.pricePerSession)}</strong> / session
               </span>
               <span className={`gx-avail-pill ${profile.isAvailable ? "is-on" : ""}`}>
                 {profile.isAvailable ? "Available" : "Paused"}

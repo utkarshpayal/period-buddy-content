@@ -2354,6 +2354,9 @@
   padding: 10px 16px;
 }
 
+.gx-rating-pinned { background: var(--ui-amber-50); color: var(--ui-amber); }
+.gx-rating-pinned p { color: var(--ink-2); font-style: italic; }
+
 .gx-rx-pinned div {
   flex: 1 1 auto;
   min-width: 0;
@@ -3682,3 +3685,54 @@
 .twostep-key { word-break: break-all; font-size: 0.85rem; }
 .twostep-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; margin: 0; padding: 0; list-style: none; }
 .twostep-codes code { font-size: 0.95rem; letter-spacing: 0.04em; }
+
+/* Bookings: booked slot, connection state, cancellation note */
+.gx-inbox-item-slot {
+  align-items: center;
+  color: var(--ui-ink-2);
+  display: flex;
+  font-size: 0.76rem;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gx-conn-state {
+  align-items: center;
+  color: var(--ui-amber);
+  display: inline-flex;
+  font-size: 0.74rem;
+  gap: 4px;
+}
+.gx-cancel-pinned { background: var(--ui-red-50); color: var(--ui-red); }
+.gx-cancel-pinned p { align-items: center; color: var(--ui-ink-2); display: flex; gap: 4px; }
+
+.gx-input-prefix {
+  align-items: center;
+  border-right: 1px solid var(--ui-line);
+  color: var(--ui-ink-2);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+/* Availability: time zone + slot length */
+.gx-zone-bar {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 14px 18px;
+}
+.gx-zone-bar .gx-field { min-width: 240px; }
+.gx-zone-bar .gx-field > span { align-items: center; display: inline-flex; gap: 6px; }
+.gx-zone-bar p { font-size: 0.84rem; margin: 0 0 8px; }
+.gx-range-summary {
+  color: var(--ui-muted);
+  font-size: 0.76rem;
+  grid-column: 1 / -1;
+  margin: 0;
+}

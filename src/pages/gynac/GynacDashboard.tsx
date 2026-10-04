@@ -18,7 +18,8 @@ import {
   getPayments,
   updateMyProfile,
   patientName,
-  formatMoney
+  formatMoney,
+  formatSlot
 } from "../../api/doctorApi";
 import {
   Avatar,
@@ -54,7 +55,9 @@ function monthlyEarnings(payments: PaymentsData | null) {
     const bucket = months.find((m) => m.key === `${d.getFullYear()}-${d.getMonth()}`);
     if (!bucket) return;
     // No `earning` field at all = an API from before wallets: use the gross.
-    if (p.earning === undefined) bucket.total += p.amountPaid ?? 0;
+    if (p.earning === undefined) {
+      if (p.status !== "cancelled" && !p.refundStatus) bucket.total += p.amountPaid ?? 0;
+    }
     else if (p.earning && p.earning.status !== "reversed") bucket.total += p.earning.net;
   });
   return months;
@@ -115,8 +118,10 @@ export const GynacDashboard: React.FC = () => {
   }
 
   const { doctor, stats, recentBookings } = data;
-  const currency = stats.currency || "INR";
-  const queue = recentBookings.filter((b) => b.status === "active" || b.status === "paid");
+  // Live sessions, soonest booked slot first.
+  const queue = recentBookings
+    .filter((b) => b.status === "active" || b.status === "paid")
+    .sort((a, b) => new Date(a.scheduledFor ?? a.createdAt ?? 0).getTime() - new Date(b.scheduledFor ?? b.createdAt ?? 0).getTime());
   const thisMonth = months[months.length - 1]?.total ?? 0;
   const lastMonth = months[months.length - 2]?.total ?? 0;
   const trend = lastMonth ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : null;
@@ -165,10 +170,10 @@ export const GynacDashboard: React.FC = () => {
           tone="teal"
           icon={<Wallet size={20} />}
           label={data?.wallet ? "Your earnings" : "Total earnings"}
-          value={formatMoney(data?.wallet ? data.wallet.lifetimeNet : stats.totalEarnings, currency)}
+          value={formatMoney(data?.wallet ? data.wallet.lifetimeNet : stats.totalEarnings)}
           hint={
             data?.wallet
-              ? `After commission · ${formatMoney(data.wallet.withdrawable, currency)} ready to withdraw`
+              ? `After commission · ${formatMoney(data.wallet.withdrawable)} ready to withdraw`
               : `${stats.paidSessions} paid sessions`
           }
         />
@@ -176,7 +181,7 @@ export const GynacDashboard: React.FC = () => {
           tone="plum"
           icon={<CalendarClock size={20} />}
           label="This month"
-          value={formatMoney(thisMonth, currency)}
+          value={formatMoney(thisMonth)}
           hint={trend === null ? "No earnings last month" : `${trend >= 0 ? "▲" : "▼"} ${Math.abs(trend)}% vs last month`}
         />
       </div>
@@ -206,7 +211,8 @@ export const GynacDashboard: React.FC = () => {
                       <div className="gx-queue-text">
                         <strong>{name}</strong>
                         <span>
-                          {formatMoney(b.amountPaid, b.currency || currency)} · booked {timeAgo(b.createdAt)}
+                          {formatMoney(b.amountPaid)} ·{" "}
+                          {b.scheduledFor ? formatSlot(b.scheduledFor, b.slotEndsAt) : `booked ${timeAgo(b.createdAt)}`}
                         </span>
                       </div>
                       <StatusBadge status={b.status} />
@@ -227,10 +233,10 @@ export const GynacDashboard: React.FC = () => {
             </Link>
           }
         >
-          <div className="gx-bars" role="img" aria-label={months.map((m) => `${m.label}: ${formatMoney(m.total, currency)}`).join(", ")}>
+          <div className="gx-bars" role="img" aria-label={months.map((m) => `${m.label}: ${formatMoney(m.total)}`).join(", ")}>
             {months.map((m, i) => (
               <div className="gx-bar-col" key={m.key}>
-                <span className="gx-bar-value">{m.total ? formatMoney(m.total, currency) : ""}</span>
+                <span className="gx-bar-value">{m.total ? formatMoney(m.total) : ""}</span>
                 <span
                   className={`gx-bar ${i === months.length - 1 ? "is-current" : ""}`}
                   style={{ height: `${Math.max(4, (m.total / maxMonth) * 100)}%` }}
@@ -263,7 +269,7 @@ export const GynacDashboard: React.FC = () => {
                   <th>Patient</th>
                   <th>Status</th>
                   <th className="num">Amount</th>
-                  <th>Booked</th>
+                  <th>Session</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,8 +283,10 @@ export const GynacDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td><StatusBadge status={b.status} /></td>
-                      <td className="num">{formatMoney(b.amountPaid, b.currency || currency)}</td>
-                      <td data-label="Booked" className="gx-muted">{timeAgo(b.createdAt)}</td>
+                      <td className="num">{formatMoney(b.amountPaid)}</td>
+                      <td data-label="Session" className="gx-muted">
+                        {b.scheduledFor ? formatSlot(b.scheduledFor, b.slotEndsAt) : `Booked ${timeAgo(b.createdAt)}`}
+                      </td>
                     </tr>
                   );
                 })}
