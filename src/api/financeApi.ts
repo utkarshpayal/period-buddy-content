@@ -172,3 +172,34 @@ export const getPayoutMethodDetails = (id: string) => request<PayoutMethodDetail
 /** Manual withdrawals: record the bank transfer you made. */
 export const markPayoutPaid = (id: string, reference: string, note?: string) =>
   request<Payout>(`/payouts/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ reference, note }) });
+
+/* ------------------------- Consultation refunds ------------------------- */
+
+export type RefundStatus = "required" | "processed";
+
+/** A cancelled paid consultation owed (or given) a refund. Always INR. */
+export type ConsultationRefund = {
+  _id: string;
+  amount: number;
+  currency: string;
+  cashfreeOrderId?: string | null;
+  scheduledFor?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: "patient" | "doctor" | "system" | null;
+  cancelReason?: string | null;
+  refundStatus: RefundStatus;
+  refundedAt?: string | null;
+  refundReference?: string | null;
+  doctor: { _id: string; name: string } | null;
+  patient: { _id: string; name: string; email?: string; phone?: string } | null;
+};
+
+export const listRefunds = (params: { page: number; status: RefundStatus }) =>
+  request<{ refunds: ConsultationRefund[]; pagination: PageInfo }>(`/refunds?${qs({ ...params, limit: 25 })}`);
+
+/** Record that the refund was made (e.g. in the Cashfree dashboard). */
+export const markRefundProcessed = (id: string, reference?: string) =>
+  request<Pick<ConsultationRefund, "_id" | "refundStatus" | "refundedAt" | "refundReference">>(`/refunds/${id}/processed`, {
+    method: "POST",
+    body: JSON.stringify(reference?.trim() ? { reference: reference.trim() } : {})
+  });

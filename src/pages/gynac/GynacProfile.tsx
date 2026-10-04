@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { Building2, Clock, Globe2, Loader2, Save, Star } from "lucide-react";
-import { DoctorProfile, formatMoney, getMyProfile, updateMyProfile } from "../../api/doctorApi";
+import {
+  DoctorProfile,
+  formatMoney,
+  getMyProfile,
+  removeMyAvatar,
+  updateMyProfile,
+  uploadMyAvatar,
+  isValidSessionFee,
+  MAX_SESSION_FEE,
+  MIN_SESSION_FEE,
+  SESSION_FEE_ERROR
+} from "../../api/doctorApi";
+import { DoctorAvatar, PhotoPicker } from "../../components/DoctorPhoto";
 import { Card, ErrorState, PageHeader, PageSkeleton } from "../../components/ui";
 import { useNoticeToast } from "../../components/Toast";
 import { TwoStepSettings } from "../../components/TwoStepSettings";
@@ -14,6 +26,7 @@ export const GynacProfile: React.FC = () => {
   useNoticeToast(notice, () => setNotice(null));
   const [languagesText, setLanguagesText] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,9 +47,29 @@ export const GynacProfile: React.FC = () => {
     setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
   };
 
+  // The photo saves on its own, straight away, so it doesn't wait on (or
+  // discard) unsaved text edits.
+  const changePhoto = async (action: () => Promise<DoctorProfile>, done: string) => {
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const updated = await action();
+      setProfile((prev) => (prev ? { ...prev, avatarUrl: updated.avatarUrl ?? null } : prev));
+      setNotice(done);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update your photo.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+    if (!isValidSessionFee(Number(profile.pricePerSession))) {
+      setError(SESSION_FEE_ERROR);
+      return;
+    }
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -45,11 +78,9 @@ export const GynacProfile: React.FC = () => {
         name: profile.name,
         specialty: profile.specialty,
         pricePerSession: Number(profile.pricePerSession),
-        currency: profile.currency,
         bio: profile.bio,
         experience: profile.experience,
         hospital: profile.hospital,
-        avatarEmoji: profile.avatarEmoji,
         languages: languagesText.split(",").map((l) => l.trim()).filter(Boolean)
       });
       setProfile(updated);
@@ -98,11 +129,19 @@ export const GynacProfile: React.FC = () => {
                 <span>Specialty</span>
                 <input value={profile.specialty} onChange={(e) => set({ specialty: e.target.value })} required />
               </label>
-              <label className="gx-field">
-                <span>Avatar emoji</span>
-                <input value={profile.avatarEmoji ?? ""} maxLength={4} onChange={(e) => set({ avatarEmoji: e.target.value })} />
-                <small>Shown on your card in the app.</small>
-              </label>
+              <div className="gx-field gx-field-full">
+                <span>Profile photo</span>
+                <PhotoPicker
+                  name={profile.name || "Doctor"}
+                  url={profile.avatarUrl}
+                  busy={photoBusy}
+                  hint="Shown on your card in the app. A clear, friendly headshot works best. Up to 5 MB."
+                  avatarClassName="doc-photo-lg"
+                  onPick={(file) => changePhoto(() => uploadMyAvatar(file), "Photo updated.")}
+                  onRemove={() => changePhoto(removeMyAvatar, "Photo removed.")}
+                  onError={setError}
+                />
+              </div>
               <label className="gx-field">
                 <span>Experience</span>
                 <input value={profile.experience ?? ""} placeholder="e.g. 12 years" onChange={(e) => set({ experience: e.target.value })} />
@@ -116,20 +155,19 @@ export const GynacProfile: React.FC = () => {
               <label className="gx-field">
                 <span>Consultation fee</span>
                 <div className="gx-input-group">
-                  <select value={profile.currency ?? "INR"} onChange={(e) => set({ currency: e.target.value })} aria-label="Currency">
-                    <option value="INR">₹ INR</option>
-                    <option value="USD">$ USD</option>
-                    <option value="EUR">€ EUR</option>
-                    <option value="GBP">£ GBP</option>
-                  </select>
+                  <span className="gx-input-prefix" aria-hidden>₹ INR</span>
                   <input
                     type="number"
-                    min={0}
+                    min={MIN_SESSION_FEE}
+                    max={MAX_SESSION_FEE}
+                    step="any"
+                    inputMode="decimal"
                     value={profile.pricePerSession}
                     onChange={(e) => set({ pricePerSession: Number(e.target.value) })}
-                    aria-label="Price per session"
+                    aria-label="Price per session in Indian rupees"
                   />
                 </div>
+                <small>Between ₹1 and ₹1,00,000. All fees are charged in Indian rupees.</small>
               </label>
               <label className="gx-field">
                 <span>Hospital / clinic</span>
@@ -178,16 +216,15 @@ export const GynacProfile: React.FC = () => {
           <p className="gx-eyebrow">Patient view</p>
           <Card className="gx-doctor-card">
             <div className="gx-doctor-card-top">
-              <span className="gx-doctor-emoji" aria-hidden>{profile.avatarEmoji || "👩‍⚕️"}</span>
+              <DoctorAvatar name={profile.name || "Doctor"} url={profile.avatarUrl} className="doc-photo-lg" />
               <div>
                 <h3>{profile.name || "Your name"}</h3>
                 <p>{profile.specialty || "Specialty"}</p>
-                {profile.rating ? (
-                  <span className="gx-inline-meta">
-                    <Star size={13} className="gx-star" /> {profile.rating.toFixed(1)}
-                    {profile.totalConsultations ? ` · ${profile.totalConsultations} consultations` : ""}
-                  </span>
-                ) : null}
+                <span className="gx-inline-meta">
+                  <Star size={13} className="gx-star" />{" "}
+                  {profile.ratingCount && profile.rating ? `${profile.rating.toFixed(1)} (${profile.ratingCount})` : "New"}
+                  {profile.totalConsultations ? ` · ${profile.totalConsultations} consultations` : ""}
+                </span>
               </div>
             </div>
             <ul className="gx-doctor-facts">
@@ -198,7 +235,7 @@ export const GynacProfile: React.FC = () => {
             {profile.bio && <p className="gx-doctor-bio">{profile.bio}</p>}
             <div className="gx-doctor-cta">
               <span>
-                <strong>{formatMoney(profile.pricePerSession, profile.currency || "INR")}</strong> / session
+                <strong>{formatMoney(profile.pricePerSession)}</strong> / session
               </span>
               <span className={`gx-avail-pill ${profile.isAvailable ? "is-on" : ""}`}>
                 {profile.isAvailable ? "Available" : "Paused"}

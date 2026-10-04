@@ -446,7 +446,7 @@ export const WithdrawalsCard: React.FC<{
                       </div>
                     )}
                   </td>
-                  <td className="num cf-cell-title">{formatMoney(p.amount, p.currency)}</td>
+                  <td className="num cf-cell-title">{formatMoney(p.amount)}</td>
                 </tr>
               ))}
             </tbody>

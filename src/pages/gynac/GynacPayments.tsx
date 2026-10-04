@@ -53,6 +53,17 @@ const netOf = (p: Row) => {
   return p.earning && p.earning.status !== "reversed" ? p.earning.net : 0;
 };
 
+/** A cancelled / refunded session, or one whose earning was reversed: the doctor keeps nothing. */
+const isReversed = (p: Row) =>
+  p.status === "cancelled" || p.paymentStatus === "refunded" || Boolean(p.refundStatus) || p.earning?.status === "reversed";
+
+const refundLabel = (p: Row) =>
+  p.status === "cancelled" || p.refundStatus
+    ? p.refundStatus === "processed" || p.paymentStatus === "refunded"
+      ? "Cancelled · refunded"
+      : "Cancelled · refund due"
+    : "Reversed";
+
 const earningLabel = (e?: Earning | null): { text: string; tone: PillTone } => {
   if (!e) return { text: "Adding…", tone: "muted" };
   if (e.status === "reversed") return { text: "Reversed", tone: "muted" };
@@ -110,8 +121,6 @@ export const GynacPayments: React.FC = () => {
     loadWallet();
   }, [loadWallet]);
 
-  const currency = data?.currency || "INR";
-
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (data?.payments ?? [])
@@ -128,9 +137,18 @@ export const GynacPayments: React.FC = () => {
   const currentPage = Math.min(tablePage, pageCount);
   const pageRows = rows.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
-  const gross = rows.reduce((sum, p) => sum + (p.amountPaid ?? 0), 0);
-  const net = rows.reduce((sum, p) => sum + netOf(p), 0);
-  const commission = rows.reduce((sum, p) => sum + (p.earning && p.earning.status !== "reversed" ? p.earning.commission : 0), 0);
+  // Only money the doctor keeps counts: cancelled/refunded and reversed rows
+  // stay in the list but out of the totals. Unfiltered, the server's own
+  // totals are used.
+  const kept = rows.filter((p) => !isReversed(p));
+  const unfiltered = range === "all" && !search.trim();
+  const gross = unfiltered && data ? data.total : kept.reduce((sum, p) => sum + (p.amountPaid ?? 0), 0);
+  const net = unfiltered && data?.net != null ? data.net : kept.reduce((sum, p) => sum + netOf(p), 0);
+  const commission =
+    unfiltered && data?.commission != null
+      ? data.commission
+      : kept.reduce((sum, p) => sum + (p.earning && p.earning.status !== "reversed" ? p.earning.commission : 0), 0);
+  const keptCount = unfiltered && data ? data.count : kept.length;
 
   const exportCsv = () => {
     const lines = [
@@ -141,11 +159,11 @@ export const GynacPayments: React.FC = () => {
           patientName(p.userId),
           p.status,
           String(p.amountPaid ?? 0),
-          p.earning ? String(p.earning.commissionPercent) : "",
-          p.earning ? String(p.earning.commission) : "",
-          String(netOf(p)),
-          earningLabel(p.earning).text,
-          p.currency || currency,
+          p.earning && !isReversed(p) ? String(p.earning.commissionPercent) : "",
+          p.earning && !isReversed(p) ? String(p.earning.commission) : "",
+          String(isReversed(p) ? 0 : netOf(p)),
+          isReversed(p) ? refundLabel(p) : earningLabel(p.earning).text,
+          "INR",
           p._id
         ]
           .map(csvCell)
@@ -282,8 +300,8 @@ export const GynacPayments: React.FC = () => {
           <div>
             <h2>Sessions</h2>
             <p>
-              {formatMoney(net, currency)} earned from {formatMoney(gross, currency)} paid
-              {commission ? ` · ${formatMoney(commission, currency)} commission` : ""}
+              {formatMoney(net)} earned from {formatMoney(gross)} paid
+              {commission ? ` · ${formatMoney(commission)} commission` : ""}
             </p>
           </div>
           <div className="cf-toolbar-group">
@@ -311,10 +329,10 @@ export const GynacPayments: React.FC = () => {
               <tbody>
                 {pageRows.map((p) => {
                   const name = patientName(p.userId);
-                  const label = earningLabel(p.earning);
-                  const cur = p.currency || currency;
+                  const reversed = isReversed(p);
+                  const label = reversed ? { text: refundLabel(p), tone: "muted" as PillTone } : earningLabel(p.earning);
                   return (
-                    <tr key={p._id}>
+                    <tr key={p._id} className={reversed ? "is-reversed" : undefined}>
                       <td>
                         <span className="gx-person">
                           <Avatar name={name} size="sm" /> {name}
@@ -322,22 +340,26 @@ export const GynacPayments: React.FC = () => {
                       </td>
                       <td className="cf-cell-sub" style={{ whiteSpace: "nowrap" }}>{formatDate(paidAt(p))}</td>
                       <td><Pill tone={label.tone}>{label.text}</Pill></td>
-                      <td className="num">{formatMoney(p.amountPaid, cur)}</td>
                       <td className="num">
-                        {p.earning ? formatMoney(p.earning.commission, cur) : "—"}
-                        {p.earning && <div className="cf-cell-sub">{p.earning.commissionPercent}%</div>}
+                        {reversed ? <s>{formatMoney(p.amountPaid)}</s> : formatMoney(p.amountPaid)}
+                        {reversed && <div className="cf-cell-sub">Not counted</div>}
                       </td>
-                      <td className="num cf-cell-title">{formatMoney(netOf(p), cur)}</td>
+                      <td className="num">
+                        {p.earning && !reversed ? formatMoney(p.earning.commission) : "—"}
+                        {p.earning && !reversed && <div className="cf-cell-sub">{p.earning.commissionPercent}%</div>}
+                      </td>
+                      <td className="num cf-cell-title">{reversed ? "—" : formatMoney(netOf(p))}</td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3} className="cf-cell-title">Total · {rows.length} session{rows.length === 1 ? "" : "s"}</td>
-                  <td className="num">{formatMoney(gross, currency)}</td>
-                  <td className="num">{formatMoney(commission, currency)}</td>
-                  <td className="num cf-cell-title">{formatMoney(net, currency)}</td>
+                  <td colSpan={3} className="cf-cell-title">Total · {keptCount} paid session{keptCount === 1 ? "" : "s"}
+                    {rows.length > kept.length && <div className="cf-cell-sub">{rows.length - kept.length} cancelled / refunded not counted</div>}</td>
+                  <td className="num">{formatMoney(gross)}</td>
+                  <td className="num">{formatMoney(commission)}</td>
+                  <td className="num cf-cell-title">{formatMoney(net)}</td>
                 </tr>
               </tfoot>
             </table>

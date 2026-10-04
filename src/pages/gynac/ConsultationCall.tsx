@@ -8,6 +8,8 @@ import React, {
 } from "react";
 import { Mic, MicOff, Video, VideoOff, Phone, X, MessageSquare, Send, User } from "lucide-react";
 import type { ConsultationMessage } from "../../api/doctorApi";
+import { CallMediaError, getCallMedia } from "../../lib/callMedia";
+import { startRingTone } from "../../lib/ringTone";
 
 /**
  * 1:1 WebRTC "meeting" between the clinician (this portal) and the patient
@@ -181,10 +183,11 @@ export const ConsultationCall = forwardRef<ConsultationCallHandle, Props>(
     );
 
     const setupPeerConnection = useCallback(async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: { facingMode: "user" }
-      });
+      const { stream, videoMissing } = await getCallMedia({ facingMode: "user" });
+      if (videoMissing) {
+        isCameraOffRef.current = true;
+        setIsCameraOff(true);
+      }
       localStreamRef.current = stream;
       setLocalStream(stream);
 
@@ -250,7 +253,7 @@ export const ConsultationCall = forwardRef<ConsultationCallHandle, Props>(
         await setupPeerConnection();
       } catch (err) {
         console.warn("Failed to enter consultation call:", err);
-        endWithReason("Couldn't access camera/mic", true);
+        endWithReason(err instanceof CallMediaError ? err.message : "Couldn't access camera/mic", true);
         return;
       }
       setPhase(knownPeer != null ? "connecting" : "waiting");
@@ -260,6 +263,12 @@ export const ConsultationCall = forwardRef<ConsultationCallHandle, Props>(
     }, [endWithReason, maybeNegotiate, send, setupPeerConnection]);
 
     const endCall = useCallback(() => endWithReason("Call ended", true), [endWithReason]);
+
+    // Ring while the patient is calling and we haven't answered.
+    useEffect(() => {
+      if (phase !== "incoming") return;
+      return startRingTone();
+    }, [phase]);
 
     const dismissIncoming = useCallback(() => {
       incomingPeerIdRef.current = null;

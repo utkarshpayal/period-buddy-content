@@ -33,7 +33,19 @@ export type Consultation = {
   currency?: string;
   meetingLink?: string;
   prescription?: string;
+  /** The patient's 1-5 rating of a completed session, and its optional comment. */
+  rating?: number;
   feedback?: string;
+  ratedAt?: string;
+  /** The booked slot (UTC ISO instants) and the zone the doctor's hours are in. */
+  scheduledFor?: string;
+  slotEndsAt?: string;
+  slotTimezone?: string;
+  cancelledBy?: "patient" | "doctor" | "system";
+  cancelReason?: string;
+  cancelledAt?: string;
+  /** Set once a cancelled paid session needs (or has had) its refund. */
+  refundStatus?: "required" | "processed";
   startedAt?: string;
   completedAt?: string;
   createdAt?: string;
@@ -56,10 +68,15 @@ export type DoctorProfile = {
   email?: string;
   name: string;
   specialty: string;
+  /** Average of patients' session ratings; only meaningful when ratingCount > 0. */
   rating?: number;
+  ratingCount?: number;
   pricePerSession: number;
   currency?: string;
+  /** @deprecated replaced by avatarUrl */
   avatarEmoji?: string;
+  /** Profile photo shown to patients; set with uploadMyAvatar / uploadDoctorAvatar. */
+  avatarUrl?: string | null;
   bio?: string;
   languages?: string[];
   experience?: string;
@@ -125,7 +142,9 @@ export type DashboardData = {
     name: string;
     specialty: string;
     avatarEmoji?: string;
+    avatarUrl?: string | null;
     rating?: number;
+    ratingCount?: number;
     isAvailable?: boolean;
   };
   stats: {
@@ -310,7 +329,8 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}): Prom
   }
 
   const headers = new Headers(options.headers);
-  if (!headers.has("Content-Type") && options.body) {
+  // FormData sets its own multipart boundary.
+  if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   const token = getApiToken();
@@ -387,9 +407,25 @@ export const updateMyProfile = (updates: Partial<DoctorProfile>) =>
     body: JSON.stringify(updates)
   });
 
+const photoForm = (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+};
+
+/** Upload the signed-in doctor's profile photo (image, up to 5 MB). */
+export const uploadMyAvatar = (file: File) =>
+  request<DoctorProfile>("/api/doctor/me/avatar", { method: "POST", body: photoForm(file) });
+
+export const removeMyAvatar = () =>
+  request<DoctorProfile>("/api/doctor/me/avatar", { method: "DELETE" });
+
 export const getDashboard = () => request<DashboardData>("/api/doctor/dashboard");
 
 /* --------------------------- Doctor: consultations ---------------------- */
+
+/** One of the signed-in doctor's bookings, with the patient. */
+export const getConsultation = (id: string) => request<Consultation>(`/api/doctor/consultations/${id}`);
 
 export const getConsultations = (status?: ConsultationStatus) =>
   request<Consultation[]>(
@@ -423,10 +459,15 @@ export const sendConsultationMessage = (id: string, text: string) =>
     body: JSON.stringify({ text })
   });
 
+/** Marks the session active before the doctor starts a call. */
 export const startVideoCall = (id: string) =>
   request<{ meetingLink: string }>(`/api/doctor/consultations/${id}/call`, {
     method: "POST"
   });
+
+/** Decline a call the patient is ringing us with. */
+export const declineIncomingCall = (id: string) =>
+  request<unknown>(`/api/doctor/consultations/${id}/call/decline`, { method: "POST" });
 
 /**
  * WebSocket URL for live consultation chat + WebRTC call signaling. Derived
@@ -450,9 +491,11 @@ export const completeConsultation = (id: string) =>
     method: "PATCH"
   });
 
-export const cancelConsultation = (id: string) =>
+/** Cancel a paid or active session. The patient is notified and a refund is queued. */
+export const cancelConsultation = (id: string, reason?: string) =>
   request<Consultation>(`/api/doctor/consultations/${id}/cancel`, {
-    method: "PATCH"
+    method: "PATCH",
+    body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {})
   });
 
 /* ------------------------------ Doctor: payments ------------------------ */
@@ -532,12 +575,10 @@ export const inviteDoctor = (payload: {
   email: string;
   specialty: string;
   pricePerSession: number;
-  currency?: string;
   bio?: string;
   languages?: string[];
   experience?: string;
   hospital?: string;
-  avatarEmoji?: string;
 }) =>
   request<{ doctor: AdminDoctor; inviteEmailDelivered: boolean; inviteUrl?: string }>(
     "/api/doctor/invite",
@@ -571,6 +612,21 @@ export const resendInvite = (id: string) =>
 export const deactivateDoctor = (id: string) =>
   request<AdminDoctor>(`/api/doctor/admin/${id}`, { method: "DELETE" });
 
+/** Admin: set a doctor's profile photo (image, up to 5 MB). */
+export const uploadDoctorAvatar = (id: string, file: File) =>
+  request<AdminDoctor>(`/api/doctor/admin/${id}/avatar`, { method: "POST", body: photoForm(file) });
+
+export const removeDoctorAvatar = (id: string) =>
+  request<AdminDoctor>(`/api/doctor/admin/${id}/avatar`, { method: "DELETE" });
+
+/** Undo a deactivation. Bookings stay paused; `needsInvite` when they never set a password. */
+export const reactivateDoctor = (id: string) =>
+  request<{ doctor: AdminDoctor; needsInvite: boolean }>(`/api/doctor/admin/${id}/reactivate`, { method: "POST" });
+
+/** Delete a doctor for good (refused while their wallet holds money). */
+export const deleteDoctorAccount = (id: string) =>
+  request<{ _id: string }>(`/api/doctor/admin/${id}/account`, { method: "DELETE" });
+
 /* ------------------------------- Helpers -------------------------------- */
 
 export function patientName(patient?: Patient | string): string {
@@ -579,13 +635,64 @@ export function patientName(patient?: Patient | string): string {
   return full || patient.email || "Patient";
 }
 
-export function formatMoney(amount?: number, currency = "INR"): string {
-  const symbols: Record<string, string> = { INR: "₹", USD: "$", EUR: "€", GBP: "£" };
-  const symbol = symbols[currency] ?? `${currency} `;
+/** Every amount on the platform is in Indian rupees. */
+export function formatMoney(amount?: number): string {
   const value = amount ?? 0;
-  const text = Math.abs(value).toLocaleString(currency === "INR" ? "en-IN" : undefined, { maximumFractionDigits: 2 });
-  return `${value < 0 ? "−" : ""}${symbol}${text}`;
+  const text = Math.abs(value).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  return `${value < 0 ? "−" : ""}₹${text}`;
 }
+
+export const MIN_SESSION_FEE = 1;
+export const MAX_SESSION_FEE = 100000;
+export const SESSION_FEE_ERROR = "Session fee must be between ₹1 and ₹1,00,000";
+
+/** Session fee check matching the backend rule (whole rupees not required). */
+export const isValidSessionFee = (fee: number) =>
+  Number.isFinite(fee) && fee >= MIN_SESSION_FEE && fee <= MAX_SESSION_FEE;
+
+/**
+ * A UTC instant shown in the viewer's own zone with a short zone name, e.g.
+ * "Thu 5 Oct, 3:00 PM IST". Pass `timeOnly` for just "3:00 PM".
+ */
+export function formatInstant(iso?: string | null, opts: { timeOnly?: boolean; zone?: boolean } = {}): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const showZone = opts.zone ?? true;
+  return new Intl.DateTimeFormat(undefined, {
+    ...(opts.timeOnly ? {} : { weekday: "short", day: "numeric", month: "short" }),
+    hour: "numeric",
+    minute: "2-digit",
+    ...(showZone ? { timeZoneName: "short" } : {})
+  }).format(d);
+}
+
+/** "Thu 5 Oct, 3:00 – 3:45 PM IST" for a booked slot. */
+export function formatSlot(start?: string | null, end?: string | null): string {
+  if (!start) return "—";
+  if (!end) return formatInstant(start);
+  const s = new Date(start);
+  const e = new Date(end);
+  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return formatInstant(start);
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short"
+  }) as Intl.DateTimeFormat & { formatRange?: (a: Date, b: Date) => string };
+  return typeof fmt.formatRange === "function" ? fmt.formatRange(s, e) : `${fmt.format(s)} – ${formatInstant(end, { timeOnly: true })}`;
+}
+
+/** The browser's IANA zone, falling back to India. */
+export const browserTimeZone = (): string => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+  } catch {
+    return "Asia/Kolkata";
+  }
+};
 
 /** A fresh key for one withdrawal attempt (see requestWithdrawal). */
 export const newIdempotencyKey = () =>
