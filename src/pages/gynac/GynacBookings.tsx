@@ -390,6 +390,10 @@ export const GynacBookings: React.FC = () => {
         if (data.type === "message" && Array.isArray(data.messages)) {
           // Merge in any new messages we don't already have (dedupe by _id).
           setMessages((prev) => dedupeMessages([...prev, ...data.messages]));
+          // A chat message moves a 'paid' booking to 'active' on the server.
+          if (selectedRef.current?._id === bookingId && selectedRef.current.status === "paid") {
+            applyUpdate({ ...selectedRef.current, status: "active" });
+          }
           return;
         }
         if (data.type === "message" && data.event) {
@@ -556,6 +560,17 @@ export const GynacBookings: React.FC = () => {
   };
 
   const isLive = Boolean(selected && ["paid", "active"].includes(selected.status) && !roomClosed);
+  // Complete only once the booked slot has begun (the server refuses earlier:
+  // it starts the payout and ends the patient's chance to cancel). Re-checked
+  // every 30 s so the button turns on by itself when the slot starts.
+  const [now, setNow] = useState(() => Date.now());
+  const slotStart = selected?.scheduledFor ? new Date(selected.scheduledFor).getTime() : null;
+  const slotStarted = slotStart === null || slotStart <= now;
+  useEffect(() => {
+    if (!isLive || slotStarted) return;
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, [isLive, slotStarted]);
   // Patient records (and the prescription editor) should only be reachable
   // while the session is actually live — once a booking is completed or
   // cancelled, both close back down rather than staying open indefinitely.
@@ -720,12 +735,20 @@ export const GynacBookings: React.FC = () => {
               {isLive && (
                 <div className="gx-conv-bar">
                   <span>
-                    {selected.status === "paid"
-                      ? "New booking — reply to start the consultation."
-                      : "Consultation in progress."}
+                    {!slotStarted && selected.scheduledFor
+                      ? `Upcoming · ${formatSlot(selected.scheduledFor, selected.slotEndsAt)}. You can complete it once it starts.`
+                      : selected.status === "paid"
+                        ? "New booking — reply to start the consultation."
+                        : "Consultation in progress."}
                   </span>
                   <span className="gx-conv-bar-actions">
-                    <button className="gx-btn gx-btn-sm gx-btn-success" type="button" onClick={finish}>
+                    <button
+                      className="gx-btn gx-btn-sm gx-btn-success"
+                      type="button"
+                      onClick={finish}
+                      disabled={!slotStarted}
+                      title={slotStarted ? undefined : "Available once the session's time slot begins"}
+                    >
                       <CheckCircle2 size={14} /> Complete
                     </button>
                     <button className="gx-btn gx-btn-sm gx-btn-quiet-danger" type="button" onClick={openCancel}>
