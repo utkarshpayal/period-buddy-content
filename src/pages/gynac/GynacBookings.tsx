@@ -40,13 +40,12 @@ import {
   patientName,
   formatMoney,
   formatSlot,
-  getWebSocketUrl,
-  startVideoCall
+  getWebSocketUrl
 } from "../../api/doctorApi";
 import { reconnectDelay, setOpenConsultation, subscribeDoctorEvents } from "../../lib/doctorEvents";
 import { Avatar, EmptyState, PageHeader, StatusBadge, Tabs, timeAgo } from "../../components/ui";
 import { useToast } from "../../components/Toast";
-import { ConsultationCall, ConsultationCallHandle } from "./ConsultationCall";
+import { JitsiConsultationCall } from "./JitsiConsultationCall";
 
 type Filter = ConsultationStatus | "all";
 
@@ -130,7 +129,6 @@ export const GynacBookings: React.FC = () => {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
-  const [startingCall, setStartingCall] = useState(false);
 
   // Live room connection for the open booking.
   const [socketState, setSocketState] = useState<SocketState>("connecting");
@@ -139,7 +137,8 @@ export const GynacBookings: React.FC = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
-  const callRef = useRef<ConsultationCallHandle | null>(null);
+  // Booking whose video call (self-hosted Jitsi) is open.
+  const [jitsiCallFor, setJitsiCallFor] = useState<string | null>(null);
   const selectedRef = useRef<Consultation | null>(null);
   selectedRef.current = selected;
   const bookingsRef = useRef<Consultation[]>([]);
@@ -274,7 +273,7 @@ export const GynacBookings: React.FC = () => {
   const openById = async (id: string, autoCall: boolean) => {
     if (autoCall) pendingCallRef.current = id;
     if (selectedRef.current?._id === id) {
-      if (autoCall && roomJoinedRef.current) {
+      if (autoCall) {
         pendingCallRef.current = null;
         beginCall();
       }
@@ -309,10 +308,25 @@ export const GynacBookings: React.FC = () => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
+  // The global ringer stays quiet only for the call the doctor is already in
+  // (not merely for an open chat: the patient waiting must still ring).
+  useEffect(() => {
+    setOpenConsultation(jitsiCallFor);
+    return () => setOpenConsultation(null);
+  }, [jitsiCallFor]);
+
+  // An answered ring opened this booking: join its call once it's selected.
+  useEffect(() => {
+    if (selected && pendingCallRef.current === selected._id) {
+      pendingCallRef.current = null;
+      beginCall();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?._id]);
+
   // Live consultation socket: while a booking is open we join its shared room
-  // (`consultation_<id>`) for live chat and to send/receive WebRTC call
-  // signaling — the same room the patient app joins, so an inbound call from
-  // the patient surfaces right here (ConsultationCall handles `call_request`).
+  // (`consultation_<id>`) for live chat and session updates (the same room
+  // the patient app joins). Video runs on Jitsi, not over this socket.
   // Reconnects with backoff, re-joins and refetches the chat after a drop.
   useEffect(() => {
     if (!selected) return;
@@ -366,23 +380,16 @@ export const GynacBookings: React.FC = () => {
         if (data.type === "joined") {
           attempt = 0;
           roomJoinedRef.current = true;
-          setOpenConsultation(bookingId);
           setSocketState("open");
           // Catch up on anything sent while we were away.
           if (everOpened) loadMessages(bookingId, false);
           everOpened = true;
-          if (pendingCallRef.current === bookingId) {
-            pendingCallRef.current = null;
-            beginCall();
-          }
           return;
         }
         if (data.type === "error") {
           // The server only lets us in while the session is paid/active.
           refused = true;
           roomJoinedRef.current = false;
-          pendingCallRef.current = null;
-          setOpenConsultation(null);
           setRoomClosed(data.message || "This session has ended.");
           loadBookingsRef.current(true);
           return;
@@ -401,23 +408,16 @@ export const GynacBookings: React.FC = () => {
             const status: ConsultationStatus = data.event === "consultation_cancelled" ? "cancelled" : "completed";
             applyUpdate({ ...(selectedRef.current as Consultation), _id: bookingId, status });
             loadBookingsRef.current(true);
-          } else if (data.event === "call_started") {
-            if (selectedRef.current?.status === "paid") applyUpdate({ ...selectedRef.current, status: "active" });
           } else if (data.event === "prescription_updated") {
             loadBookingsRef.current(true);
           }
           return;
-        }
-        if (data.type && data.type !== "message" && data.type !== "left") {
-          // Everything else on this room is call signaling — hand it to the call UI.
-          callRef.current?.handleSignal(data);
         }
       };
 
       ws.onclose = () => {
         if (socketRef.current === ws) socketRef.current = null;
         roomJoinedRef.current = false;
-        if (!disposed) setOpenConsultation(null);
         schedule();
       };
       ws.onerror = () => {
@@ -431,7 +431,6 @@ export const GynacBookings: React.FC = () => {
       disposed = true;
       window.clearTimeout(retryTimer);
       roomJoinedRef.current = false;
-      setOpenConsultation(null);
       const ws = socket;
       if (ws) {
         ws.onclose = null;
@@ -493,26 +492,12 @@ export const GynacBookings: React.FC = () => {
     }
   };
 
-  /** Marks the session active on the server, then starts the in-page call. */
-  async function beginCall() {
+  /** Opens the video call. The call screen asks the API for a token itself, and
+   * the API checks the booking and the join window (a refusal shows there). */
+  function beginCall() {
     const booking = selectedRef.current;
-    if (!booking || startingCall) return;
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN || !roomJoinedRef.current) {
-      toast.show("Still connecting to the consultation room. Try again in a moment.", "info");
-      return;
-    }
-    if (callRef.current?.isBusy()) return;
-    setStartingCall(true);
-    try {
-      await startVideoCall(booking._id);
-      if (booking.status === "paid") applyUpdate({ ...booking, status: "active" });
-      if (selectedRef.current?._id !== booking._id) return;
-      callRef.current?.startCall();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not start the call.");
-    } finally {
-      setStartingCall(false);
-    }
+    if (!booking) return;
+    setJitsiCallFor(booking._id);
   }
 
   const saveRx = async () => {
@@ -560,6 +545,38 @@ export const GynacBookings: React.FC = () => {
   };
 
   const isLive = Boolean(selected && ["paid", "active"].includes(selected.status) && !roomClosed);
+  // The video join window from the server, re-checked every 30 s so "Start
+  // consultation" turns on by itself. The server checks again on join.
+  const jitsiInfo = selected?.videoCall ?? null;
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!jitsiInfo || !isLive) return;
+    const t = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, [jitsiInfo, isLive]);
+  const jitsiOpensAt = jitsiInfo?.joinOpensAt ? new Date(jitsiInfo.joinOpensAt).getTime() : null;
+  const jitsiClosesAt = jitsiInfo?.joinClosesAt ? new Date(jitsiInfo.joinClosesAt).getTime() : null;
+  const jitsiTooEarly = jitsiOpensAt !== null && clock < jitsiOpensAt;
+  const jitsiOver = jitsiClosesAt !== null && clock > jitsiClosesAt;
+  const callDisabledReason = !jitsiInfo
+    ? undefined
+    : jitsiInfo.available === false
+      ? "Video calls aren't available right now"
+      : jitsiTooEarly
+      ? `The video room opens at ${new Date(jitsiOpensAt!).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+      : jitsiOver
+        ? "The time for this video consultation is over"
+        : undefined;
+  // A different booking, or this one was completed/cancelled (here, from another
+  // tab or by the system): the open call goes away.
+  useEffect(() => {
+    if (!jitsiCallFor) return;
+    if (selected?._id === jitsiCallFor && !isLive) {
+      toast.show("This consultation is closed, so the video call ended.", "info");
+    }
+    if (selected?._id !== jitsiCallFor || !isLive) setJitsiCallFor(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?._id, isLive, jitsiCallFor]);
   // Complete only once the booked slot has begun (the server refuses earlier:
   // it starts the payout and ends the patient's chance to cancel). Re-checked
   // every 30 s so the button turns on by itself when the slot starts.
@@ -726,8 +743,17 @@ export const GynacBookings: React.FC = () => {
                   <button className="gx-btn gx-btn-ghost" type="button" onClick={() => setShowRx(true)} disabled={!isLive}>
                     <Pill size={16} /> <span className="gx-hide-sm">Prescription</span>
                   </button>
-                  <button className="gx-btn gx-btn-primary" type="button" onClick={beginCall} disabled={!isLive || startingCall}>
-                    {startingCall ? <Loader2 className="spin-icon" size={16} /> : <Video size={16} />} <span className="gx-hide-sm">Video call</span>
+                  <button
+                    className="gx-btn gx-btn-primary"
+                    type="button"
+                    onClick={beginCall}
+                    disabled={!isLive || !jitsiInfo || Boolean(callDisabledReason)}
+                    title={callDisabledReason}
+                  >
+                    <Video size={16} />{" "}
+                    <span className="gx-hide-sm">
+                      {selected.status === "active" ? "Join consultation" : "Start consultation"}
+                    </span>
                   </button>
                 </div>
               </header>
@@ -862,15 +888,20 @@ export const GynacBookings: React.FC = () => {
         </section>
       </div>
 
-      {selected && (
-        <ConsultationCall
-          key={selected._id}
-          ref={callRef}
-          roomId={`consultation_${selected._id}`}
+      {selected && jitsiCallFor === selected._id && (
+        <JitsiConsultationCall
+          key={`jitsi-${selected._id}`}
+          consultationId={selected._id}
           peerName={selectedName}
-          socketRef={socketRef}
           messages={messages}
           onSendMessage={sendMessageText}
+          canSend={isLive}
+          sending={sending}
+          onClose={() => {
+            setJitsiCallFor(null);
+            // Joining moves a paid booking to active on the server; mirror whatever it has now.
+            getConsultation(selected._id).then(applyUpdate).catch(() => undefined);
+          }}
         />
       )}
 
