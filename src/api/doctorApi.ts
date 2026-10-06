@@ -50,6 +50,31 @@ export type Consultation = {
   completedAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** When the video room (self-hosted Jitsi) can be joined, decided by the server. Null once
+   * the session is closed. */
+  videoCall?: VideoCallInfo | null;
+};
+
+/** Every consultation call runs on the self-hosted Jitsi server (meet.thenura.care). */
+export type VideoCallInfo = {
+  /** false while the API has no Jitsi server configured. */
+  available: boolean;
+  joinOpensAt: string | null;
+  joinClosesAt: string | null;
+  canJoinNow: boolean;
+};
+
+/** A short-lived pass into one consultation's Jitsi room (POST .../video/join). */
+export type VideoJoin = {
+  domain: string;
+  roomName: string;
+  meetingUrl: string;
+  token: string;
+  role: "moderator" | "participant";
+  expiresAt: string;
+  joinWindow: { opensAt: string | null; closesAt: string | null };
+  displayName: string;
+  peerName: string;
 };
 
 export type ConsultationMessage = {
@@ -312,8 +337,23 @@ export type AdminDoctor = Omit<DoctorProfile, "userId"> & {
 
 /* ------------------------------- Core fetch ----------------------------- */
 
+/** A failed request: the server's message, plus its status and machine-readable `code` when sent. */
+export class ApiRequestError extends Error {
+  status: number;
+  code?: string;
+  body?: Record<string, unknown>;
+  constructor(message: string, status: number, body?: Record<string, unknown>) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.body = body;
+    this.code = typeof body?.code === "string" ? body.code : undefined;
+  }
+}
+
 type ApiEnvelope<T> = {
   success?: boolean;
+  code?: string;
   message?: string;
   data?: T;
   /** Present on list endpoints called with ?page=/?limit= (backend sendPaginatedList). */
@@ -355,12 +395,18 @@ async function requestEnvelope<T>(path: string, options: RequestInit = {}): Prom
   }
   // 403 = signed in, but this role lacks the permission. Not a session problem.
   if (response.status === 403) {
-    throw new Error(body?.message ?? "You don't have permission to do this.");
+    throw new ApiRequestError(
+      body?.message ?? "You don't have permission to do this.",
+      403,
+      body as Record<string, unknown> | undefined
+    );
   }
 
   if (!response.ok) {
-    throw new Error(
-      body?.message ?? `Request failed with ${response.status} ${response.statusText}`
+    throw new ApiRequestError(
+      body?.message ?? `Request failed with ${response.status} ${response.statusText}`,
+      response.status,
+      body as Record<string, unknown> | undefined
     );
   }
 
@@ -459,10 +505,16 @@ export const sendConsultationMessage = (id: string, text: string) =>
     body: JSON.stringify({ text })
   });
 
-/** Marks the session active before the doctor starts a call. */
-export const startVideoCall = (id: string) =>
-  request<{ meetingLink: string }>(`/api/doctor/consultations/${id}/call`, {
-    method: "POST"
+/** A fresh moderator token for this booking's Jitsi room. Refusals carry `code`
+ * (JOIN_WINDOW_NOT_OPEN with `opensAt`, JOIN_WINDOW_CLOSED, CONSULTATION_NOT_LIVE, ...). */
+export const joinVideoConsultation = (id: string) =>
+  request<VideoJoin>(`/api/doctor/consultations/${id}/video/join`, { method: "POST" });
+
+/** Informational only: never completes or changes the session. */
+export const reportVideoAttendance = (id: string, event: "joined" | "left") =>
+  request<unknown>(`/api/doctor/consultations/${id}/video/attendance`, {
+    method: "POST",
+    body: JSON.stringify({ event })
   });
 
 /** Decline a call the patient is ringing us with. */
@@ -470,7 +522,7 @@ export const declineIncomingCall = (id: string) =>
   request<unknown>(`/api/doctor/consultations/${id}/call/decline`, { method: "POST" });
 
 /**
- * WebSocket URL for live consultation chat + WebRTC call signaling. Derived
+ * WebSocket URL for live consultation chat and session events. Derived
  * from VITE_API_BASE_URL (http→ws) with the auth token as a query param, the
  * same scheme the patient app uses so both sides share the consultation room.
  */

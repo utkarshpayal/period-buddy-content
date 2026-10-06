@@ -10,13 +10,17 @@ import { useToast } from "./Toast";
 /** Stop ringing on our own if nobody answers. */
 const RING_TIMEOUT_MS = 45 * 1000;
 
-type Ringing = { consultationId: string; callerName: string; callerAvatarUrl?: string | null };
+type Ringing = {
+  consultationId: string;
+  callerName: string;
+  callerAvatarUrl?: string | null;
+};
 
 /**
  * Global incoming-call listener for signed-in doctors, mounted once in the
  * clinician portal shell. Holds the personal WebSocket (the server auto-joins
  * `user_<id>`), re-broadcasts its events to the page (doctorEvents), and rings
- * when a patient calls while the doctor isn't in that consultation's room.
+ * when a patient is waiting in a video call the doctor hasn't joined.
  */
 export const GynacIncomingCall: React.FC = () => {
   const navigate = useNavigate();
@@ -60,10 +64,14 @@ export const GynacIncomingCall: React.FC = () => {
         publishDoctorEvent(data);
         const id = data.consultationId ? String(data.consultationId) : "";
         if (data.event === "incoming_call" && id) {
-          // The Bookings page already has this call's room (and its own prompt) open.
+          // The doctor is already in this call.
           if (getOpenConsultation() === id) return;
           if (ringingRef.current && ringingRef.current.consultationId !== id) return; // already ringing for another
-          setRinging({ consultationId: id, callerName: data.callerName || "Your patient", callerAvatarUrl: data.callerAvatarUrl });
+          setRinging({
+            consultationId: id,
+            callerName: data.callerName || "Your patient",
+            callerAvatarUrl: data.callerAvatarUrl
+          });
         } else if (["call_cancelled", "call_declined", "consultation_cancelled", "consultation_completed"].includes(data.event)) {
           stopRinging(id || undefined);
         }
@@ -133,8 +141,8 @@ export const GynacIncomingCall: React.FC = () => {
           <div className="gy-vc-ring pulse">
             {ringing.callerAvatarUrl ? <Avatar name={ringing.callerName} src={ringing.callerAvatarUrl} size="lg" /> : <Video size={30} />}
           </div>
-          <h3>{ringing.callerName} is calling</h3>
-          <p className="gy-vc-sub">Video consultation · answer to join with your camera and mic.</p>
+          <h3>{ringing.callerName} is waiting</h3>
+          <p className="gy-vc-sub">Your patient is in the video room. Join with your camera and mic.</p>
           <div className="gy-vc-answer-row">
             <button type="button" className="gy-vc-ctrl danger" onClick={decline} disabled={declining} aria-label="Decline">
               <PhoneOff size={24} />

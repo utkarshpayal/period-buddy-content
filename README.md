@@ -104,6 +104,25 @@ iOS Safari. It opens in its own window with the Nura icon.
 - The service worker only registers in production builds (`npm run build`), and
   installing needs HTTPS (or `localhost`).
 
+## Video consultations
+
+Every consultation call runs on the self-hosted Jitsi server (`meet.thenura.care`); there
+is no other video path. **Start/Join consultation** on a live booking opens
+`src/pages/gynac/JitsiConsultationCall.tsx`: Jitsi's IFrame API (`src/lib/jitsi.ts`,
+script loaded from the domain the API returns) with a short-lived moderator token from
+`POST /api/doctor/consultations/:id/video/join`. Jitsi's own toolbar is hidden, so the
+portal's mic / camera / audio-only / leave buttons are the only controls (no invite,
+recording or sharing). The chat button opens the booking's existing chat beside the video,
+with the same saved messages as the bookings screen and an unread count for patient messages.
+The button is disabled with the reason before the join window
+opens, after it closes, or while the API has no Jitsi server (`videoCall.available`), and
+the API refuses too. Leaving never completes the session: that's still the **Complete**
+button. If the booking is completed or cancelled meanwhile (another tab, the system), the
+call closes. When the patient joins first, `GynacIncomingCall` shows "… is waiting"; a
+patient declining the doctor's ring shows a banner in the call. If a
+Content-Security-Policy is ever added to this site, allow `script-src` and `frame-src
+https://meet.thenura.care`.
+
 ## Contributing
 
 Branch from `main` and open a PR. CI runs `npm ci` + `npm run build`. Never commit `.env*` files.

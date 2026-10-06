@@ -42,6 +42,8 @@ export function subscribeDoctorEvents(fn: Listener): () => void {
  * mounted there). The global ringer stays quiet for it, so a call is never
  * announced twice.
  */
+// The booking whose video call is open in the portal (GynacBookings), so the
+// global ringer doesn't ring for a call the doctor is already in.
 let openConsultationId: string | null = null;
 
 export const setOpenConsultation = (id: string | null) => {
