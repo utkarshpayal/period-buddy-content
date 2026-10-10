@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CheckCircle2,
+  Gift,
   MessageCircle,
   Star,
   Stethoscope,
@@ -34,6 +35,7 @@ import {
   timeAgo
 } from "../../components/ui";
 import { useToast } from "../../components/Toast";
+import { MyReferrals, getMyReferrals } from "../../api/referralApi";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -70,13 +72,19 @@ export const GynacDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
+  const [referrals, setReferrals] = useState<MyReferrals | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [dash, pay] = await Promise.all([getDashboard(), getPayments().catch(() => null)]);
+      const [dash, pay, refs] = await Promise.all([
+        getDashboard(),
+        getPayments().catch(() => null),
+        getMyReferrals().catch(() => null)
+      ]);
       setData(dash);
       setPayments(pay);
+      setReferrals(refs);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load your dashboard.");
     } finally {
@@ -185,6 +193,30 @@ export const GynacDashboard: React.FC = () => {
           hint={trend === null ? "No earnings last month" : `${trend >= 0 ? "▲" : "▼"} ${Math.abs(trend)}% vs last month`}
         />
       </div>
+
+      {referrals && (referrals.summary.freeSessionsRemaining > 0 || referrals.program.enabled) && (
+        <Link to="/referrals" className="rf-banner">
+          <span className="rf-banner-icon" aria-hidden>
+            <Gift size={20} />
+          </span>
+          <span className="rf-banner-text">
+            {referrals.summary.freeSessionsRemaining > 0 ? (
+              <>
+                <strong>
+                  {referrals.summary.freeSessionsRemaining} commission-free session{referrals.summary.freeSessionsRemaining === 1 ? "" : "s"} left
+                </strong>
+                <span>Nura takes no commission on your next paid sessions. Thanks for your referrals!</span>
+              </>
+            ) : (
+              <>
+                <strong>Refer a colleague, earn {referrals.program.rewardSessions} commission-free sessions</strong>
+                <span>When a gynecologist you refer joins Nura, you keep 100% of your next {referrals.program.rewardSessions} session fees.</span>
+              </>
+            )}
+          </span>
+          <ArrowRight size={16} aria-hidden />
+        </Link>
+      )}
 
       <div className="gx-grid-2">
         <Card

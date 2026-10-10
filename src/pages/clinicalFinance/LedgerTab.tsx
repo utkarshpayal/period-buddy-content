@@ -125,7 +125,7 @@ export const LedgerTab: React.FC = () => {
                       <td className="num">{adjustment ? "—" : inr(e.gross)}</td>
                       <td className="num">
                         {adjustment ? "—" : inr(e.commission)}
-                        {!adjustment && <div className="cf-cell-sub">{e.commissionPercent}%</div>}
+                        {!adjustment && (e.freeSession ? <div><Pill tone="ok">Referral · 0%</Pill></div> : <div className="cf-cell-sub">{e.commissionPercent}%</div>)}
                       </td>
                       <td className="num cf-cell-title">{inr(e.net)}</td>
                       <td>

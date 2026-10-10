@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Gift,
   ImageOff,
   KeyRound,
   Loader2,
@@ -17,6 +18,7 @@ import {
   RotateCcw,
   Star,
   Trash2,
+  UserPlus,
   UserX
 } from "lucide-react";
 import { AdminDoctor, formatMoney } from "../api/doctorApi";
@@ -197,6 +199,16 @@ export const DoctorCard: React.FC<{ doc: AdminDoctor; busy?: boolean; actions: D
         {doc.experience && (
           <li title={doc.experience}>
             <Award size={14} /> {doc.experience} experience
+          </li>
+        )}
+        {doc.referredBy?.name && (
+          <li title={`Referred by ${doc.referredBy.name}`}>
+            <UserPlus size={14} /> Referred by {doc.referredBy.name}
+          </li>
+        )}
+        {(doc.freeSessionsRemaining ?? 0) > 0 && (
+          <li>
+            <Gift size={14} /> {doc.freeSessionsRemaining} commission-free session{doc.freeSessionsRemaining === 1 ? "" : "s"} left
           </li>
         )}
         <li

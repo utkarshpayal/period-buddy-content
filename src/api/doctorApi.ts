@@ -33,6 +33,8 @@ export type Consultation = {
   currency?: string;
   meetingLink?: string;
   prescription?: string;
+  /** The structured prescription (absent on older, free-text ones). */
+  rx?: Rx | null;
   /** The patient's 1-5 rating of a completed session, and its optional comment. */
   rating?: number;
   feedback?: string;
@@ -107,6 +109,8 @@ export type DoctorProfile = {
   experience?: string;
   hospital?: string;
   education?: string[];
+  /** Medical council registration number(s), printed on prescriptions. */
+  licenses?: string[];
   isAvailable?: boolean;
   totalConsultations?: number;
 };
@@ -197,6 +201,9 @@ export type Earning = {
   currency: string;
   gross: number;
   commissionPercent: number;
+  /** "referral": a commission-free session from a referral credit (newer API only). */
+  commissionSource?: "default" | "doctor" | "none" | "referral";
+  freeSession?: boolean;
   commission: number;
   net: number;
   status: "active" | "reversed";
@@ -333,6 +340,10 @@ export type AdminDoctor = Omit<DoctorProfile, "userId"> & {
       }
     | string;
   createdAt?: string;
+  /** The gynac who referred them (newer API only). */
+  referredBy?: { referralId: string; status: "invited" | "onboarded"; doctorId?: string; name?: string } | null;
+  /** Commission-free sessions they can still use (newer API only). */
+  freeSessionsRemaining?: number;
 };
 
 /* ------------------------------- Core fetch ----------------------------- */
@@ -532,11 +543,28 @@ export function getWebSocketUrl(): string {
   return `${wsBase}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 }
 
-export const setPrescription = (id: string, prescription: string) =>
+export type RxMedicine = { name: string; dose: string; frequency: string; timing: string; duration: string; notes: string };
+/** A prescription as the portal writes it and the PDF prints it. */
+export type Rx = {
+  complaints: string;
+  diagnosis: string;
+  medicines: RxMedicine[];
+  investigations: string;
+  advice: string;
+  followUp: string;
+};
+
+export const setPrescription = (id: string, rx: Rx) =>
   request<Consultation>(`/api/doctor/consultations/${id}/prescription`, {
     method: "PATCH",
-    body: JSON.stringify({ prescription })
+    body: JSON.stringify({ rx })
   });
+
+/** The printable prescription the patient downloads: a full HTML page. */
+export type PrescriptionDocument = { html: string; fileName: string; number: string };
+
+export const getPrescriptionDocument = (id: string) =>
+  request<PrescriptionDocument>(`/api/doctor/consultations/${id}/prescription`);
 
 export const completeConsultation = (id: string) =>
   request<Consultation>(`/api/doctor/consultations/${id}/complete`, {
@@ -593,6 +621,36 @@ export const setAvailability = (slots: AvailabilitySlot[]) =>
     body: JSON.stringify({ slots })
   });
 
+export type ScheduleRange = { startTime: string; endTime: string; maxSlots?: number; slotMinutes?: number };
+
+/** Hours on one date ("YYYY-MM-DD" in the schedule's zone), replacing that
+ * weekday's hours. No ranges = day off. */
+export type DateOverride = { date: string; ranges: ScheduleRange[]; note?: string };
+
+export type DoctorSchedule = {
+  timezone: string;
+  /** Length of one consultation; every range is cut into slots this long. */
+  consultationMinutes: number;
+  bookingWindowDays: number;
+  minNoticeMinutes: number;
+  weekly: (ScheduleRange & { dayOfWeek: number })[];
+  overrides: DateOverride[];
+  limits?: { maxBookingWindowDays: number; maxMinNoticeMinutes: number };
+};
+
+export type SavedSchedule = DoctorSchedule & {
+  /** Upcoming booked sessions the new hours no longer cover (still booked). */
+  outsideHours: { id: string; scheduledFor: string }[];
+};
+
+export const getSchedule = () => request<DoctorSchedule>("/api/doctor/availability/schedule");
+
+export const saveSchedule = (schedule: Omit<DoctorSchedule, "limits">) =>
+  request<SavedSchedule>("/api/doctor/availability/schedule", {
+    method: "PUT",
+    body: JSON.stringify(schedule)
+  });
+
 /* ------------------------------- Doctor: reels -------------------------- */
 
 export const getMyReels = () => request<Reel[]>("/api/doctor/reels");
@@ -631,8 +689,10 @@ export const inviteDoctor = (payload: {
   languages?: string[];
   experience?: string;
   hospital?: string;
+  /** The gynac who referred them; they earn free sessions when this one joins. */
+  referrerDoctorId?: string;
 }) =>
-  request<{ doctor: AdminDoctor; inviteEmailDelivered: boolean; inviteUrl?: string }>(
+  request<{ doctor: AdminDoctor; inviteEmailDelivered: boolean; inviteUrl?: string; referralId?: string | null }>(
     "/api/doctor/invite",
     { method: "POST", body: JSON.stringify(payload) }
   );
@@ -740,7 +800,9 @@ export function formatSlot(start?: string | null, end?: string | null): string {
 /** The browser's IANA zone, falling back to India. */
 export const browserTimeZone = (): string => {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+    // Some browsers still report India's old IANA name.
+    return zone === "Asia/Calcutta" ? "Asia/Kolkata" : zone;
   } catch {
     return "Asia/Kolkata";
   }
