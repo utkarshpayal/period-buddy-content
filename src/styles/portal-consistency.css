@@ -1,0 +1,348 @@
+/* =========================================================================
+   Clinician portal: one visual system across every page.
+
+   The portal's pages grew their own building blocks (gx cards, cf and gw
+   wallet pieces, av availability, rf referrals), each with a slightly
+   different radius, shadow, padding, title size and button shape. This
+   file, loaded last and scoped to .gynac-shell, brings them onto one set of
+   values so every page reads as the same product. The Admin Workspace is
+   not affected.
+
+   The system:
+   - Surfaces: 16px radius, 1px --ui-line border, --ui-shadow-sm.
+   - Padding: 20px in content cards, 18px in stat tiles.
+   - Card titles: 1rem / 800. Card subtitles: 0.82rem muted.
+   - Stat tiles: 0.8rem label, 1.5rem / 800 value, 0.76rem hint.
+   - Buttons: pills, 40px (34px small), 0.875rem / 700, 16px side padding.
+   ========================================================================= */
+
+.gynac-shell {
+  --pc-radius: 16px;
+  --pc-radius-inner: 12px;
+  --pc-shadow: var(--ui-shadow-sm);
+  --pc-pad: 20px;
+  --pc-pad-stat: 18px;
+}
+
+/* ------------------------------------------------------------ Surfaces */
+
+.gynac-shell .gx-card,
+.gynac-shell .gx-stat,
+.gynac-shell .cf-kpi,
+.gynac-shell .gw-card,
+.gynac-shell .cf-section,
+.gynac-shell .cf-table-card,
+.gynac-shell .av-card {
+  border: 1px solid var(--ui-line);
+  border-radius: var(--pc-radius);
+  box-shadow: var(--pc-shadow);
+}
+
+/* Cards with a table or list flush to their edges keep their corners. */
+.gynac-shell .gw-card,
+.gynac-shell .cf-table-card,
+.gynac-shell .gx-card.is-flush { overflow: hidden; }
+
+/* Feature surfaces (hero, wallet balance) share the radius too. */
+.gynac-shell .gw-balance,
+.gynac-shell .rf-hero { border-radius: var(--pc-radius); }
+
+.gynac-shell .av-card { padding: var(--pc-pad); }
+.gynac-shell .gx-stat,
+.gynac-shell .cf-kpi { padding: var(--pc-pad-stat); }
+
+/* --------------------------------------------------------- Card titles */
+
+.gynac-shell .gx-card-head h2,
+.gynac-shell .gw-card-head h2,
+.gynac-shell .av-card-head h2,
+.gynac-shell .cf-section-head h3,
+.gynac-shell .gx-form legend {
+  color: var(--ui-ink);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+.gynac-shell .gw-card-head p,
+.gynac-shell .av-card-head p,
+.gynac-shell .cf-section-head p { color: var(--ui-muted); font-size: 0.82rem; }
+.gynac-shell .gw-card-head { padding: 16px var(--pc-pad); }
+.gynac-shell .gw-card-body { padding: 16px var(--pc-pad); }
+
+/* ---------------------------------------------------------- Stat tiles */
+
+.gynac-shell .cf-kpi-head,
+.gynac-shell .gx-stat-label { color: var(--ui-muted); font-size: 0.8rem; font-weight: 600; }
+.gynac-shell .cf-kpi-value,
+.gynac-shell .gx-stat-value {
+  color: var(--ui-ink);
+  font-family: inherit;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.gynac-shell .cf-kpi-hint,
+.gynac-shell .gx-stat-hint { color: var(--ui-muted); font-size: 0.76rem; line-height: 1.4; }
+.gynac-shell .cf-kpi-icon { border-radius: 8px; }
+
+/* Stat rows: every tile in a row is the same height. */
+.gynac-shell .gx-stat-grid { align-items: stretch; gap: 14px; }
+.gynac-shell .gx-stat-grid > * { height: 100%; }
+
+/* ------------------------------------------------------------- Buttons */
+
+.gynac-shell .cf-btn,
+.gynac-shell .gx-btn,
+.gynac-shell .gy-btn,
+.gynac-shell .av-btn {
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  gap: 7px;
+  height: auto;
+  min-height: 40px;
+  padding: 0 16px;
+}
+.gynac-shell .cf-btn-sm,
+.gynac-shell .gx-btn-sm,
+.gynac-shell .av-btn-sm {
+  font-size: 0.8rem;
+  gap: 6px;
+  height: auto;
+  min-height: 34px;
+  padding: 0 12px;
+}
+/* Icon-only and quiet buttons keep their own shape. */
+.gynac-shell .av-btn-quiet { height: auto; min-height: 32px; padding: 0 10px; }
+
+/* Earnings & Wallet: with the free-sessions KPI there are four minis, 2×2. */
+.gynac-shell .gw-minis:has(> .cf-kpi:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .gynac-shell .gw-minis:has(> .cf-kpi:nth-child(4)) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* -------------------------------------------------------- Page rhythm */
+
+/* Same space between every block on every page. */
+.gynac-shell .gx-page { gap: 20px; }
+.gynac-shell .gx-page-header { align-items: flex-end; gap: 16px; }
+.gynac-shell .gx-page-header .gx-subtitle { max-width: 640px; }
+
+/* ============================================================ My profile */
+
+.gynac-shell .gx-field > label { color: var(--ui-ink-2); font-size: 0.82rem; font-weight: 700; }
+.pf-section-lead { clear: both; color: var(--ui-muted); font-size: 0.82rem; margin: -6px 0 14px; }
+.pf-footer-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+
+/* Chips you type into (qualifications, languages). */
+.pf-tags { display: grid; gap: 8px; }
+.pf-tags-box {
+  align-items: center;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 10px;
+  cursor: text;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 42px;
+  padding: 5px 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pf-tags-box:focus-within { border-color: var(--ui-berry); box-shadow: var(--ui-ring); }
+.gynac-shell .gx-field .pf-tags-box input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  flex: 1 1 120px;
+  min-height: 30px;
+  min-width: 80px;
+  padding: 0 4px;
+}
+.pf-tag {
+  align-items: center;
+  background: var(--ui-berry-50);
+  border-radius: 999px;
+  color: var(--ui-berry-700);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 4px;
+  padding: 4px 6px 4px 10px;
+}
+.pf-tag button {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  height: 18px;
+  justify-content: center;
+  padding: 0;
+  width: 18px;
+}
+.pf-tag button:hover { background: rgba(0, 0, 0, 0.08); }
+.pf-suggest { display: flex; flex-wrap: wrap; gap: 6px; }
+.pf-suggest button {
+  background: var(--ui-surface);
+  border: 1px dashed var(--ui-line-strong);
+  border-radius: 999px;
+  color: var(--ui-ink-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  padding: 3px 10px;
+}
+.pf-suggest button:hover { border-color: var(--ui-berry); color: var(--ui-berry-700); }
+
+/* Profile completeness. */
+.pf-complete { display: grid; gap: 14px; }
+.pf-complete-head { align-items: center; display: flex; gap: 14px; justify-content: space-between; }
+.pf-complete-head h2 { font-size: 1rem; font-weight: 800; margin: 0; }
+.pf-complete-head p { color: var(--ui-muted); font-size: 0.8rem; margin: 2px 0 0; }
+.pf-ring {
+  align-items: center;
+  background: conic-gradient(var(--ui-berry) var(--pf), var(--ui-berry-50) 0);
+  border-radius: 999px;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 54px;
+  justify-content: center;
+  width: 54px;
+}
+.pf-ring.is-done { background: conic-gradient(var(--ui-teal) 100%, transparent 0); }
+.pf-ring > span {
+  align-items: center;
+  background: var(--ui-surface);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+.pf-checklist { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.pf-checklist li > span,
+.pf-checklist li > button {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ui-ink-2);
+  display: flex;
+  font: inherit;
+  font-size: 0.84rem;
+  gap: 8px;
+  padding: 6px 8px;
+  text-align: left;
+  width: 100%;
+}
+.pf-checklist li.is-done > span { color: var(--ui-muted); }
+.pf-checklist li.is-done svg { color: var(--ui-teal); }
+.pf-checklist li > button { color: var(--ui-berry-700); cursor: pointer; font-weight: 600; }
+.pf-checklist li > button svg { color: var(--ui-line-strong); }
+.pf-checklist li > button:hover { background: var(--ui-berry-50); }
+.pf-checklist li > button:focus-visible { box-shadow: var(--ui-ring); outline: none; }
+#pf-photo:focus { outline: none; }
+
+/* ========================================================== Availability */
+
+/* Quick start: shown while no weekly hours are set. */
+.av-quickstart {
+  background: linear-gradient(135deg, var(--ui-berry-50), var(--ui-surface) 70%);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px;
+}
+.av-quickstart-head { align-items: flex-start; display: flex; gap: 12px; }
+.av-quickstart-head > svg { color: var(--ui-berry); flex-shrink: 0; margin-top: 2px; }
+.av-quickstart-head div { display: grid; gap: 2px; }
+.av-quickstart-head strong { color: var(--ui-ink); font-size: 0.95rem; }
+.av-quickstart-head span { color: var(--ui-muted); font-size: 0.82rem; }
+.av-quickstart-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.av-preset {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 2px;
+  padding: 12px 14px;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.av-preset strong { color: var(--ui-ink); font-size: 0.88rem; }
+.av-preset span { color: var(--ui-muted); font-size: 0.76rem; }
+.av-preset:hover { border-color: var(--ui-berry); box-shadow: var(--ui-shadow-sm); transform: translateY(-1px); }
+.av-preset:focus-visible { box-shadow: var(--ui-ring); outline: none; }
+
+/* Quick setup menu (once some hours exist). */
+.av-preset-menu { min-width: 250px; right: 0; }
+.av-preset-item {
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 1px;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+.av-preset-item:hover,
+.av-preset-item:focus-visible { background: var(--ui-surface-2); outline: none; }
+.av-preset-item strong { align-items: center; color: var(--ui-ink); display: flex; font-size: 0.86rem; gap: 6px; }
+.av-preset-item span { color: var(--ui-muted); font-size: 0.75rem; }
+.av-preset-item.is-danger { border-top: 1px solid var(--ui-line); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 10px; }
+.av-preset-item.is-danger strong { color: var(--ui-red); }
+.av-preset-menu small { color: var(--ui-muted); display: block; font-size: 0.72rem; padding: 6px 10px 2px; }
+
+/* Time off: one-click spans. */
+.av-quickpicks { display: flex; flex-wrap: wrap; gap: 6px; }
+.av-quickpick {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 999px;
+  color: var(--ui-ink-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+.av-quickpick:hover { border-color: var(--ui-berry); color: var(--ui-berry-700); }
+.av-quickpick.is-active { background: var(--ui-berry-50); border-color: var(--ui-berry); color: var(--ui-berry-700); }
+
+/* Overview: its call to action sits at the bottom, and side by side with
+   the rules (medium widths) the two cards are the same height. */
+.av-overview { display: flex; flex-direction: column; gap: 14px; }
+.av-overview .av-btn-block { margin-top: auto; }
+@media (max-width: 1180px) and (min-width: 901px) {
+  .gynac-shell .av-side { align-items: stretch; }
+}
+
+/* Completeness: in the side column on wide screens, above the form (in
+   reading order) once the layout is a single column. */
+.pf-complete-top { display: none; }
+@media (max-width: 1180px) {
+  .pf-complete-top { display: block; }
+  .pf-complete-side { display: none; }
+}
+
+@media (max-width: 560px) {
+  .av-quickstart-grid { grid-template-columns: minmax(0, 1fr); }
+  .av-quickstart { padding: 14px; }
+}

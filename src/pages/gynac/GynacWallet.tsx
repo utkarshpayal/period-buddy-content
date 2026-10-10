@@ -419,7 +419,7 @@ export const WithdrawalsCard: React.FC<{
         <EmptyRow icon={<Send size={22} />} title="No withdrawals yet">Your withdrawals and their status show here.</EmptyRow>
       ) : (
         <div className="cf-table-scroll">
-          <table className="cf-table">
+          <table className="cf-table is-stack is-payouts">
             <thead>
               <tr>
                 <th>Requested</th>
@@ -431,9 +431,9 @@ export const WithdrawalsCard: React.FC<{
             <tbody>
               {payouts.map((p) => (
                 <tr key={p._id}>
-                  <td className="cf-cell-sub" style={{ whiteSpace: "nowrap" }}>{formatDate(p.createdAt)}</td>
-                  <td>{p.method?.display ?? "—"}</td>
-                  <td>
+                  <td className="cf-cell-sub c-date" style={{ whiteSpace: "nowrap" }}>{formatDate(p.createdAt)}</td>
+                  <td className="c-to">{p.method?.display ?? "—"}</td>
+                  <td className="c-state">
                     <PayoutBadge status={p.status} />
                     {p.utr && <div className="cf-cell-sub">Ref {p.utr}</div>}
                     {p.failureReason && <div className="cf-cell-sub is-danger">{p.failureReason}</div>}
@@ -446,7 +446,7 @@ export const WithdrawalsCard: React.FC<{
                       </div>
                     )}
                   </td>
-                  <td className="num cf-cell-title">{formatMoney(p.amount)}</td>
+                  <td className="num cf-cell-title c-net">{formatMoney(p.amount)}</td>
                 </tr>
               ))}
             </tbody>

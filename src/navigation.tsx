@@ -22,7 +22,8 @@ import {
   Users,
   UsersRound,
   IdCard,
-  HandCoins
+  HandCoins,
+  Gift
 } from "lucide-react";
 import { PERMISSIONS as P, Permission } from "./auth/access";
 import { WorkspaceHome } from "./pages/WorkspaceHome";
@@ -42,6 +43,7 @@ import { SubscriptionsPage } from "./pages/subscriptions/SubscriptionsPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
 import { DoctorsPage } from "./pages/DoctorsPage";
 import { ClinicalFinancePage } from "./pages/clinicalFinance/ClinicalFinancePage";
+import { GynacReferralsPage } from "./pages/referrals/GynacReferralsPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { CompanyFilesPage } from "./pages/CompanyFilesPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -114,7 +116,9 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: "/gynecologists", label: "Gynecologists", icon: Stethoscope, element: <DoctorsPage />, permissions: [P.DOCTORS_READ], description: "Invite and manage clinicians" },
       // Clinical Admin + Super Admin only (payouts.read).
-      { path: "/commission-payouts", label: "Commission & Payouts", icon: HandCoins, element: <ClinicalFinancePage />, permissions: [P.PAYOUTS_READ], description: "Commission rates, doctor wallets and withdrawals" }
+      { path: "/commission-payouts", label: "Commission & Payouts", icon: HandCoins, element: <ClinicalFinancePage />, permissions: [P.PAYOUTS_READ], description: "Commission rates, doctor wallets and withdrawals" },
+      // Clinical Admin + Super Admin only (referrals.read).
+      { path: "/gynac-referrals", label: "Gynac Referrals", icon: Gift, element: <GynacReferralsPage />, permissions: [P.REFERRALS_READ], description: "Review referrals and manage free sessions" }
     ]
   },
   {

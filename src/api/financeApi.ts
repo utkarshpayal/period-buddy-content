@@ -177,6 +177,17 @@ export const markPayoutPaid = (id: string, reference: string, note?: string) =>
 
 export type RefundStatus = "required" | "processed";
 
+/** pending: Cashfree is processing it; failed: retried until attempts run out;
+ * skipped: can't be automatic (no Cashfree order), refund by hand. */
+export type RefundAuto = {
+  status: "pending" | "success" | "failed" | "skipped" | null;
+  attempts: number;
+  lastError: string | null;
+  nextAttemptAt: string | null;
+  providerStatus: string | null;
+  refundId: string | null;
+};
+
 /** A cancelled paid consultation owed (or given) a refund. Always INR. */
 export type ConsultationRefund = {
   _id: string;
@@ -190,12 +201,20 @@ export type ConsultationRefund = {
   refundStatus: RefundStatus;
   refundedAt?: string | null;
   refundReference?: string | null;
+  /** The automatic Cashfree refund; null until the server first tries it. */
+  auto?: RefundAuto | null;
   doctor: { _id: string; name: string } | null;
   patient: { _id: string; name: string; email?: string; phone?: string } | null;
 };
 
 export const listRefunds = (params: { page: number; status: RefundStatus }) =>
   request<{ refunds: ConsultationRefund[]; pagination: PageInfo }>(`/refunds?${qs({ ...params, limit: 25 })}`);
+
+/** Start a fresh round of automatic Cashfree refund attempts (failed or skipped ones). */
+export const retryRefund = (id: string) =>
+  request<{ _id: string; outcome: "success" | "pending" | "failed" | "skipped" | null; refundStatus: RefundStatus }>(`/refunds/${id}/retry`, {
+    method: "POST"
+  });
 
 /** Record that the refund was made (e.g. in the Cashfree dashboard). */
 export const markRefundProcessed = (id: string, reference?: string) =>

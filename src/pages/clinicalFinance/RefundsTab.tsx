@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Copy, Loader2, RefreshCw, RotateCcw } from "lucide-react";
-import { ConsultationRefund, RefundStatus, listRefunds, markRefundProcessed } from "../../api/financeApi";
+import { ConsultationRefund, RefundStatus, listRefunds, markRefundProcessed, retryRefund } from "../../api/financeApi";
 import { Pagination, type PageInfo } from "../../components/Pagination";
 import { useToast } from "../../components/Toast";
 import { useAppContext } from "../../context/AppContext";
@@ -19,10 +19,45 @@ const CANCELLED_BY: Record<string, string> = {
   system: "System"
 };
 
+/** Where the automatic Cashfree refund stands, for the "To refund" list. */
+const AutoState: React.FC<{ refund: ConsultationRefund }> = ({ refund }) => {
+  const auto = refund.auto;
+  if (!auto?.status) return <Pill tone="info">Queued</Pill>;
+  if (auto.status === "pending") {
+    return (
+      <>
+        <Pill tone="info">Processing at Cashfree</Pill>
+        {auto.refundId && <div className="cf-cell-sub">Refund id {auto.refundId}</div>}
+      </>
+    );
+  }
+  if (auto.status === "skipped") {
+    return (
+      <>
+        <Pill tone="muted">Refund by hand</Pill>
+        {auto.lastError && <div className="cf-cell-sub">{auto.lastError}</div>}
+      </>
+    );
+  }
+  // failed
+  return (
+    <>
+      <Pill tone={auto.nextAttemptAt ? "warn" : "danger"}>{auto.nextAttemptAt ? "Failed, retrying" : "Failed"}</Pill>
+      {auto.lastError && <div className="cf-cell-sub is-danger">{auto.lastError}</div>}
+      <div className="cf-cell-sub">
+        {auto.attempts} attempt{auto.attempts === 1 ? "" : "s"}
+        {auto.nextAttemptAt ? ` · next ${dateTime(auto.nextAttemptAt)}` : " · no more automatic tries"}
+      </div>
+    </>
+  );
+};
+
 /**
- * Cancelled paid consultations owed a refund. Refunds are made by hand in the
- * Cashfree dashboard (find the order by its id), then marked here. Listing
- * needs payouts.read; marking needs payouts.manage.
+ * Cancelled paid consultations owed a refund. Refunds go out automatically
+ * through Cashfree; this list shows where each stands. One that can't be
+ * automatic or keeps failing can be retried, or refunded in the Cashfree
+ * dashboard and marked here. Listing needs payouts.read; acting needs
+ * payouts.manage.
  */
 export const RefundsTab: React.FC = () => {
   const { can } = useAppContext();
@@ -39,6 +74,7 @@ export const RefundsTab: React.FC = () => {
   const [marking, setMarking] = useState<ConsultationRefund | null>(null);
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
+  const [retrying, setRetrying] = useState<string | null>(null);
   const list = useLatestRequest();
 
   const load = useCallback(async () => {
@@ -70,6 +106,22 @@ export const RefundsTab: React.FC = () => {
     setMarking(r);
   };
 
+  const retry = async (r: ConsultationRefund) => {
+    if (retrying) return;
+    setRetrying(r._id);
+    try {
+      const result = await retryRefund(r._id);
+      if (result.outcome === "success") toast.success(`${inr(r.amount)} refunded through Cashfree.`);
+      else if (result.outcome === "pending") toast.success("Sent to Cashfree. It's processing the refund.");
+      else toast.error("Cashfree didn't take it. See the reason in the list.");
+      load();
+    } catch (err) {
+      toast.error(errorText(err, "Could not retry the refund."));
+    } finally {
+      setRetrying(null);
+    }
+  };
+
   const submitMark = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!marking || busy) return;
@@ -91,7 +143,7 @@ export const RefundsTab: React.FC = () => {
   return (
     <div className="cf-stack">
       <Notice tone="info">
-        Refund cancelled sessions in the Cashfree dashboard (search by the order id), then mark them refunded here. Amounts are in INR.
+        Cancelled paid sessions are refunded automatically through Cashfree, back to the patient's original payment method. Only refund one by hand if it says “Refund by hand” or “Failed”, then mark it here. Amounts are in INR.
       </Notice>
 
       <div className="cf-toolbar">
@@ -128,6 +180,7 @@ export const RefundsTab: React.FC = () => {
                   <th className="num">Amount</th>
                   <th>Cancelled</th>
                   <th>Cashfree order</th>
+                  {status === "required" && <th>Automatic refund</th>}
                   {status === "processed" && <th>Refunded</th>}
                   {canManage && status === "required" && <th className="actions"><span className="sr-only">Actions</span></th>}
                 </tr>
@@ -162,9 +215,14 @@ export const RefundsTab: React.FC = () => {
                         "—"
                       )}
                     </td>
+                    {status === "required" && (
+                      <td>
+                        <AutoState refund={r} />
+                      </td>
+                    )}
                     {status === "processed" && (
                       <td>
-                        <Pill tone="ok">Refunded</Pill>
+                        <Pill tone="ok">{r.auto?.status === "success" ? "Refunded automatically" : "Refunded"}</Pill>
                         <div className="cf-cell-sub" style={{ whiteSpace: "nowrap" }}>{dateTime(r.refundedAt)}</div>
                         {r.refundReference && <div className="cf-cell-sub">Ref {r.refundReference}</div>}
                       </td>
@@ -172,9 +230,16 @@ export const RefundsTab: React.FC = () => {
                     {canManage && status === "required" && (
                       <td className="actions">
                         <div>
-                          <button type="button" className="cf-btn cf-btn-primary cf-btn-sm" disabled={busy} onClick={() => openMark(r)}>
-                            <CheckCircle2 size={14} /> Mark refunded
-                          </button>
+                          {(r.auto?.status === "failed" || r.auto?.status === "skipped") && r.cashfreeOrderId && (
+                            <button type="button" className="cf-btn cf-btn-secondary cf-btn-sm" disabled={retrying !== null} onClick={() => retry(r)}>
+                              {retrying === r._id ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Retry
+                            </button>
+                          )}
+                          {r.auto?.status !== "pending" && (
+                            <button type="button" className="cf-btn cf-btn-primary cf-btn-sm" disabled={busy} onClick={() => openMark(r)}>
+                              <CheckCircle2 size={14} /> Mark refunded
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
@@ -208,6 +273,9 @@ export const RefundsTab: React.FC = () => {
             <p className="cf-help">
               Cashfree order <code>{marking.cashfreeOrderId}</code>
             </p>
+          )}
+          {marking.auto?.status === "failed" && marking.auto.nextAttemptAt && (
+            <Notice tone="warn">The automatic refund will try again at {dateTime(marking.auto.nextAttemptAt)}. If you refund it by hand, mark it here first so it stops.</Notice>
           )}
           <Field label="Refund reference (optional)" hint="e.g. the Cashfree refund id. Only mark it once the refund has been made." htmlFor="cf-refund-ref">
             <input id="cf-refund-ref" value={reference} onChange={(e) => setReference(e.target.value)} maxLength={120} autoComplete="off" autoFocus />

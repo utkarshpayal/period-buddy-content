@@ -6,6 +6,7 @@ import {
   Wallet,
   Film,
   Clock,
+  Gift,
   UserCog,
   LogOut,
   Menu,
@@ -84,6 +85,10 @@ export const GynacSidebar: React.FC = () => {
         <NavLink to="/availability" className={link} onClick={close}>
           <Clock size={18} />
           Availability
+        </NavLink>
+        <NavLink to="/referrals" className={link} onClick={close}>
+          <Gift size={18} />
+          Refer &amp; Earn
         </NavLink>
 
         <p className="nav-section-label">Content</p>

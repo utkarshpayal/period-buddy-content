@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, Download, Percent, Receipt, Send } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Clock, Download, Gift, Percent, Receipt, Send } from "lucide-react";
 import {
   Earning,
   PaymentsData,
@@ -16,6 +17,7 @@ import { Pagination, type PageInfo } from "../../components/Pagination";
 import { useToast } from "../../components/Toast";
 import { EmptyRow, Kpi, Notice, Pill, SearchField, Segmented, useLatestRequest, type PillTone } from "../../components/financeUi";
 import { PayoutMethodsCard, WithdrawDialog, WithdrawalsCard, isCoolingDown } from "./GynacWallet";
+import { MyReferrals, getMyReferrals } from "../../api/referralApi";
 
 // Table rows per page. Totals, the session count and the CSV export always
 // cover every row in the chosen period — only the table itself is paged.
@@ -87,7 +89,15 @@ export const GynacPayments: React.FC = () => {
   const [range, setRange] = useState<Range>("all");
   const [search, setSearch] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  // Commission-free sessions from referrals; absent on an API without them.
+  const [referrals, setReferrals] = useState<MyReferrals | null>(null);
   const walletRequest = useLatestRequest();
+
+  useEffect(() => {
+    getMyReferrals()
+      .then(setReferrals)
+      .catch(() => undefined);
+  }, []);
 
   const loadWallet = useCallback(async () => {
     const token = walletRequest.begin();
@@ -159,7 +169,7 @@ export const GynacPayments: React.FC = () => {
           patientName(p.userId),
           p.status,
           String(p.amountPaid ?? 0),
-          p.earning && !isReversed(p) ? String(p.earning.commissionPercent) : "",
+          p.earning && !isReversed(p) ? (p.earning.freeSession ? "0 (referral)" : String(p.earning.commissionPercent)) : "",
           p.earning && !isReversed(p) ? String(p.earning.commission) : "",
           String(isReversed(p) ? 0 : netOf(p)),
           isReversed(p) ? refundLabel(p) : earningLabel(p.earning).text,
@@ -260,6 +270,21 @@ export const GynacPayments: React.FC = () => {
               value={formatMoney(w.lifetimeNet)}
               hint={`${formatMoney(w.lifetimeGross)} paid · ${formatMoney(w.lifetimeCommission)} commission`}
             />
+            {referrals && (referrals.summary.freeSessionsGranted > 0 || referrals.program.enabled) && (
+              <Kpi
+                icon={<Gift size={15} />}
+                tone="teal"
+                label="Commission-free sessions"
+                value={referrals.summary.freeSessionsRemaining}
+                hint={
+                  referrals.summary.freeSessionsGranted > 0 ? (
+                    `${formatMoney(referrals.summary.commissionSaved)} commission saved so far`
+                  ) : (
+                    <Link to="/referrals">Refer a colleague to earn {referrals.program.rewardSessions}</Link>
+                  )
+                }
+              />
+            )}
           </div>
         </div>
       )}
@@ -315,7 +340,7 @@ export const GynacPayments: React.FC = () => {
           </EmptyRow>
         ) : (
           <div className="cf-table-scroll">
-            <table className="cf-table is-wide">
+            <table className="cf-table is-wide is-stack">
               <thead>
                 <tr>
                   <th>Patient</th>
@@ -333,33 +358,37 @@ export const GynacPayments: React.FC = () => {
                   const label = reversed ? { text: refundLabel(p), tone: "muted" as PillTone } : earningLabel(p.earning);
                   return (
                     <tr key={p._id} className={reversed ? "is-reversed" : undefined}>
-                      <td>
+                      <td className="c-who">
                         <span className="gx-person">
                           <Avatar name={name} size="sm" /> {name}
                         </span>
                       </td>
-                      <td className="cf-cell-sub" style={{ whiteSpace: "nowrap" }}>{formatDate(paidAt(p))}</td>
-                      <td><Pill tone={label.tone}>{label.text}</Pill></td>
-                      <td className="num">
+                      <td className="cf-cell-sub c-date" style={{ whiteSpace: "nowrap" }}>{formatDate(paidAt(p))}</td>
+                      <td className="c-state"><Pill tone={label.tone}>{label.text}</Pill></td>
+                      <td className="num c-paid" data-label="Paid">
                         {reversed ? <s>{formatMoney(p.amountPaid)}</s> : formatMoney(p.amountPaid)}
                         {reversed && <div className="cf-cell-sub">Not counted</div>}
                       </td>
-                      <td className="num">
+                      <td className="num c-fee" data-label="Commission">
                         {p.earning && !reversed ? formatMoney(p.earning.commission) : "—"}
-                        {p.earning && !reversed && <div className="cf-cell-sub">{p.earning.commissionPercent}%</div>}
+                        {p.earning && !reversed && (p.earning.freeSession ? (
+                          <div><Pill tone="ok">Free · referral</Pill></div>
+                        ) : (
+                          <div className="cf-cell-sub">{p.earning.commissionPercent}%</div>
+                        ))}
                       </td>
-                      <td className="num cf-cell-title">{reversed ? "—" : formatMoney(netOf(p))}</td>
+                      <td className="num cf-cell-title c-net">{reversed ? "—" : formatMoney(netOf(p))}</td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3} className="cf-cell-title">Total · {keptCount} paid session{keptCount === 1 ? "" : "s"}
+                  <td colSpan={3} className="cf-cell-title c-who">Total · {keptCount} paid session{keptCount === 1 ? "" : "s"}
                     {rows.length > kept.length && <div className="cf-cell-sub">{rows.length - kept.length} cancelled / refunded not counted</div>}</td>
-                  <td className="num">{formatMoney(gross)}</td>
-                  <td className="num">{formatMoney(commission)}</td>
-                  <td className="num cf-cell-title">{formatMoney(net)}</td>
+                  <td className="num c-paid" data-label="Paid">{formatMoney(gross)}</td>
+                  <td className="num c-fee" data-label="Commission">{formatMoney(commission)}</td>
+                  <td className="num cf-cell-title c-net">{formatMoney(net)}</td>
                 </tr>
               </tfoot>
             </table>

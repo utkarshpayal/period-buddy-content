@@ -22,6 +22,7 @@ import { DoctorCard } from "../components/DoctorCard";
 import { useAppContext } from "../context/AppContext";
 import { useNoticeToast } from "../components/Toast";
 import { Pagination, type PageInfo } from "../components/Pagination";
+import { GynacPicker } from "../components/GynacPicker";
 
 const emptyForm = {
   name: "",
@@ -31,7 +32,8 @@ const emptyForm = {
   experience: "",
   hospital: "",
   languages: "",
-  bio: ""
+  bio: "",
+  referrerDoctorId: ""
 };
 
 export const DoctorsPage: React.FC = () => {
@@ -150,7 +152,8 @@ export const DoctorsPage: React.FC = () => {
         bio: form.bio.trim() || undefined,
         languages: form.languages
           ? form.languages.split(",").map((l) => l.trim()).filter(Boolean)
-          : undefined
+          : undefined,
+        referrerDoctorId: form.referrerDoctorId || undefined
       });
       let photoNote = "";
       if (photoFile && result.doctor?._id) {
@@ -458,6 +461,15 @@ export const DoctorsPage: React.FC = () => {
                 placeholder="English, Hindi"
               />
             </label>
+            <div className="gy-field gy-field-full">
+              <span>Referred by (optional)</span>
+              <GynacPicker
+                value={form.referrerDoctorId}
+                onChange={(id) => setForm({ ...form, referrerDoctorId: id })}
+                placeholder="Nobody — not a referral"
+              />
+              <small className="gy-field-hint">They get commission-free sessions once this gynac sets up their account.</small>
+            </div>
             <label className="gy-field gy-field-full">
               <span>Bio</span>
               <textarea

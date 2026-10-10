@@ -16,6 +16,7 @@ import { GynacPayments } from "./pages/gynac/GynacPayments";
 import { GynacReels } from "./pages/gynac/GynacReels";
 import { GynacAvailability } from "./pages/gynac/GynacAvailability";
 import { GynacProfile } from "./pages/gynac/GynacProfile";
+import { GynacReferrals } from "./pages/gynac/GynacReferrals";
 import { isAdminApiConfigured } from "./api/adminApi";
 
 // The signing page pulls in pdf.js, so it loads only when someone opens a link.
@@ -60,6 +61,7 @@ function GynacApp() {
           <Route path="/payments" element={<GynacPayments />} />
           <Route path="/reels" element={<GynacReels />} />
           <Route path="/availability" element={<GynacAvailability />} />
+          <Route path="/referrals" element={<GynacReferrals />} />
           <Route path="/profile" element={<GynacProfile />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />

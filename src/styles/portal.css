@@ -2943,148 +2943,26 @@
   color: var(--ui-green);
 }
 
-/* Availability */
 
-.gx-week-overview {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(7, minmax(0, 1fr)) auto;
-}
 
-.gx-week-col {
-  display: grid;
-  gap: 8px;
-  justify-items: center;
-}
 
-.gx-week-day {
-  color: var(--ui-muted);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 
-.gx-week-track {
-  background: repeating-linear-gradient(180deg, var(--ui-surface-2) 0 24px, var(--line-2) 24px 25px);
-  border: 1px solid var(--ui-line);
-  border-radius: 10px;
-  height: 140px;
-  position: relative;
-  width: 100%;
-}
 
-.gx-week-block {
-  background: var(--ui-berry);
-  border-radius: 6px;
-  left: 4px;
-  opacity: 0.85;
-  position: absolute;
-  right: 4px;
-}
 
-.gx-week-scale {
-  color: var(--ui-muted);
-  display: flex;
-  flex-direction: column;
-  font-size: 0.66rem;
-  justify-content: space-between;
-  padding: 26px 0 0;
-}
 
-.gx-days {
-  display: grid;
-  gap: 10px;
-}
 
-.gx-day {
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-line);
-  border-radius: 14px;
-  padding: 12px 16px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
 
-.gx-day.is-open {
-  border-color: var(--ui-line-strong);
-  box-shadow: var(--ui-shadow-xs);
-}
 
-.gx-day-head {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: space-between;
-  min-height: 36px;
-}
 
-.gx-day-head .gx-toggle-label strong {
-  display: inline-block;
-  min-width: 90px;
-}
 
-.gx-day-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 
-.gx-day-off {
-  align-items: center;
-  color: var(--ui-muted);
-  display: inline-flex;
-  font-size: 0.82rem;
-  gap: 6px;
-}
 
-.gx-ranges {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
 
-.gx-range {
-  align-items: end;
-  background: var(--ui-surface-2);
-  border-radius: 12px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(110px, 160px)) minmax(80px, 100px) auto;
-  padding: 10px 12px;
-}
 
-.gx-range.is-invalid {
-  background: var(--ui-red-50);
-}
 
-.gx-range label {
-  display: grid;
-  gap: 4px;
-}
 
-.gx-range label span {
-  color: var(--ui-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
 
-.gx-range input {
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-line-strong);
-  border-radius: 8px;
-  font: inherit;
-  font-size: 0.88rem;
-  padding: 7px 9px;
-  width: 100%;
-}
 
-.gx-range input:focus {
-  border-color: var(--ui-berry);
-  box-shadow: var(--ui-ring);
-  outline: none;
-}
 
 /* Reels */
 
@@ -3321,13 +3199,7 @@
     max-width: 86%;
   }
 
-  .gx-week-overview {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-  }
 
-  .gx-week-scale {
-    display: none;
-  }
 }
 
 @media (max-width: 620px) {
@@ -3366,9 +3238,6 @@
     width: 100%;
   }
 
-  .gx-range {
-    grid-template-columns: 1fr 1fr;
-  }
 
   .gx-table th,
   .gx-table td {
@@ -3719,20 +3588,472 @@
   white-space: nowrap;
 }
 
-/* Availability: time zone + slot length */
-.gx-zone-bar {
-  align-items: end;
+
+
+/* ------------------------------------------------------------------------ */
+/* Clinician portal: page polish (bookings, earnings, reels, profile)       */
+/* ------------------------------------------------------------------------ */
+
+/* Bookings: notes on the session (cancellation, prescription, rating) as a
+   row of small cards above the thread, side by side when there's room. */
+.gx-pins {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  padding: 10px 14px;
+}
+
+.gx-pins .gx-rx-pinned {
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+
+.gx-pins .gx-rx-pinned svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/* Profile: the save row stays in reach while scrolling a long form. */
+.gx-form > .gx-form-footer {
+  background: var(--ui-surface);
+  border-radius: 0 0 var(--ui-radius) var(--ui-radius);
+  border-top: 1px solid var(--line);
+  bottom: 0;
+  margin-top: 8px;
+  padding-top: 14px;
+  position: sticky;
+  z-index: 5;
+}
+
+.gx-form-footer.is-dirty .gx-muted {
+  align-items: center;
+  color: var(--amber);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.gx-form-footer.is-dirty .gx-muted::before {
+  background: currentColor;
+  border-radius: 50%;
+  content: "";
+  height: 8px;
+  width: 8px;
+}
+
+@media (max-width: 860px) {
+  /* An open conversation takes the whole screen below the top bar. */
+  .gx-page-fill.has-chat {
+    gap: 0;
+    padding: 0;
+  }
+
+  .gx-page-fill.has-chat > .gx-page-header {
+    display: none;
+  }
+
+  .gx-page-fill.has-chat .gx-inbox {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 0;
+  }
+
+  .gx-pins {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 8px 10px;
+  }
+
+  .gx-pins .gx-rx-pinned p {
+    -webkit-line-clamp: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Earnings: the three small balances become one list card. */
+  .gynac-shell .gw-minis {
+    gap: 0;
+  }
+
+  .gynac-shell .gw-minis .cf-kpi {
+    align-items: center;
+    border-radius: 0;
+    column-gap: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px 16px;
+  }
+
+  .gynac-shell .gw-minis .cf-kpi + .cf-kpi {
+    border-top: 0;
+  }
+
+  .gynac-shell .gw-minis .cf-kpi:first-child {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .gynac-shell .gw-minis .cf-kpi:last-child {
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+
+  .gynac-shell .gw-minis .cf-kpi > :first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .gynac-shell .gw-minis .cf-kpi > :nth-child(2) {
+    font-size: 1.15rem;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: 0;
+  }
+
+  .gynac-shell .gw-minis .cf-kpi > :nth-child(n + 3) {
+    grid-column: 1;
+    margin: 2px 0 0 36px;
+  }
+
+  /* Earnings tables: stacked rows, amounts on the right, no side-scrolling. */
+  .gynac-shell .gw-card .cf-table.is-stack,
+  .gynac-shell .gw-card .cf-table.is-stack tbody,
+  .gynac-shell .gw-card .cf-table.is-stack tfoot {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack thead {
+    display: none;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack tr {
+    align-items: center;
+    border-top: 1px solid var(--line-2);
+    display: grid;
+    gap: 4px 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px 16px;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack tbody tr:first-child {
+    border-top: 0;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack tfoot tr {
+    background: var(--surface-2);
+    border-top: 1px solid var(--line);
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack td {
+    background: none;
+    border: 0;
+    display: block;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack td[data-label]::before {
+    color: var(--ink-4);
+    content: attr(data-label) " ";
+    font-size: 0.76rem;
+    font-weight: 600;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-stack .c-who { grid-column: 1; grid-row: 1; }
+  .gynac-shell .gw-card .cf-table.is-stack .c-net { font-size: 1rem; grid-column: 2; grid-row: 1; }
+  .gynac-shell .gw-card .cf-table.is-stack .c-date { grid-column: 1; grid-row: 2; }
+  .gynac-shell .gw-card .cf-table.is-stack .c-paid { color: var(--ink-3); font-size: 0.82rem; grid-column: 2; grid-row: 2; }
+  .gynac-shell .gw-card .cf-table.is-stack .c-state { grid-column: 1; grid-row: 3; }
+  .gynac-shell .gw-card .cf-table.is-stack .c-fee { color: var(--ink-3); font-size: 0.82rem; grid-column: 2; grid-row: 3; }
+  .gynac-shell .gw-card .cf-table.is-stack .c-paid .cf-cell-sub,
+  .gynac-shell .gw-card .cf-table.is-stack .c-fee .cf-cell-sub {
+    display: inline;
+    margin-left: 4px;
+  }
+
+  .gynac-shell .gw-card .cf-table.is-payouts .c-date { grid-column: 1; grid-row: 1; }
+  .gynac-shell .gw-card .cf-table.is-payouts .c-to { color: var(--ink-3); font-size: 0.84rem; grid-column: 1 / -1; grid-row: 2; overflow-wrap: anywhere; }
+  .gynac-shell .gw-card .cf-table.is-payouts .c-state { grid-column: 1 / -1; grid-row: 3; }
+
+  /* Reels: three small stats in a row, and two reels per row. */
+  .gx-stat-grid.is-3 {
+    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gx-stat-grid.is-3 .gx-stat {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .gx-stat-grid.is-3 .gx-stat-icon {
+    height: 28px;
+    width: 28px;
+  }
+
+  .gx-stat-grid.is-3 .gx-stat-icon svg {
+    height: 16px;
+    width: 16px;
+  }
+
+  .gx-stat-grid.is-3 .gx-stat-label {
+    font-size: 0.72rem;
+  }
+
+  .gx-stat-grid.is-3 .gx-stat-hint {
+    display: none;
+  }
+
+  .gx-reel-grid {
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gx-reel-body {
+    padding: 10px 12px 12px;
+  }
+
+  .gx-reel-body h3 {
+    font-size: 0.86rem;
+  }
+
+  .gx-reel-foot {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* Profile: a full-width save button above the phone's home bar. */
+  .gx-form > .gx-form-footer {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .gx-form > .gx-form-footer .gx-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* Prescription card actions (Edit / Print) and a field hint that needs attention. */
+.gx-pin-actions {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+.gx-pin-actions .gx-link {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.gx-field small.gx-field-warn {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Prescription editor (rxe-*): laid out like the printed prescription      */
+/* ------------------------------------------------------------------------ */
+
+.gx-dialog.rxe {
+  gap: 16px;
+  max-width: 920px;
+  padding: 22px 24px;
+}
+
+.rxe-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rxe-meds {
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  padding: 14px 14px 12px;
+}
+
+.rxe-meds-head {
+  align-items: baseline;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
-  padding: 14px 18px;
+  gap: 4px 12px;
+  justify-content: space-between;
 }
-.gx-zone-bar .gx-field { min-width: 240px; }
-.gx-zone-bar .gx-field > span { align-items: center; display: inline-flex; gap: 6px; }
-.gx-zone-bar p { font-size: 0.84rem; margin: 0 0 8px; }
-.gx-range-summary {
-  color: var(--ui-muted);
-  font-size: 0.76rem;
-  grid-column: 1 / -1;
+
+.rxe-meds-head h3 {
+  align-items: center;
+  color: var(--ui-ink);
+  display: flex;
+  font-size: 0.95rem;
+  gap: 6px;
   margin: 0;
+}
+
+.rxe-rx {
+  color: var(--brand);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.rxe-meds-head small {
+  color: var(--ink-4);
+  font-size: 0.78rem;
+}
+
+/* One grid for the column labels and every row, so they line up. */
+.rxe-cols,
+.rxe-row {
+  display: grid;
+  gap: 6px 8px;
+  grid-template-columns: 22px minmax(0, 1fr) 108px 108px 120px 104px 34px;
+}
+
+.rxe-cols {
+  border-bottom: 1px solid var(--ui-line);
+  color: var(--ink-4);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.rxe-rows {
+  display: grid;
+  gap: 0;
+}
+
+.rxe-row {
+  align-items: center;
+  border-bottom: 1px dashed var(--ui-line);
+  padding: 8px 0;
+}
+
+.rxe-row:last-child {
+  border-bottom: 0;
+}
+
+.rxe-row input {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 9px;
+  color: var(--ui-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  height: 36px;
+  min-width: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.rxe-row input:focus {
+  border-color: var(--ui-berry);
+  box-shadow: var(--ui-ring);
+  outline: none;
+}
+
+.rxe-row input::placeholder {
+  color: var(--ink-5);
+}
+
+.rxe-name {
+  font-weight: 700;
+}
+
+.rxe-n {
+  color: var(--ink-4);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* The note sits under the name, across the detail columns. */
+.rxe-row .rxe-notes {
+  background: var(--surface-2);
+  border-style: dashed;
+  font-size: 0.8rem;
+  grid-column: 2 / 7;
+  height: 32px;
+}
+
+.rxe-add {
+  justify-self: start;
+}
+
+.rxe-follow {
+  max-width: 420px;
+}
+
+.rxe-actions {
+  align-items: center;
+  border-top: 1px solid var(--ui-line);
+  padding-top: 14px;
+}
+
+.rxe-actions > span {
+  font-size: 0.84rem;
+  margin-right: auto;
+}
+
+.rxe-problem {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .gx-dialog.rxe {
+    padding: 18px 16px;
+  }
+
+  .rxe-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rxe-cols {
+    display: none;
+  }
+
+  /* Each medicine becomes a small card: name, then the details two by two. */
+  .rxe-row {
+    grid-template-areas:
+      "n name del"
+      ". dose freq"
+      ". when dur"
+      ". notes notes";
+    grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .rxe-row > :nth-child(1) { grid-area: n; }
+  .rxe-row > :nth-child(2) { grid-area: name; grid-column: 2 / 3; }
+  .rxe-row > :nth-child(3) { grid-area: dose; }
+  .rxe-row > :nth-child(4) { grid-area: freq; }
+  .rxe-row > :nth-child(5) { grid-area: when; }
+  .rxe-row > :nth-child(6) { grid-area: dur; }
+  .rxe-row > :nth-child(7) { grid-area: del; justify-self: end; }
+  .rxe-row > .rxe-notes { grid-area: notes; grid-column: 2 / 4; }
+
+  .rxe-row input {
+    font-size: 1rem;
+    height: 40px;
+  }
+
+  .rxe-actions {
+    flex-wrap: wrap;
+  }
+
+  .rxe-actions > span {
+    flex: 1 1 100%;
+  }
+
+  .rxe-actions .gx-btn {
+    flex: 1 1 0;
+  }
 }
