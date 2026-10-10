@@ -22,19 +22,22 @@ import {
   Star,
   Clock,
   WifiOff,
-  RotateCcw
+  RotateCcw,
+  Printer
 } from "lucide-react";
 import {
   Consultation,
   ConsultationMessage,
   ConsultationStatus,
   PatientOverview,
+  Rx,
   getConsultation,
   getConsultationsPage,
   getConsultationMessages,
   getConsultationPatient,
   sendConsultationMessage,
   setPrescription,
+  getPrescriptionDocument,
   completeConsultation,
   cancelConsultation,
   patientName,
@@ -46,6 +49,7 @@ import { reconnectDelay, setOpenConsultation, subscribeDoctorEvents } from "../.
 import { Avatar, EmptyState, PageHeader, StatusBadge, Tabs, timeAgo } from "../../components/ui";
 import { useToast } from "../../components/Toast";
 import { JitsiConsultationCall } from "./JitsiConsultationCall";
+import { PrescriptionEditor } from "./PrescriptionEditor";
 
 type Filter = ConsultationStatus | "all";
 
@@ -123,7 +127,6 @@ export const GynacBookings: React.FC = () => {
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientError, setPatientError] = useState<string | null>(null);
   const [showRx, setShowRx] = useState(false);
-  const [rxText, setRxText] = useState("");
   const [rxSaving, setRxSaving] = useState(false);
 
   const [showCancel, setShowCancel] = useState(false);
@@ -261,7 +264,6 @@ export const GynacBookings: React.FC = () => {
     selectedRef.current = booking;
     setSelected(booking);
     setMessages([]);
-    setRxText(booking.prescription ?? "");
     // Reset the patient panel for the newly-selected booking.
     setPatient(null);
     setPatientError(null);
@@ -500,11 +502,36 @@ export const GynacBookings: React.FC = () => {
     setJitsiCallFor(booking._id);
   }
 
-  const saveRx = async () => {
-    if (!selected || !rxText.trim()) return;
+  /** Open the patient's printable prescription in a new tab and print it
+   * (the browser's print dialog also saves it as a PDF). */
+  const printRx = async (id: string) => {
+    // Opened before the request: browsers block pop-ups not tied to the click.
+    const win = window.open("", "_blank");
+    if (!win) {
+      toast.error("Allow pop-ups for this site to print the prescription.");
+      return;
+    }
+    win.document.write('<p style="font-family:sans-serif;padding:24px;color:#736A79">Preparing prescription…</p>');
+    try {
+      const doc = await getPrescriptionDocument(id);
+      win.document.open();
+      win.document.write(doc.html);
+      win.document.close();
+      win.setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 300);
+    } catch (err) {
+      win.close();
+      toast.error(err instanceof Error ? err.message : "Could not open the prescription.");
+    }
+  };
+
+  const saveRx = async (rx: Rx) => {
+    if (!selected) return;
     setRxSaving(true);
     try {
-      applyUpdate(await setPrescription(selected._id, rxText.trim()));
+      applyUpdate(await setPrescription(selected._id, rx));
       setShowRx(false);
       toast.success("Prescription saved and shared with the patient.");
     } catch (err) {
@@ -621,7 +648,7 @@ export const GynacBookings: React.FC = () => {
   const selectedName = selected ? patientName(selected.userId) : "";
 
   return (
-    <div className="gx-page gx-page-fill">
+    <div className={`gx-page gx-page-fill${selected ? " has-chat" : ""}`}>
       <PageHeader
         eyebrow="Consultations"
         title="Bookings & Chat"
@@ -790,51 +817,60 @@ export const GynacBookings: React.FC = () => {
                 </div>
               )}
 
-              {selected.status === "cancelled" && (
-                <div className="gx-rx-pinned gx-cancel-pinned">
-                  <XCircle size={16} />
-                  <div>
-                    <strong>{CANCELLED_BY[selected.cancelledBy ?? ""] ?? "Cancelled"}</strong>
-                    {selected.cancelReason && <p>“{selected.cancelReason}”</p>}
-                    {selected.refundStatus && (
-                      <p>
-                        <RotateCcw size={12} />{" "}
-                        {selected.refundStatus === "processed"
-                          ? `${formatMoney(selected.amountPaid)} refunded to the patient.`
-                          : `Refund of ${formatMoney(selected.amountPaid)} is being processed.`}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selected.prescription && (
-                <div className="gx-rx-pinned">
-                  <FileText size={16} />
-                  <div>
-                    <strong>Prescription shared</strong>
-                    <p>{selected.prescription}</p>
-                  </div>
-                  {isLive && (
-                    <button type="button" className="gx-link" onClick={() => setShowRx(true)}>
-                      Edit
-                    </button>
+              {(selected.status === "cancelled" || selected.prescription || selected.rating) && (
+                <div className="gx-pins">
+                  {selected.status === "cancelled" && (
+                    <div className="gx-rx-pinned gx-cancel-pinned">
+                      <XCircle size={16} />
+                      <div>
+                        <strong>{CANCELLED_BY[selected.cancelledBy ?? ""] ?? "Cancelled"}</strong>
+                        {selected.cancelReason && <p>“{selected.cancelReason}”</p>}
+                        {selected.refundStatus && (
+                          <p>
+                            <RotateCcw size={12} />{" "}
+                            {selected.refundStatus === "processed"
+                              ? `${formatMoney(selected.amountPaid)} refunded to the patient.`
+                              : `Refund of ${formatMoney(selected.amountPaid)} is being processed.`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
+
+                  {selected.prescription && (
+                    <div className="gx-rx-pinned">
+                      <FileText size={16} />
+                      <div>
+                        <strong>Prescription shared</strong>
+                        <p>{selected.prescription}</p>
+                      </div>
+                      <span className="gx-pin-actions">
+                        {isLive && (
+                          <button type="button" className="gx-link" onClick={() => setShowRx(true)}>
+                            Edit
+                          </button>
+                        )}
+                        <button type="button" className="gx-link" onClick={() => printRx(selected._id)} title="Print or save as PDF">
+                          <Printer size={14} /> Print
+                        </button>
+                      </span>
+                    </div>
+                  )}
+
+                  {selected.rating ? (
+                    <div className="gx-rx-pinned gx-rating-pinned">
+                      <Star size={16} />
+                      <div>
+                        <strong>
+                          Patient rated this session {selected.rating}/5{" "}
+                          <span aria-hidden>{"★".repeat(selected.rating)}{"☆".repeat(5 - selected.rating)}</span>
+                        </strong>
+                        {selected.feedback && <p>“{selected.feedback}”</p>}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
-
-              {selected.rating ? (
-                <div className="gx-rx-pinned gx-rating-pinned">
-                  <Star size={16} />
-                  <div>
-                    <strong>
-                      Patient rated this session {selected.rating}/5{" "}
-                      <span aria-hidden>{"★".repeat(selected.rating)}{"☆".repeat(5 - selected.rating)}</span>
-                    </strong>
-                    {selected.feedback && <p>“{selected.feedback}”</p>}
-                  </div>
-                </div>
-              ) : null}
 
               <div className="gx-messages" ref={scrollRef}>
                 {msgLoading ? (
@@ -1042,34 +1078,14 @@ export const GynacBookings: React.FC = () => {
       )}
 
       {showRx && selected && (
-        <div className="gx-overlay is-centered" onClick={() => setShowRx(false)}>
-          <div className="gx-dialog" role="dialog" aria-label="Prescription" onClick={(e) => e.stopPropagation()}>
-            <div className="gx-drawer-head">
-              <span><Pill size={16} /> Prescription for {selectedName}</span>
-              <button className="gx-icon-btn" type="button" aria-label="Close" onClick={() => setShowRx(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <p className="gx-muted">The patient sees this in their app as soon as you save.</p>
-            <textarea
-              className="gx-textarea"
-              rows={9}
-              value={rxText}
-              onChange={(e) => setRxText(e.target.value)}
-              placeholder={"Medication — dosage — duration\nAdvice\nFollow-up"}
-              autoFocus
-            />
-            <div className="gx-dialog-actions">
-              <button className="gx-btn gx-btn-ghost" type="button" onClick={() => setShowRx(false)}>
-                Cancel
-              </button>
-              <button className="gx-btn gx-btn-primary" type="button" onClick={saveRx} disabled={rxSaving || !rxText.trim()}>
-                {rxSaving ? <Loader2 className="spin-icon" size={16} /> : <CheckCircle2 size={16} />}
-                Save prescription
-              </button>
-            </div>
-          </div>
-        </div>
+        <PrescriptionEditor
+          patientName={selectedName}
+          rx={selected.rx}
+          text={selected.prescription}
+          saving={rxSaving}
+          onCancel={() => setShowRx(false)}
+          onSave={saveRx}
+        />
       )}
     </div>
   );
