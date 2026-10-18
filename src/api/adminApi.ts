@@ -216,8 +216,26 @@ export type AudienceCount = {
   fcmConfigured: boolean;
 };
 
-/** `route`: in-app screen a tap opens. `icon`: one of PUSH_ICONS. `image`: https big picture. */
-export type PushData = { route?: string; icon?: string; image?: string };
+/** Kinds of push the backend knows (NOTIFICATION_KINDS in utils/notificationRoute.js). */
+export type PushKind = "app_update";
+
+/**
+ * What a tap on a push opens: an in-app screen (`route`) or a store link
+ * (`storeUrl`, plus `iosStoreUrl` for iPhones), never both. With
+ * `kind: "app_update"` and no link, the server fills both from App settings.
+ */
+export type PushTap = {
+  /** In-app path opened when tapped, e.g. "/tracker". Omit for the notifications list. */
+  route?: string;
+  kind?: PushKind;
+  /** https://play.google.com/…, market://… or https://apps.apple.com/… */
+  storeUrl?: string;
+  /** https://apps.apple.com/… (opened on iPhones instead of storeUrl). */
+  iosStoreUrl?: string;
+};
+
+/** `route` or store link: what a tap opens. `icon`: one of PUSH_ICONS. `image`: https big picture. */
+export type PushData = PushTap & { icon?: string; image?: string };
 
 /** Look of a push, sent alongside title/body. Blank = not set. */
 export type PushLook = {
@@ -225,15 +243,13 @@ export type PushLook = {
   image?: string;
 };
 
-export type BroadcastInput = PushLook & {
+export type BroadcastInput = PushLook & PushTap & {
   title: string;
   body: string;
   audience: BroadcastAudience;
   /** Required when audience is "selected". */
   userIds?: string[];
   saveToInbox: boolean;
-  /** In-app path opened when the notification is tapped, e.g. "/tracker". Omit for the notifications list. */
-  route?: string;
 };
 
 export type Recipient = {
@@ -256,11 +272,10 @@ export async function getAudienceCount(audience: Exclude<BroadcastAudience, "sel
   return adminRequest(`/api/admin/notifications/audience?audience=${audience}`);
 }
 
-export async function sendTestNotification(input: PushLook & {
+export async function sendTestNotification(input: PushLook & PushTap & {
   title: string;
   body: string;
   email: string;
-  route?: string;
 }): Promise<{ messageId: string; detailsHidden?: boolean }> {
   return adminRequest(`/api/admin/notifications/test`, {
     method: "POST",

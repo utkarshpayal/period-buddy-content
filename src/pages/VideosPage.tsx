@@ -1,11 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { 
-  Film, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, PlayCircle, BarChart3, X
+  Film, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, PlayCircle, BarChart3, X,
+  Eye, Heart, MessageCircle, Bookmark
 } from "lucide-react";
+import { ReelCommentsPanel } from "../components/ReelCommentsPanel";
+import { isAdminApiConfigured } from "../api/adminApi";
+import { PERMISSIONS } from "../auth/access";
 import { useAppContext } from "../context/AppContext";
 import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
 import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 import { uid } from "../lib/uid";
@@ -37,7 +42,9 @@ const emptyVideo = (): ContentItem => ({
 });
 
 export const VideosPage: React.FC = () => {
-  const { items, isLoading, isSaving, createItem, updateItem, deleteItem } = useAppContext();
+  const { items, isLoading, isSaving, createItem, updateItem, deleteItem, can } = useAppContext();
+  // Writers without publish rights submit for medical review instead.
+  const canPublish = useCanPublish();
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyVideo());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -47,6 +54,12 @@ export const VideosPage: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   
+  // Comment moderation panel (needs the API; deleting needs content.write).
+  const [commentsFor, setCommentsFor] = useState<{ id: string; title: string } | null>(null);
+  // Latest app-visible comment count per reel, after moderating.
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const canModerateComments = !isAdminApiConfigured || can(PERMISSIONS.CONTENT_WRITE);
+
   // Local state for adding/editing a single poll option
   const [newOptionTopic, setNewOptionTopic] = useState("");
 
@@ -199,17 +212,8 @@ export const VideosPage: React.FC = () => {
                 value={query}
               />
             </label>
-            <select
-              onChange={(e) => setStatusFilter(e.target.value as ContentStatus | "all")}
-              value={statusFilter}
-            >
-              <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="review">Needs Review</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
           </div>
+          <StatusTabs type="video" items={videos} value={statusFilter} onChange={setStatusFilter} />
 
           <div className="entry-list">
             {isLoading ? (
@@ -236,8 +240,9 @@ export const VideosPage: React.FC = () => {
                     <div>
                       <div className="entry-title-row">
                         <h4>{video.title}</h4>
-                        <span className={`status-chip ${video.status}`}>{video.status}</span>
+                        <span className={`status-chip ${video.status}`}>{statusLabel(video.status)}</span>
                         <PendingBadge id={video.id} />
+                        <ReviewChip item={video} />
                       </div>
                       <p>{video.summary || video.videoUrl}</p>
                       <div className="entry-meta">
@@ -251,9 +256,30 @@ export const VideosPage: React.FC = () => {
                           </span>
                         )}
                       </div>
+                      {video.engagement && (
+                        <div className="reel-stats" aria-label="App engagement">
+                          <span title="Views"><Eye size={13} /> {video.engagement.views.toLocaleString()}</span>
+                          <span title="Likes"><Heart size={13} /> {video.engagement.likes.toLocaleString()}</span>
+                          <span title="Comments shown in the app">
+                            <MessageCircle size={13} /> {(commentCounts[video.id] ?? video.engagement.comments).toLocaleString()}
+                          </span>
+                          <span title="Saves"><Bookmark size={13} /> {video.engagement.saves.toLocaleString()}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="entry-actions">
+                    <StatusActions item={video} />
+                    {isAdminApiConfigured && canModerateComments && (
+                      <button
+                        aria-label="Moderate comments"
+                        onClick={() => setCommentsFor({ id: video.id, title: video.title })}
+                        title="Comments"
+                        type="button"
+                      >
+                        <MessageCircle size={17} />
+                      </button>
+                    )}
                     <button aria-label="Edit Video" onClick={() => handleEdit(video)} type="button">
                       <PencilLine size={17} />
                     </button>
@@ -273,6 +299,15 @@ export const VideosPage: React.FC = () => {
         </div>
 
       </div>
+
+      {commentsFor && (
+        <ReelCommentsPanel
+          canDelete={canModerateComments}
+          onClose={() => setCommentsFor(null)}
+          onCountChange={(count) => setCommentCounts((current) => ({ ...current, [commentsFor.id]: count }))}
+          reel={commentsFor}
+        />
+      )}
 
       {isEditorOpen && (
         <div className="modal-overlay" onClick={closeEditor}>
@@ -327,12 +362,15 @@ export const VideosPage: React.FC = () => {
               Status
               <select
                 onChange={(e) => updateDraft("status", e.target.value as ContentStatus)}
+                disabled={draft.status === "review"}
+                title={draft.status === "review" ? "Waiting for medical review: use the row's review actions" : undefined}
                 value={draft.status}
               >
+                {draft.status === "review" && <option value="review">In medical review</option>}
                 <option value="draft">Draft</option>
-                <option value="review">Needs Review</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                {(canPublish || draft.status === "published") && (
+                  <option disabled={!canPublish} value="published">Published</option>
+                )}
               </select>
             </label>
 
@@ -443,7 +481,8 @@ export const VideosPage: React.FC = () => {
 
           <aside className="preview-pane">
             <div className="preview-heading">
-              <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+              <span className={`status-chip ${draft.status}`}>{statusLabel(draft.status)}</span>
+              <ReviewChip item={draft} />
               <span>{draft.audience}</span>
             </div>
             {draft.imageUrl && (

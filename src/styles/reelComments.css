@@ -1,0 +1,107 @@
+/* Video Reels → engagement stats and the comment moderation panel. */
+.reel-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--ink-4);
+}
+.reel-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reel-comments-panel {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: calc(100vh - 80px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.reel-comments-panel header {
+  padding: 18px 52px 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.reel-comments-panel header h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.reel-comments-panel header p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-4);
+}
+.reel-comments-list {
+  overflow-y: auto;
+  padding: 6px 0;
+  flex: 1;
+}
+.reel-comment {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.reel-comment:last-child {
+  border-bottom: none;
+}
+.reel-comment.hidden {
+  background: #fff6f6;
+}
+.reel-comment-avatar {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+.reel-comment-body {
+  flex: 1;
+  min-width: 0;
+}
+.reel-comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-4);
+}
+.reel-comment-meta strong {
+  color: var(--ink);
+  font-size: 13.5px;
+}
+.reel-comment-flag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fde8e8;
+  color: #b42318;
+  font-weight: 600;
+}
+.reel-comment-text {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+}
+.reel-comment button {
+  align-self: flex-start;
+}
+.reel-comments-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}

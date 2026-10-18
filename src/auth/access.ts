@@ -31,6 +31,9 @@ export const PERMISSIONS = {
   // Gynac referral program: referrals and commission-free session credits.
   REFERRALS_READ: "referrals.read",
   REFERRALS_MANAGE: "referrals.manage",
+  // Help & support tickets from the app: read the queue / reply, assign, change status.
+  SUPPORT_READ: "support.read",
+  SUPPORT_MANAGE: "support.manage",
   STAFF_MANAGE: "staff.manage",
   AUDIT_READ: "audit.read",
   COMPANY_FILES_MANAGE: "company_files.manage",
@@ -81,7 +84,8 @@ export const ROLE_META: Record<StaffRole, { label: string; department: Departmen
     permissions: [
       P.USERS_READ, P.USERS_MANAGE, P.PUSH_READ, P.PUSH_SEND, P.PUSH_BROADCAST, P.ANALYTICS_READ,
       P.SUBSCRIPTIONS_READ, P.SUBSCRIPTIONS_WRITE, P.SUBSCRIPTIONS_MANAGE,
-      P.SCHEME_APPLICATIONS_READ, P.SCHEME_APPLICATIONS_REVIEW, P.MARKETING_READ, P.APP_APPROVE, P.STAFF_MANAGE
+      P.SCHEME_APPLICATIONS_READ, P.SCHEME_APPLICATIONS_REVIEW, P.MARKETING_READ, P.APP_APPROVE,
+      P.SUPPORT_READ, P.SUPPORT_MANAGE, P.STAFF_MANAGE
     ]
   },
   app_admin: {
@@ -90,7 +94,8 @@ export const ROLE_META: Record<StaffRole, { label: string; department: Departmen
     level: 3,
     permissions: [
       P.USERS_READ, P.PUSH_READ, P.PUSH_SEND, P.ANALYTICS_READ, P.SUBSCRIPTIONS_READ, P.SUBSCRIPTIONS_WRITE,
-      P.SCHEME_APPLICATIONS_READ, P.SCHEME_APPLICATIONS_REVIEW, P.MARKETING_READ
+      P.SCHEME_APPLICATIONS_READ, P.SCHEME_APPLICATIONS_REVIEW, P.MARKETING_READ,
+      P.SUPPORT_READ, P.SUPPORT_MANAGE
     ]
   },
   clinical_admin: {
@@ -169,6 +174,8 @@ const PERMISSION_INFO: Record<Permission, { area: string; label: string }> = {
   [P.PAYOUTS_MANAGE]: { area: "Commission & payouts", label: "Set commission, approve withdrawals" },
   [P.REFERRALS_READ]: { area: "Gynac referrals", label: "View" },
   [P.REFERRALS_MANAGE]: { area: "Gynac referrals", label: "Review referrals, grant & revoke free sessions" },
+  [P.SUPPORT_READ]: { area: "Support tickets", label: "View" },
+  [P.SUPPORT_MANAGE]: { area: "Support tickets", label: "Reply, assign & change status" },
   [P.STAFF_MANAGE]: { area: "Team", label: "Invite & manage roles" },
   [P.AUDIT_READ]: { area: "Audit logs", label: "View" },
   [P.COMPANY_FILES_MANAGE]: { area: "Company files", label: "Manage" },

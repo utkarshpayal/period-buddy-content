@@ -16,6 +16,7 @@ import {
   Inbox,
   Landmark,
   LayoutGrid,
+  LifeBuoy,
   ScrollText,
   Settings,
   Stethoscope,
@@ -41,6 +42,7 @@ import { UsersPage } from "./pages/UsersPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { SubscriptionsPage } from "./pages/subscriptions/SubscriptionsPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
+import { SupportTicketsPage } from "./pages/SupportTicketsPage";
 import { DoctorsPage } from "./pages/DoctorsPage";
 import { ClinicalFinancePage } from "./pages/clinicalFinance/ClinicalFinancePage";
 import { GynacReferralsPage } from "./pages/referrals/GynacReferralsPage";
@@ -59,7 +61,7 @@ export type NavItem = {
   permissions: Permission[];
   /** One-liner used on the Home page's shortcuts. */
   description: string;
-  badge?: "approvals";
+  badge?: "approvals" | "support";
 };
 
 export type NavSection = { id: string; label: string; items: NavItem[] };
@@ -107,7 +109,16 @@ export const NAV_SECTIONS: NavSection[] = [
       { path: "/users", label: "Users", icon: Users, element: <UsersPage />, permissions: [P.USERS_READ], description: "App accounts and their activity" },
       { path: "/notifications", label: "Push Notifications", icon: Bell, element: <NotificationsPage />, permissions: [P.PUSH_READ], description: "Broadcasts and direct pushes" },
       { path: "/subscriptions", label: "Subscriptions", icon: CreditCard, element: <SubscriptionsPage />, permissions: [P.SUBSCRIPTIONS_READ], description: "Plans, paywall features and coupons" },
-      { path: "/scheme-applications", label: "Scheme Applications", icon: ClipboardCheck, element: <SchemeApplicationsPage />, permissions: [P.SCHEME_APPLICATIONS_READ], description: "Review users' benefit applications" }
+      { path: "/scheme-applications", label: "Scheme Applications", icon: ClipboardCheck, element: <SchemeApplicationsPage />, permissions: [P.SCHEME_APPLICATIONS_READ], description: "Review users' benefit applications" },
+      {
+        path: "/support",
+        label: "Support",
+        icon: LifeBuoy,
+        element: <SupportTicketsPage />,
+        permissions: [P.SUPPORT_READ],
+        description: "Help & support tickets from the app",
+        badge: "support"
+      }
     ]
   },
   {

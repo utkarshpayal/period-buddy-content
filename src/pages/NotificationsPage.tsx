@@ -17,6 +17,8 @@ import {
   Search,
   Send,
   Smartphone,
+  Sparkles,
+  Store,
   UserPlus,
   Users,
   UsersRound,
@@ -29,6 +31,7 @@ import {
   BroadcastStatus,
   Pagination,
   PushBroadcast,
+  PushData,
   PushSchedule,
   Recipient,
   ScheduleStatus,
@@ -59,6 +62,16 @@ import {
   whenFromSchedule
 } from "./notifications/schedule";
 import { EmojiButton, IconPicker, ImageField, insertAtCursor, pushIconFor, type BannerPick } from "./notifications/look";
+import {
+  StoreLinkFields,
+  TapChip,
+  iosStoreUrlError,
+  storeLinkLabel,
+  storeUrlError,
+  tapFromData,
+  tapPayload,
+  type TapMode
+} from "./notifications/storeLink";
 
 /* ------------------------------ Constants ------------------------------ */
 
@@ -102,6 +115,15 @@ const DESTINATIONS: { value: string; label: string }[] = [
   { value: "/government-schemes", label: "Government schemes" },
   { value: "/subscription", label: "My subscription / plans" }
 ];
+
+const routeLabel = (route: string) => DESTINATIONS.find((d) => d.value === route)?.label ?? route;
+
+// Quick fill for an "Update the app" push: text, icon and "Tap opens: App store".
+const UPDATE_TEMPLATE = {
+  title: "A new version of The Nura is here",
+  body: "Update now for the latest features and fixes. Tap to open the store.",
+  icon: "sparkles"
+};
 
 const MODES: { value: Mode; label: string; hint: string; icon: React.ReactNode }[] = [
   { value: "everyone", label: "Everyone", hint: "All active accounts", icon: <UsersRound size={18} /> },
@@ -178,9 +200,27 @@ const ENDED: ScheduleStatus[] = ["completed", "cancelled"];
 
 const fmt = (n: number) => n.toLocaleString();
 
-type Draft = { title: string; body: string; route: string; icon: string; image: string };
+type Draft = {
+  title: string;
+  body: string;
+  route: string;
+  icon: string;
+  image: string;
+  tap: TapMode;
+  storeUrl: string;
+  iosStoreUrl: string;
+};
 
-const EMPTY_DRAFT: Draft = { title: "", body: "", route: "", icon: "", image: "" };
+const EMPTY_DRAFT: Draft = {
+  title: "",
+  body: "",
+  route: "",
+  icon: "",
+  image: "",
+  tap: "route",
+  storeUrl: "",
+  iosStoreUrl: ""
+};
 
 const loadDraft = (): Draft => {
   try {
@@ -192,7 +232,10 @@ const loadDraft = (): Draft => {
         body: d.body ?? "",
         route: d.route ?? "",
         icon: d.icon ?? "",
-        image: d.image ?? ""
+        image: d.image ?? "",
+        tap: d.tap === "store" ? "store" : "route",
+        storeUrl: d.storeUrl ?? "",
+        iosStoreUrl: d.iosStoreUrl ?? ""
       };
     }
   } catch {
@@ -203,7 +246,8 @@ const loadDraft = (): Draft => {
 
 const saveDraft = (d: Draft) => {
   try {
-    if (d.title || d.body || d.route || d.icon || d.image) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+    if (d.title || d.body || d.route || d.icon || d.image || d.tap === "store" || d.storeUrl || d.iosStoreUrl)
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
     else localStorage.removeItem(DRAFT_KEY);
   } catch {
     /* storage unavailable */
@@ -438,6 +482,10 @@ export const NotificationsPage: React.FC = () => {
   const [route, setRoute] = useState(initialDraft.route);
   const [icon, setIcon] = useState(initialDraft.icon);
   const [image, setImage] = useState(initialDraft.image);
+  // What a tap opens: a screen in the app (route) or an app store (update push).
+  const [tap, setTap] = useState<TapMode>(initialDraft.tap);
+  const [storeUrl, setStoreUrl] = useState(initialDraft.storeUrl);
+  const [iosStoreUrl, setIosStoreUrl] = useState(initialDraft.iosStoreUrl);
   const [showTest, setShowTest] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [when, setWhen] = useState<WhenState>(defaultWhen);
@@ -467,7 +515,10 @@ export const NotificationsPage: React.FC = () => {
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => saveDraft({ title, body, route, icon, image }), [title, body, route, icon, image]);
+  useEffect(
+    () => saveDraft({ title, body, route, icon, image, tap, storeUrl, iosStoreUrl }),
+    [title, body, route, icon, image, tap, storeUrl, iosStoreUrl]
+  );
 
   // A user handed over from the Users page ("Send push notification").
   useEffect(() => {
@@ -572,6 +623,8 @@ export const NotificationsPage: React.FC = () => {
   if (!t) blockers.push("Add a title");
   if (!b) blockers.push("Write a message");
   if (image && !image.startsWith("https://")) blockers.push("Image link must start with https://");
+  const storeError = tap === "store" ? storeUrlError(storeUrl) ?? iosStoreUrlError(iosStoreUrl) : null;
+  if (storeError) blockers.push(storeError);
   if (mode === "people" && picked.length === 0) blockers.push("Pick at least one recipient");
   if (mode !== "people" && bulkActive && when.mode === "now")
     blockers.push("Wait for the current broadcast to finish");
@@ -596,13 +649,14 @@ export const NotificationsPage: React.FC = () => {
     setError(null);
     if (!t || !b) return setError("Add a title and message before sending a test.");
     if (!testEmail.trim()) return setError("Enter the email of the account to test on.");
+    if (storeError) return setError(storeError);
     setTesting(true);
     try {
       const { detailsHidden } = await sendTestNotification({
         title: t,
         body: b,
         email: testEmail.trim(),
-        route: route || undefined,
+        ...tapPayload(tap, route, storeUrl, iosStoreUrl),
         icon: icon || undefined,
         image: image || undefined
       });
@@ -629,6 +683,9 @@ export const NotificationsPage: React.FC = () => {
     setRoute("");
     setIcon("");
     setImage("");
+    setTap("route");
+    setStoreUrl("");
+    setIosStoreUrl("");
     setWhen(defaultWhen());
     setEditing(null);
   };
@@ -642,7 +699,7 @@ export const NotificationsPage: React.FC = () => {
       audience: mode === "people" ? ("selected" as const) : countAudience,
       userIds: mode === "people" ? picked.map((p) => p._id) : undefined,
       saveToInbox,
-      route: route || undefined,
+      ...tapPayload(tap, route, storeUrl, iosStoreUrl),
       icon: icon || undefined,
       image: image || undefined
     };
@@ -708,10 +765,18 @@ export const NotificationsPage: React.FC = () => {
     }
   };
 
+  const applyTap = (data?: PushData | null) => {
+    const next = tapFromData(data);
+    setTap(next.mode);
+    setRoute(next.route);
+    setStoreUrl(next.storeUrl);
+    setIosStoreUrl(next.iosStoreUrl);
+  };
+
   const handleReuse = (item: PushBroadcast | PushSchedule) => {
     setTitle(item.title);
     setBody(item.body);
-    setRoute(item.data?.route ?? "");
+    applyTap(item.data);
     setIcon(item.data?.icon ?? "");
     setImage(item.data?.image ?? "");
     setSaveToInbox(item.saveToInbox);
@@ -724,7 +789,7 @@ export const NotificationsPage: React.FC = () => {
     setImage(pick.image);
     if (!title.trim()) setTitle(pick.title.slice(0, TITLE_MAX));
     if (!body.trim() && pick.body) setBody(pick.body.slice(0, BODY_MAX));
-    if (!route && pick.route) {
+    if (tap === "route" && !route && pick.route) {
       // Banners use expo-router group paths ("/(app)/(dashboard)/tracker").
       const path = pick.route.replace(/\/\([^)]*\)/g, "") || "/";
       if (DESTINATIONS.some((d) => d.value === path)) setRoute(path);
@@ -739,7 +804,7 @@ export const NotificationsPage: React.FC = () => {
       const { schedule, recipients } = await getSchedule(item._id);
       setTitle(schedule.title);
       setBody(schedule.body);
-      setRoute(schedule.data?.route ?? "");
+      applyTap(schedule.data);
       setIcon(schedule.data?.icon ?? "");
       setImage(schedule.data?.image ?? "");
       setSaveToInbox(schedule.saveToInbox);
@@ -783,6 +848,15 @@ export const NotificationsPage: React.FC = () => {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const handleUpdateTemplate = () => {
+    const hasText = title.trim() || body.trim();
+    if (hasText && !window.confirm("Replace the title and message with the “New version available” template?")) return;
+    setTitle(UPDATE_TEMPLATE.title);
+    setBody(UPDATE_TEMPLATE.body);
+    setIcon(UPDATE_TEMPLATE.icon);
+    setTap("store");
   };
 
   const handleCancelSchedule = (item: PushSchedule) => {
@@ -939,6 +1013,13 @@ export const NotificationsPage: React.FC = () => {
               <h3>Write the message</h3>
             </div>
 
+            <div className="pn-templates">
+              <span>Quick template:</span>
+              <button type="button" className="admin-chip" onClick={handleUpdateTemplate}>
+                <Sparkles size={13} /> New version available
+              </button>
+            </div>
+
             <div className="pn-field">
               <span className="pn-label-row">
                 <label htmlFor="pn-title">Title</label>
@@ -992,19 +1073,62 @@ export const NotificationsPage: React.FC = () => {
               )}
             </div>
 
-            <label className="pn-field">
+            <div className="pn-field">
               <span className="pn-label-row">
-                <span>Opens in the app</span>
+                <span>Tap opens</span>
               </span>
-              <select value={route} onChange={(e) => setRoute(e.target.value)}>
-                {DESTINATIONS.map((d) => (
-                  <option key={d.value} value={d.value}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              <small className="pn-muted">The screen people land on when they tap the notification.</small>
-            </label>
+              <div className="pn-modes pn-modes-2" role="radiogroup" aria-label="Tap opens">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={tap === "route"}
+                  className={`pn-mode ${tap === "route" ? "is-active" : ""}`}
+                  onClick={() => setTap("route")}
+                >
+                  <span className="pn-mode-icon">
+                    <Smartphone size={18} />
+                  </span>
+                  <span className="pn-mode-label">Screen in the app</span>
+                  <span className="pn-mode-hint">Home, tracker, blogs…</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={tap === "store"}
+                  className={`pn-mode ${tap === "store" ? "is-active" : ""}`}
+                  onClick={() => setTap("store")}
+                >
+                  <span className="pn-mode-icon">
+                    <Store size={18} />
+                  </span>
+                  <span className="pn-mode-label">App store (update)</span>
+                  <span className="pn-mode-hint">Play Store / App Store page</span>
+                </button>
+              </div>
+            </div>
+
+            {tap === "route" ? (
+              <label className="pn-field">
+                <span className="pn-label-row">
+                  <span>Opens in the app</span>
+                </span>
+                <select value={route} onChange={(e) => setRoute(e.target.value)}>
+                  {DESTINATIONS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <small className="pn-muted">The screen people land on when they tap the notification.</small>
+              </label>
+            ) : (
+              <StoreLinkFields
+                storeUrl={storeUrl}
+                iosStoreUrl={iosStoreUrl}
+                onStoreUrl={setStoreUrl}
+                onIosStoreUrl={setIosStoreUrl}
+              />
+            )}
 
             <div className="pn-field">
               <span className="pn-label-row">
@@ -1119,6 +1243,7 @@ export const NotificationsPage: React.FC = () => {
         loading={schedulesLoading}
         busyId={busyId}
         audienceText={scheduleAudienceText}
+        routeLabel={routeLabel}
         onEdit={handleEdit}
         onReuse={handleReuse}
         onPause={(item) => runScheduleAction(item, pauseSchedule, "Schedule paused.")}
@@ -1158,6 +1283,7 @@ export const NotificationsPage: React.FC = () => {
                     {item.audience === "selected" ? <UserPlus size={13} /> : <Users size={13} />}
                     {audienceText(item)}
                   </span>
+                  <TapChip data={item.data} routeLabel={routeLabel} />
                   {item.scheduleId && (
                     <span className="pn-item-aud" title="Sent by a scheduled push">
                       <CalendarClock size={13} /> Scheduled
@@ -1293,7 +1419,13 @@ export const NotificationsPage: React.FC = () => {
               </div>
               <div>
                 <dt>Opens</dt>
-                <dd>{DESTINATIONS.find((d) => d.value === route)?.label ?? route}</dd>
+                <dd>
+                  {tap === "store"
+                    ? storeUrl.trim() || iosStoreUrl.trim()
+                      ? storeLinkLabel({ storeUrl: storeUrl.trim(), iosStoreUrl: iosStoreUrl.trim() })
+                      : "App store (links from App settings)"
+                    : routeLabel(route)}
+                </dd>
               </div>
               <div>
                 <dt>Icon</dt>

@@ -1,12 +1,12 @@
 import { throwIfPendingApproval } from "./approval";
 import { starterContent } from "../data/starterContent";
-import { ContentItem, ContentType, CycleStage } from "../types/content";
+import { ContentItem, ContentReview, ContentStatus, ContentType, CycleStage, ReviewAction } from "../types/content";
 import { getApiToken, handleUnauthorized } from "./authApi";
 import { uid } from "../lib/uid";
 
 export type ApiSource = "api" | "blocked" | "local";
 
-type BackendContentItem = Omit<Partial<ContentItem>, "status" | "type"> & {
+type BackendContentItem = Omit<Partial<ContentItem>, "status" | "type" | "review"> & {
   _id?: string;
   createdAt?: string;
   content?: string;
@@ -24,6 +24,19 @@ type BackendContentItem = Omit<Partial<ContentItem>, "status" | "type"> & {
   type?: string;
   // Production counter names
   viewCount?: number;
+  metrics?: {
+    readerCount?: number;
+    readSessionCount?: number;
+    averageReadSeconds?: number | null;
+    completionRate?: number | null;
+    // Reels (videos)
+    views?: number;
+    likes?: number;
+    comments?: number;
+    saves?: number;
+  };
+  commentCount?: number;
+  saveCount?: number;
   likeCount?: number;
   keywords?: string[];
   version?: number;
@@ -46,6 +59,8 @@ type BackendContentItem = Omit<Partial<ContentItem>, "status" | "type"> & {
   prevention?: string;
   whenToSeeDoctor?: string;
   category?: string;
+  reviewedAt?: string;
+  review?: Partial<ContentReview>;
 };
 
 // Grouped-by-type shape returned by GET /api/content: each content type is
@@ -91,6 +106,45 @@ const contentEndpoint = import.meta.env.VITE_CONTENT_ENDPOINT ?? "/api/content";
 const storageKey = "period-buddy-content-items";
 
 const isApiConfigured = Boolean(apiBaseUrl);
+
+/** Blog categories: the backend's lowercase enum (enums.js blogCategoryEnum). */
+export const BLOG_CATEGORIES = [
+  { value: "general", label: "General" },
+  { value: "health", label: "Health" },
+  { value: "lifestyle", label: "Lifestyle" },
+  { value: "beauty", label: "Beauty" }
+] as const;
+
+/** Statuses a type can actually hold. Only blogs can be archived; every type
+ * can wait for medical review ("review" = the API's `in_review`). */
+export function statusesFor(type: ContentType): ContentStatus[] {
+  return type === "blog" ? ["published", "review", "draft", "archived"] : ["published", "review", "draft"];
+}
+
+/**
+ * The `status` the content API expects for a type: blogs take
+ * published/draft/archived, Q&As published/draft, and videos, health issues
+ * and wellbeing resources active/inactive (see GET /api/content/types).
+ */
+function backendStatusFor(type: ContentType, status: ContentStatus) {
+  if (status === "review") return "in_review";
+  const live = status === "published";
+  if (type === "blog") return live ? "published" : status === "archived" ? "archived" : "draft";
+  if (type === "qa") return live ? "published" : "draft";
+  return live ? "active" : "inactive";
+}
+
+/** Same estimate the backend stores (utils/blogReadTime.js): ~200 words a minute, at least 1. */
+export function estimateReadMinutes(content: string) {
+  const words = String(content ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\]\([^)]*\)/g, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .split(/\s+/)
+    .filter((token) => /[\p{L}\p{N}]/u.test(token)).length;
+  return Math.max(1, Math.round(words / 200));
+}
 
 const backendCategoryByStage: Record<ContentItem["stage"], string> = {
   Emergency: "health",
@@ -168,6 +222,10 @@ function writeLocalContent(items: ContentItem[]) {
 }
 
 function normalizeStatus(item: BackendContentItem) {
+  if (item.status === "in_review") {
+    return "review";
+  }
+
   if (item.status === "active" || item.isActive === true) {
     return "published";
   }
@@ -237,7 +295,24 @@ function normalizeLocalItem(item: ContentItem & { type?: string }): ContentItem 
   };
 }
 
+/** The server's review stamp + workflow, from `review` or the top-level fields. */
+function normalizeReview(item: BackendContentItem): ContentReview {
+  const review = item.review ?? {};
+  return {
+    medicallyReviewed: Boolean(review.medicallyReviewed ?? item.medicallyReviewed),
+    by: review.by ?? (item.reviewedBy || null),
+    at: review.at ?? item.reviewedAt ?? null,
+    note: review.note ?? null,
+    submittedAt: review.submittedAt ?? null,
+    submittedBy: review.submittedBy ?? null,
+    sentBackAt: review.sentBackAt ?? null,
+    sentBackBy: review.sentBackBy ?? null,
+    sentBackNote: review.sentBackNote ?? null
+  };
+}
+
 function normalizeItem(item: BackendContentItem): ContentItem {
+  const review = normalizeReview(item);
   let type = normalizeType(item.type);
   
   if (type === "guide" && (item.resourceType === "sexual_wellbeing" || item.type === "sexual_wellbeing")) {
@@ -276,16 +351,34 @@ function normalizeItem(item: BackendContentItem): ContentItem {
     question: item.question ?? "",
     answer: item.answer ?? "",
     isSensitive: item.isSensitive ?? false,
-    medicallyReviewed: item.medicallyReviewed ?? false,
+    medicallyReviewed: review.medicallyReviewed,
     videoUrl: item.videoUrl ?? item.directMp4Url ?? "",
     imageUrl: item.imageUrl ?? item.coverImageUrl ?? item.thumbnailUrl ?? "",
     tags: Array.isArray(item.tags) ? item.tags : [],
     author: item.author ?? "Period Buddy Team",
-    reviewedBy: item.reviewedBy ?? "",
+    reviewedBy: review.by ?? "",
+    review,
     sourceLinks: Array.isArray(item.sourceLinks) ? item.sourceLinks : [],
     updatedAt: item.updatedAt ?? item.createdAt ?? new Date().toISOString(),
-    reviewRequired: item.reviewRequired ?? !item.medicallyReviewed,
+    reviewRequired: !review.medicallyReviewed,
     readTimeMinutes: typeof item.readTimeMinutes === "number" ? item.readTimeMinutes : (typeof item.estimatedReadTime === "number" ? item.estimatedReadTime : 0),
+    readStats: item.metrics
+      ? {
+          reads: item.metrics.readerCount ?? item.metrics.readSessionCount ?? 0,
+          visits: item.metrics.readSessionCount ?? 0,
+          averageReadSeconds: item.metrics.averageReadSeconds ?? null,
+          completionRate: item.metrics.completionRate ?? null
+        }
+      : undefined,
+    engagement: type === "video"
+      ? {
+          views: item.metrics?.views ?? item.viewCount ?? 0,
+          likes: item.metrics?.likes ?? item.likeCount ?? 0,
+          comments: item.metrics?.comments ?? item.commentCount ?? 0,
+          saves: item.metrics?.saves ?? item.saveCount ?? 0
+        }
+      : undefined,
+    category: type === "blog" ? item.category || "general" : item.category,
     seoTitle: item.seoTitle ?? "",
     seoDescription: item.seoDescription ?? "",
     keywords: Array.isArray(item.keywords) ? item.keywords : [],
@@ -368,22 +461,21 @@ function parseItem(response: ContentResponse) {
 
 function toBackendPayload(item: ContentItem) {
   const content = item.body || item.answer || item.summary || item.title;
-  const isPublished = item.status === "published";
 
   if (item.type === "qa") {
     const question = item.question || item.title;
     const answer = item.answer || item.body;
+    // The review stamp is server-only: never send it back.
+    const { medicallyReviewed, reviewedBy, review, reviewRequired, ...rest } = item;
 
     return {
-      ...item,
+      ...rest,
       answer,
       category: backendCategoryByStage[item.stage] ?? "general",
       content: answer,
-      isPublished,
+      status: backendStatusFor("qa", item.status),
       isSensitive: item.isSensitive,
-      medicallyReviewed: item.medicallyReviewed,
       question,
-      reviewedBy: item.reviewedBy,
       shortAnswer: item.summary,
       sourceLinks: item.sourceLinks,
       title: question
@@ -405,8 +497,7 @@ function toBackendPayload(item: ContentItem) {
       prevention: item.prevention || "",
       whenToSeeDoctor: item.whenToSeeDoctor || "",
       order: Number(item.order) || 0,
-      isActive: isPublished,
-      isPublished
+      status: backendStatusFor("issue", item.status)
     };
   }
 
@@ -423,8 +514,10 @@ function toBackendPayload(item: ContentItem) {
       directMp4Url: item.videoUrl,
       pollQuestion: item.pollQuestion || "",
       pollOptions: item.pollOptions || [],
-      isActive: isPublished,
-      isPublished
+      // Caption and #tags shown under the reel in the app.
+      description: item.summary || "",
+      tags: item.tags.filter(Boolean),
+      status: backendStatusFor("video", item.status)
     };
   }
 
@@ -441,31 +534,34 @@ function toBackendPayload(item: ContentItem) {
       videoUrl: item.videoUrl || "",
       audioUrl: item.audioUrl || "",
       order: Number(item.order) || 0,
-      isActive: isPublished,
-      isPublished
+      status: backendStatusFor(item.type, item.status)
     };
   }
 
-  // Map stage to backend blogCategory enum values
-  const blogCategoryByStage: Record<string, string> = {
-    Emergency: "health",
-    General: "general",
-    Ovulation: "health",
-    Period: "health",
-    PMS: "health",
-    Tracking: "general",
-    Wellness: "lifestyle"
-  };
-
+  // Blog: only the fields the API reads. `readTimeMinutes` is computed by the
+  // server from `content`, and `category` is the lowercase enum (an older
+  // out-of-list value is echoed back unchanged, which the API leaves alone).
   return {
-    ...item,
+    title: item.title,
     content,
     excerpt: item.summary,
-    category: blogCategoryByStage[item.stage] ?? "general",
-    imageUrl: item.imageUrl || undefined,
-    isActive: isPublished,
-    isPublished
+    category: item.category || "general",
+    tags: item.tags.filter(Boolean),
+    author: item.author,
+    coverImageUrl: item.imageUrl || undefined,
+    seoTitle: item.seoTitle,
+    seoDescription: item.seoDescription,
+    keywords: (item.keywords ?? []).filter(Boolean),
+    status: backendStatusFor("blog", item.status)
   };
+}
+
+/** Save body for create/update. An item waiting for medical review keeps its
+ * status: the editor never moves it (only the review actions do). */
+function toSavePayload(item: ContentItem) {
+  const payload: Record<string, unknown> = toBackendPayload(item);
+  if (item.status === "review") delete payload.status;
+  return payload;
 }
 
 async function apiRequest<T>(path: string, options: RequestInit = {}) {
@@ -532,6 +628,22 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
   return body;
 }
 
+const BACKEND_TYPES = ["blog", "video", "question-answer", "health-issue", "wellbeing"];
+const PAGE_SIZE = 100;
+/** Safety stop: 50 pages = 5000 items of one type. */
+const MAX_PAGES = 50;
+
+async function loadAllOfType(type: string): Promise<ContentItem[]> {
+  const all: ContentItem[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const response = await apiRequest<ContentCollectionResponse>(endpoint(`?type=${type}&limit=${PAGE_SIZE}&page=${page}`));
+    const items = parseItems(response);
+    all.push(...items);
+    if (items.length < PAGE_SIZE) break;
+  }
+  return all;
+}
+
 export async function loadContent(): Promise<LoadResult> {
   if (!isApiConfigured) {
     return {
@@ -542,10 +654,12 @@ export async function loadContent(): Promise<LoadResult> {
   }
 
   try {
-    const response = await apiRequest<ContentCollectionResponse>(endpoint());
+    // The API caps a request at 100 per type, so load each type page by page
+    // until it runs out: lists and status counts then cover everything.
+    const items = (await Promise.all(BACKEND_TYPES.map(loadAllOfType))).flat();
 
     return {
-      items: parseItems(response),
+      items,
       message: "Connected to the Period Buddy content API.",
       source: "api"
     };
@@ -576,7 +690,7 @@ export async function createContent(item: ContentItem): Promise<MutationResult> 
 
   try {
     const response = await apiRequest<ContentResponse>(endpointWithType(item.type), {
-      body: JSON.stringify(toBackendPayload(item)),
+      body: JSON.stringify(toSavePayload(item)),
       method: "POST"
     });
 
@@ -603,7 +717,7 @@ export async function updateContent(id: string, item: ContentItem): Promise<Muta
 
   try {
     const response = await apiRequest<ContentResponse>(endpointWithId(item.type, id), {
-      body: JSON.stringify(toBackendPayload(item)),
+      body: JSON.stringify(toSavePayload(item)),
       method: "PUT"
     });
 
@@ -639,4 +753,61 @@ export async function deleteContent(id: string, type: ContentType): Promise<Muta
   } catch (error) {
     throw error instanceof Error ? error : new Error(getErrorMessage(error));
   }
+}
+
+/**
+ * Publish / unpublish / archive one item: PATCH /api/content/:type/:id/publish
+ * with the status the type expects. Resolves to the saved item from the
+ * response (staff without content.publish get a PendingApprovalError).
+ */
+export async function setContentStatus(item: ContentItem, status: ContentStatus): Promise<MutationResult> {
+  if (!isApiConfigured) {
+    const saved = { ...item, status, updatedAt: new Date().toISOString() };
+    writeLocalContent(readLocalContent().map((contentItem) => (contentItem.id === item.id ? saved : contentItem)));
+    return { item: saved, message: "Updated local browser storage.", source: "local" };
+  }
+
+  const response = await apiRequest<ContentResponse>(`${endpointWithId(item.type, item.id)}/publish`, {
+    body: JSON.stringify({ status: backendStatusFor(item.type, status) }),
+    method: "PATCH"
+  });
+  const saved = parseItem(response);
+  // Guides and wellbeing tips share one backend type; keep the page's own type.
+  return {
+    item: { ...saved, type: item.type },
+    message: "Updated through the content API.",
+    source: "api"
+  };
+}
+
+/**
+ * Medical review: POST /api/content/:type/:id/review with
+ * `submit` (writers), or `approve` / `mark_reviewed` / `send_back` (needs
+ * content.approve; `send_back` needs a note). Resolves to the saved item.
+ */
+export async function reviewContent(item: ContentItem, action: ReviewAction, note?: string): Promise<MutationResult> {
+  if (!isApiConfigured) {
+    const status: ContentStatus =
+      action === "submit" ? "review" : action === "approve" ? "published" : action === "send_back" ? "draft" : item.status === "review" ? "draft" : item.status;
+    const stamped = action === "approve" || action === "mark_reviewed";
+    const saved: ContentItem = {
+      ...item,
+      status,
+      medicallyReviewed: stamped ? true : action === "send_back" ? false : item.medicallyReviewed,
+      updatedAt: new Date().toISOString()
+    };
+    writeLocalContent(readLocalContent().map((contentItem) => (contentItem.id === item.id ? saved : contentItem)));
+    return { item: saved, message: "Updated local browser storage.", source: "local" };
+  }
+
+  const response = await apiRequest<ContentResponse>(`${endpointWithId(item.type, item.id)}/review`, {
+    body: JSON.stringify(note ? { action, note } : { action }),
+    method: "POST"
+  });
+  const saved = parseItem(response);
+  return {
+    item: { ...saved, type: item.type },
+    message: "Updated through the content API.",
+    source: "api"
+  };
 }

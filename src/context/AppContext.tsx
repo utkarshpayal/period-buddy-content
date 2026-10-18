@@ -16,10 +16,13 @@ import {
   createContent,
   updateContent,
   deleteContent,
+  setContentStatus,
+  reviewContent,
   ApiSource
 } from "../api/contentApi";
 import { isAdminApiConfigured } from "../api/adminApi";
 import { isPendingApprovalError, PENDING_APPROVAL_EVENT } from "../api/approval";
+import { countAwaitingTickets, SUPPORT_CHANGED_EVENT } from "../api/supportApi";
 import {
   ChangeRequest,
   getChangeRequestSummary,
@@ -28,7 +31,7 @@ import {
 } from "../api/workspaceApi";
 import { deriveAccess, isStaffRole, PERMISSIONS, Permission, WorkspaceAccess } from "../auth/access";
 import { useToast } from "../components/Toast";
-import { ContentItem, ContentType } from "../types/content";
+import { ContentItem, ContentStatus, ContentType, ReviewAction } from "../types/content";
 
 type ApprovalSummary = { toReview: number; minePending: number };
 
@@ -52,10 +55,16 @@ interface AppContextType {
   createItem: (item: ContentItem) => Promise<boolean>;
   updateItem: (id: string, item: ContentItem) => Promise<boolean>;
   deleteItem: (id: string, type: ContentType) => Promise<boolean>;
+  /** Publish / unpublish / archive one item; its row is replaced by the saved item. */
+  setItemStatus: (item: ContentItem, status: ContentStatus) => Promise<boolean>;
+  /** Medical review: submit / approve & publish / mark reviewed / send back (note). */
+  reviewItem: (item: ContentItem, action: ReviewAction, note?: string) => Promise<boolean>;
   /** Pending content change requests, keyed by content id. */
   pendingContent: Map<string, ChangeRequest>;
   approvalSummary: ApprovalSummary;
   refreshApprovals: () => Promise<void>;
+  /** Support tickets waiting on a staff reply (sidebar badge; 0 without support.read). */
+  supportAwaiting: number;
   /**
    * Resolves to null on success, the error message to show, or the emailed
    * code step (staff and doctors, when the backend asks for it).
@@ -79,6 +88,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sessionExpired, setSessionExpired] = useState(false);
   const [pendingContent, setPendingContent] = useState<Map<string, ChangeRequest>>(new Map());
   const [approvalSummary, setApprovalSummary] = useState<ApprovalSummary>({ toReview: 0, minePending: 0 });
+  const [supportAwaiting, setSupportAwaiting] = useState(0);
 
   const role = authSession?.user?.role ?? null;
   const isAuthenticated = Boolean(authSession?.token);
@@ -188,6 +198,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [refreshApprovals, usesApprovals]);
 
+  // Support badge: tickets where the person replied last. Best-effort, like
+  // the approvals badge; refreshed every minute and after changes on the page.
+  const usesSupport = usesApprovals && can(PERMISSIONS.SUPPORT_READ);
+  useEffect(() => {
+    if (!usesSupport) {
+      setSupportAwaiting(0);
+      return;
+    }
+    const refresh = () =>
+      countAwaitingTickets()
+        .then(setSupportAwaiting)
+        .catch(() => {
+          /* badges are best-effort */
+        });
+    refresh();
+    window.addEventListener(SUPPORT_CHANGED_EVENT, refresh);
+    const timer = window.setInterval(refresh, 60_000);
+    return () => {
+      window.removeEventListener(SUPPORT_CHANGED_EVENT, refresh);
+      window.clearInterval(timer);
+    };
+  }, [usesSupport]);
+
   const refreshContent = async () => {
     await Promise.all([fetchContent(), refreshApprovals()]);
   };
@@ -240,6 +273,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return reportMutationError(error, "Unable to update content.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const setItemStatus = async (item: ContentItem, status: ContentStatus): Promise<boolean> => {
+    try {
+      const result = await setContentStatus(item, status);
+      const savedItem = result.item ?? { ...item, status };
+      setItems((prev) => prev.map((i) => (i.id === item.id ? savedItem : i)));
+      setApiMessage(result.message);
+      setApiSource(result.source);
+      toast.success(
+        savedItem.status === "published" ? "Published." : savedItem.status === "archived" ? "Archived." : "Moved to drafts."
+      );
+      return true;
+    } catch (error) {
+      return reportMutationError(error, "Unable to change the status.");
+    }
+  };
+
+  const reviewItem = async (item: ContentItem, action: ReviewAction, note?: string): Promise<boolean> => {
+    try {
+      const result = await reviewContent(item, action, note);
+      const savedItem = result.item ?? item;
+      setItems((prev) => prev.map((i) => (i.id === item.id ? savedItem : i)));
+      setApiMessage(result.message);
+      setApiSource(result.source);
+      toast.success(
+        action === "submit"
+          ? "Submitted for medical review."
+          : action === "approve"
+            ? "Approved and published."
+            : action === "mark_reviewed"
+              ? "Marked as medically reviewed."
+              : "Sent back to drafts."
+      );
+      return true;
+    } catch (error) {
+      return reportMutationError(error, "Unable to update the review.");
     }
   };
 
@@ -315,9 +386,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createItem,
         updateItem,
         deleteItem,
+        setItemStatus,
+        reviewItem,
         pendingContent,
         approvalSummary,
         refreshApprovals,
+        supportAwaiting,
         login,
         verifyCode,
         logout

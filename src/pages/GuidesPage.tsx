@@ -8,6 +8,7 @@ import { useAppContext } from "../context/AppContext";
 import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
 import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage, ContentType } from "../types/content";
 import { uid } from "../lib/uid";
@@ -112,6 +113,8 @@ const WellbeingAppPreview: React.FC<{ draft: ContentItem }> = ({ draft }) => {
 
 export const GuidesPage: React.FC = () => {
   const { items, isLoading, isSaving, createItem, updateItem, deleteItem } = useAppContext();
+  // Writers without publish rights submit for medical review instead.
+  const canPublish = useCanPublish();
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyGuide());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -258,16 +261,8 @@ export const GuidesPage: React.FC = () => {
                 value={query}
               />
             </label>
-            <select
-              onChange={(e) => setStatusFilter(e.target.value as ContentStatus | "all")}
-              value={statusFilter}
-            >
-              <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
           </div>
+          <StatusTabs type="guide" items={guides} value={statusFilter} onChange={setStatusFilter} />
 
           <div className="entry-list">
             {isLoading ? (
@@ -295,8 +290,9 @@ export const GuidesPage: React.FC = () => {
                     <div>
                       <div className="entry-title-row">
                         <h4>{guide.title}</h4>
-                        <span className={`status-chip ${guide.status}`}>{guide.status}</span>
+                        <span className={`status-chip ${guide.status}`}>{statusLabel(guide.status)}</span>
                         <PendingBadge id={guide.id} />
+                        <ReviewChip item={guide} />
                       </div>
                       <p>{guide.summary}</p>
                       <div className="entry-meta">
@@ -309,6 +305,7 @@ export const GuidesPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="entry-actions">
+                    <StatusActions item={guide} />
                     <button aria-label="Edit Guide" onClick={() => handleEdit(guide)} type="button">
                       <PencilLine size={17} />
                     </button>
@@ -372,11 +369,15 @@ export const GuidesPage: React.FC = () => {
               Status
               <select
                 onChange={(e) => updateDraft("status", e.target.value as ContentStatus)}
+                disabled={draft.status === "review"}
+                title={draft.status === "review" ? "Waiting for medical review: use the row's review actions" : undefined}
                 value={draft.status}
               >
+                {draft.status === "review" && <option value="review">In medical review</option>}
                 <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                {(canPublish || draft.status === "published") && (
+                  <option disabled={!canPublish} value="published">Published</option>
+                )}
               </select>
             </label>
 
@@ -486,7 +487,8 @@ export const GuidesPage: React.FC = () => {
           {draft.type === "tip" ? (
             <aside className="preview-pane">
               <div className="preview-heading">
-                <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+                <span className={`status-chip ${draft.status}`}>{statusLabel(draft.status)}</span>
+                <ReviewChip item={draft} />
                 <span style={{ color: draft.color }}>Sexual Wellbeing</span>
               </div>
               <WellbeingAppPreview draft={draft} />
@@ -494,7 +496,8 @@ export const GuidesPage: React.FC = () => {
           ) : (
             <aside className="preview-pane" style={{ borderLeft: `5px solid ${draft.color}` }}>
               <div className="preview-heading">
-                <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+                <span className={`status-chip ${draft.status}`}>{statusLabel(draft.status)}</span>
+                <ReviewChip item={draft} />
                 <span style={{ color: draft.color }}>
                   Hygiene
                 </span>

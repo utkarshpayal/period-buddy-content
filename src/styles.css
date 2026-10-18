@@ -1499,6 +1499,12 @@ img.media-upload-preview {
   color: var(--danger-dark);
 }
 
+.media-upload-status.warning {
+  align-items: flex-start;
+  background: var(--amber-tint);
+  color: var(--amber-dark);
+}
+
 /* Preview list styling */
 .preview-extended-list, .preview-symptoms-list {
   margin-top: 10px;
@@ -4823,6 +4829,13 @@ button:focus-visible,
   border-color: var(--pn-berry); box-shadow: 0 0 0 3px rgba(194, 65, 111, 0.14); outline: none;
 }
 .pn-warn { color: var(--amber); font-size: 0.75rem; }
+.pn-error { color: var(--danger); font-size: 0.75rem; }
+.pn-field input[aria-invalid="true"] { border-color: var(--danger); }
+.pn-store { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pn-store-note { grid-column: 1 / -1; }
+@media (max-width: 640px) { .pn-store { grid-template-columns: 1fr; } }
+.pn-templates { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: var(--pb-muted, var(--ink-4)); }
+.pn-templates .admin-chip { display: inline-flex; align-items: center; gap: 5px; }
 .pn-inbox > span:not(.gy-switch-track) { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.86rem; }
 
 /* When (scheduling) */
@@ -5223,3 +5236,31 @@ button:focus-visible,
   cursor: pointer;
 }
 .gy-jitsi-chat-form button:disabled { opacity: 0.5; cursor: default; }
+
+/* Medical review: "Send back" note dialog */
+.editor-panel.modal-panel.send-back-dialog {
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 18px 0;
+}
+.send-back-dialog h3 {
+  margin: 0 0 6px;
+}
+.send-back-dialog p {
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+.send-back-dialog label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.send-back-dialog textarea {
+  width: 100%;
+  resize: vertical;
+}
+.send-back-count {
+  margin-top: 4px;
+  font-size: 12px;
+  text-align: right;
+}
