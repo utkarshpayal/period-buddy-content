@@ -6,6 +6,7 @@ import { useAppContext } from "../context/AppContext";
 import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
 import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 import { uid } from "../lib/uid";
@@ -22,12 +23,12 @@ const emptyCondition = (): ContentItem => ({
   question: "",
   answer: "",
   isSensitive: false,
-  medicallyReviewed: true,
+  medicallyReviewed: false,
   videoUrl: "",
   imageUrl: "",
   tags: [],
   author: "Medical Advisory Board",
-  reviewedBy: "Dr. Sarah Chen, OBGYN",
+  reviewedBy: "",
   sourceLinks: [],
   updatedAt: new Date().toISOString(),
   reviewRequired: false,
@@ -46,6 +47,8 @@ const emptyCondition = (): ContentItem => ({
 
 export const ConditionsPage: React.FC = () => {
   const { items, isLoading, isSaving, createItem, updateItem, deleteItem } = useAppContext();
+  // Writers without publish rights submit for medical review instead.
+  const canPublish = useCanPublish();
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyCondition());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,16 +186,8 @@ export const ConditionsPage: React.FC = () => {
                 value={query}
               />
             </label>
-            <select
-              onChange={(e) => setStatusFilter(e.target.value as ContentStatus | "all")}
-              value={statusFilter}
-            >
-              <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
           </div>
+          <StatusTabs type="issue" items={conditions} value={statusFilter} onChange={setStatusFilter} />
 
           <div className="entry-list">
             {isLoading ? (
@@ -220,8 +215,9 @@ export const ConditionsPage: React.FC = () => {
                     <div>
                       <div className="entry-title-row">
                         <h4>{condition.title}</h4>
-                        <span className={`status-chip ${condition.status}`}>{condition.status}</span>
+                        <span className={`status-chip ${condition.status}`}>{statusLabel(condition.status)}</span>
                         <PendingBadge id={condition.id} />
+                        <ReviewChip item={condition} />
                       </div>
                       <p>{condition.summary}</p>
                       <div className="entry-meta">
@@ -233,6 +229,7 @@ export const ConditionsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="entry-actions">
+                    <StatusActions item={condition} />
                     <button aria-label="Edit Condition" onClick={() => handleEdit(condition)} type="button">
                       <PencilLine size={17} />
                     </button>
@@ -301,11 +298,15 @@ export const ConditionsPage: React.FC = () => {
               Status
               <select
                 onChange={(e) => updateDraft("status", e.target.value as ContentStatus)}
+                disabled={draft.status === "review"}
+                title={draft.status === "review" ? "Waiting for medical review: use the row's review actions" : undefined}
                 value={draft.status}
               >
+                {draft.status === "review" && <option value="review">In medical review</option>}
                 <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                {(canPublish || draft.status === "published") && (
+                  <option disabled={!canPublish} value="published">Published</option>
+                )}
               </select>
             </label>
 
@@ -435,7 +436,8 @@ export const ConditionsPage: React.FC = () => {
 
           <aside className="preview-pane" style={{ borderLeft: `5px solid ${draft.color}` }}>
             <div className="preview-heading">
-              <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+              <span className={`status-chip ${draft.status}`}>{statusLabel(draft.status)}</span>
+              <ReviewChip item={draft} />
               <span style={{ color: draft.color }}>Health issue</span>
             </div>
             {draft.imageUrl && (

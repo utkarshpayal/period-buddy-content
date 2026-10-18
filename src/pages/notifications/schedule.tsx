@@ -13,6 +13,7 @@ import {
   XCircle
 } from "lucide-react";
 import type { PushSchedule, ScheduleRepeat, ScheduleStatus, ScheduleTiming } from "../../api/adminApi";
+import { TapChip } from "./storeLink";
 
 /*
  * Scheduling pieces for NotificationsPage: the "When" step of the composer
@@ -345,12 +346,13 @@ export const ScheduledList: React.FC<{
   loading: boolean;
   busyId: string | null;
   audienceText: (s: PushSchedule) => string;
+  routeLabel: (route: string) => string;
   onEdit: (s: PushSchedule) => void;
   onReuse: (s: PushSchedule) => void;
   onPause: (s: PushSchedule) => void;
   onResume: (s: PushSchedule) => void;
   onCancel: (s: PushSchedule) => void;
-}> = ({ schedules, loading, busyId, audienceText, onEdit, onReuse, onPause, onResume, onCancel }) => {
+}> = ({ schedules, loading, busyId, audienceText, routeLabel, onEdit, onReuse, onPause, onResume, onCancel }) => {
   if (loading) {
     return (
       <div className="gy-empty">
@@ -384,6 +386,7 @@ export const ScheduledList: React.FC<{
                 {s.audience === "selected" ? <UserPlus size={13} /> : <Users size={13} />}
                 {audienceText(s)}
               </span>
+              <TapChip data={s.data} routeLabel={routeLabel} />
             </div>
 
             <div className="pn-item-title">{s.title}</div>

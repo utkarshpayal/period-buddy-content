@@ -8,6 +8,7 @@ import "./styles/hr.css";
 import "./styles/finance.css";
 import "./styles/availability.css";
 import "./styles/referrals.css";
+import "./styles/support.css";
 import "./styles/portal-consistency.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

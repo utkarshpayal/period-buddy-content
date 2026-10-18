@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, Link2, Loader2, Scissors, Upload, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Link2, Loader2, Scissors, Upload, X } from "lucide-react";
 import { MediaFolder, uploadMediaFile } from "../api/uploadApi";
 import { AUDIO_TRIM_MIME_TYPE, canTrimMedia, recordTrimmedMedia, VIDEO_TRIM_MIME_TYPE } from "../lib/mediaTrim";
+import { reelVideoWarnings } from "../lib/videoUploadCheck";
 
 type MediaKind = "video" | "audio" | "image";
 
@@ -46,6 +47,8 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
   const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [showManualUrl, setShowManualUrl] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const checkedFileRef = useRef<File | null>(null);
 
   useEffect(() => {
     return () => {
@@ -60,6 +63,8 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
     setDuration(0);
     setTrimStart(0);
     setTrimEnd(0);
+    setWarnings([]);
+    checkedFileRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -72,6 +77,14 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
     setObjectUrl(URL.createObjectURL(selected));
     setStatus("idle");
     setError(null);
+    setWarnings([]);
+    checkedFileRef.current = selected;
+    if (kind === "video") {
+      void reelVideoWarnings(selected).then((found) => {
+        // Ignore the result if another file was picked (or the pick cancelled) meanwhile.
+        if (checkedFileRef.current === selected) setWarnings(found);
+      });
+    }
   };
 
   const handleLoadedMetadata = () => {
@@ -219,6 +232,13 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
               </label>
             </div>
           )}
+
+          {warnings.map((warning) => (
+            <div className="media-upload-status warning" key={warning}>
+              <AlertTriangle size={14} />
+              <span>{warning}</span>
+            </div>
+          ))}
 
           <div className="media-upload-actions">
             <button className="btn-add-opt" disabled={uploading} onClick={handleUpload} type="button">

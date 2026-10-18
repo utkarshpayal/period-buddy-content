@@ -15,7 +15,7 @@ const initialsOf = (label: string) =>
     .toUpperCase() || "NA";
 
 export const Sidebar: React.FC = () => {
-  const { authSession, access, can, logout, approvalSummary } = useAppContext();
+  const { authSession, access, can, logout, approvalSummary, supportAwaiting } = useAppContext();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -66,15 +66,23 @@ export const Sidebar: React.FC = () => {
               <p className="nav-section-label">{section.label}</p>
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const count = item.badge === "approvals" ? badgeCount : 0;
+                const count =
+                  item.badge === "approvals" ? badgeCount : item.badge === "support" ? supportAwaiting : 0;
+                const alert = item.badge === "support" || approvalSummary.toReview > 0;
+                const badgeTitle =
+                  item.badge === "support"
+                    ? `${count} ticket${count === 1 ? "" : "s"} awaiting a reply`
+                    : approvalSummary.toReview
+                      ? `${count} waiting for your review`
+                      : `${count} of your requests pending`;
                 return (
                   <NavLink key={item.path} to={item.path} end={item.path === "/"} className={link} onClick={close}>
                     <Icon size={18} />
                     <span className="nav-label">{item.label}</span>
                     {count > 0 && (
                       <span
-                        className={`nav-badge ${approvalSummary.toReview ? "is-alert" : ""}`}
-                        title={approvalSummary.toReview ? `${count} waiting for your review` : `${count} of your requests pending`}
+                        className={`nav-badge ${alert ? "is-alert" : ""}`}
+                        title={badgeTitle}
                       >
                         {count > 99 ? "99+" : count}
                       </span>

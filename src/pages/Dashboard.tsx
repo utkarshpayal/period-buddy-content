@@ -76,9 +76,9 @@ export const Dashboard: React.FC = () => {
           <div className="card-header-icon">
             <Gauge size={22} />
           </div>
-          <span className="stat-label">Needs Review</span>
+          <span className="stat-label">In Medical Review</span>
           <strong className="stat-value">{counts.review}</strong>
-          <span className="stat-desc">Awaiting medical clearance</span>
+          <span className="stat-desc">Submitted, waiting for a reviewer</span>
         </article>
 
         <article className="metric-card main-stats draft-card">

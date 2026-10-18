@@ -1,13 +1,22 @@
 import React, { useState, useMemo } from "react";
 import { 
-  FileText, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, BookOpen, AlertCircle, X
+  FileText, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, BookOpen, AlertCircle, X, Eye
 } from "lucide-react";
+
+/** "3m 20s" for an average read time in seconds. */
+function formatSeconds(seconds: number) {
+  const s = Math.round(seconds);
+  if (s < 60) return `${s}s`;
+  return s % 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${Math.floor(s / 60)}m`;
+}
 import { useAppContext } from "../context/AppContext";
 import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
-import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
+import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
+import { BLOG_CATEGORIES, estimateReadMinutes } from "../api/contentApi";
+import { ContentItem, ContentStatus, Audience } from "../types/content";
 import { uid } from "../lib/uid";
 
 const emptyBlog = (): ContentItem => ({
@@ -31,7 +40,7 @@ const emptyBlog = (): ContentItem => ({
   sourceLinks: [],
   updatedAt: new Date().toISOString(),
   reviewRequired: false,
-  readTimeMinutes: 5,
+  category: "general",
   seoTitle: "",
   seoDescription: "",
   keywords: []
@@ -39,6 +48,8 @@ const emptyBlog = (): ContentItem => ({
 
 export const BlogsPage: React.FC = () => {
   const { items, isLoading, isSaving, createItem, updateItem, deleteItem } = useAppContext();
+  // Writers without publish rights submit for medical review instead.
+  const canPublish = useCanPublish();
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyBlog());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -177,17 +188,8 @@ export const BlogsPage: React.FC = () => {
                 value={query}
               />
             </label>
-            <select
-              onChange={(e) => setStatusFilter(e.target.value as ContentStatus | "all")}
-              value={statusFilter}
-            >
-              <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="review">Needs Review</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
           </div>
+          <StatusTabs type="blog" items={blogs} value={statusFilter} onChange={setStatusFilter} />
 
           <div className="entry-list">
             {isLoading ? (
@@ -214,15 +216,33 @@ export const BlogsPage: React.FC = () => {
                     <div>
                       <div className="entry-title-row">
                         <h4>{blog.title}</h4>
-                        <span className={`status-chip ${blog.status}`}>{blog.status}</span>
+                        <span className={`status-chip ${blog.status}`}>{statusLabel(blog.status)}</span>
                         <PendingBadge id={blog.id} />
+                        <ReviewChip item={blog} />
                       </div>
                       <p>{blog.summary || blog.body}</p>
                       <div className="entry-meta">
                         <span>
                           <Clock size={14} />
-                          {blog.readTimeMinutes} min read
+                          {blog.readStats?.averageReadSeconds
+                            ? `${formatSeconds(blog.readStats.averageReadSeconds)} read (real) · est. ${blog.readTimeMinutes || 1} min`
+                            : blog.readTimeMinutes
+                              ? `${blog.readTimeMinutes} min read (est.)`
+                              : "Read time on save"}
                         </span>
+                        {blog.readStats && blog.readStats.reads > 0 ? (
+                          <span title="Real reading in the app: unique readers, average active time on screen per visit, and the share of readers who reached the end">
+                            <Eye size={14} />
+                            {blog.readStats.reads} {blog.readStats.reads === 1 ? "reader" : "readers"}
+                            {blog.readStats.visits > blog.readStats.reads ? ` (${blog.readStats.visits} visits)` : ""}
+                            {blog.readStats.completionRate != null ? ` · ${Math.round(blog.readStats.completionRate * 100)}% finished` : ""}
+                          </span>
+                        ) : (
+                          <span>
+                            <Eye size={14} />
+                            No reads yet
+                          </span>
+                        )}
                         <span>
                           <Tags size={14} />
                           {blog.tags.join(", ") || "No tags"}
@@ -232,6 +252,7 @@ export const BlogsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="entry-actions">
+                    <StatusActions item={blog} />
                     <button aria-label="Edit Blog" onClick={() => handleEdit(blog)} type="button">
                       <PencilLine size={17} />
                     </button>
@@ -284,11 +305,15 @@ export const BlogsPage: React.FC = () => {
               Status
               <select
                 onChange={(e) => updateDraft("status", e.target.value as ContentStatus)}
+                disabled={draft.status === "review"}
+                title={draft.status === "review" ? "Waiting for medical review: use the row's review actions" : undefined}
                 value={draft.status}
               >
+                {draft.status === "review" && <option value="review">In medical review</option>}
                 <option value="draft">Draft</option>
-                <option value="review">Needs Medical Review</option>
-                <option value="published">Published</option>
+                {(canPublish || draft.status === "published") && (
+                  <option disabled={!canPublish} value="published">Published</option>
+                )}
                 <option value="archived">Archived</option>
               </select>
             </label>
@@ -308,19 +333,33 @@ export const BlogsPage: React.FC = () => {
             </label>
 
             <label>
-              Cycle Area
+              Category
               <select
-                onChange={(e) => updateDraft("stage", e.target.value as CycleStage)}
-                value={draft.stage}
+                onChange={(e) => updateDraft("category", e.target.value)}
+                value={draft.category || "general"}
               >
-                <option value="General">General</option>
-                <option value="Period">Period</option>
-                <option value="PMS">PMS</option>
-                <option value="Ovulation">Ovulation</option>
-                <option value="Tracking">Tracking</option>
-                <option value="Wellness">Wellness</option>
-                <option value="Emergency">Emergency</option>
+                {BLOG_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+                {draft.category && !BLOG_CATEGORIES.some((c) => c.value === draft.category) && (
+                  <option value={draft.category}>{draft.category} (old category, kept as is)</option>
+                )}
               </select>
+            </label>
+
+            <label>
+              Reading Time
+              <input
+                readOnly
+                title="Calculated by the server from the article (about 200 words a minute)"
+                value={
+                  draft.body.trim()
+                    ? `Auto · about ${estimateReadMinutes(draft.body)} min`
+                    : "Auto · calculated from the content"
+                }
+              />
             </label>
 
             <label className="wide-field">
@@ -408,8 +447,11 @@ export const BlogsPage: React.FC = () => {
 
           <aside className="preview-pane">
             <div className="preview-heading">
-              <span className={`status-chip ${draft.status}`}>{draft.status}</span>
-              <span>{draft.audience} • {draft.stage}</span>
+              <span className={`status-chip ${draft.status}`}>{statusLabel(draft.status)}</span>
+              <ReviewChip item={draft} />
+              <span>
+                {draft.audience} • {BLOG_CATEGORIES.find((c) => c.value === draft.category)?.label ?? draft.category ?? "General"}
+              </span>
             </div>
             {draft.imageUrl && (
               <img alt="" className="preview-cover-image" src={draft.imageUrl} />

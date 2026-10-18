@@ -1,0 +1,181 @@
+/* =========================================================================
+   Support tickets (sp-*): the Admin Workspace's Support queue and the ticket
+   side panel. Builds on the aq-* table/toolbar (styles.css) and the rf-drawer
+   panel (styles/referrals.css); new rules use the --ui-* tokens.
+   ========================================================================= */
+
+.sp-tabs { margin-top: 4px; }
+.sp-alert { align-items: center; margin-top: 12px; }
+.sp-alert .gy-btn { margin-left: auto; }
+.sp-muted { color: var(--ui-muted); font-size: 0.8rem; margin: 0; }
+
+/* ------------------------------------------------------------ Queue */
+
+.sp-table { min-width: 980px; }
+.sp-row { cursor: pointer; }
+.sp-row td { vertical-align: top; }
+.sp-row.is-selected { background: var(--ui-berry-50); }
+.sp-row.is-awaiting td:first-child { box-shadow: inset 3px 0 0 var(--ui-berry); }
+.sp-td-ticket { max-width: 380px; }
+
+.sp-ticket-no {
+  align-items: center;
+  color: var(--ui-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  gap: 8px;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+.sp-subject {
+  background: none;
+  border: 0;
+  color: var(--ui-ink);
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 3px 0 2px;
+  padding: 0;
+  text-align: left;
+}
+.sp-subject:hover { color: var(--ui-berry); text-decoration: underline; }
+.sp-subject:focus-visible { border-radius: 4px; box-shadow: var(--ui-ring); outline: none; }
+.sp-preview {
+  color: var(--ui-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-td-ticket .sp-preview { max-width: 360px; }
+
+.sp-pill-stack,
+.sp-pill-row { align-items: flex-start; display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-pill-stack { flex-direction: column; }
+.sp-awaiting {
+  align-items: center;
+  background: var(--ui-berry);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 800;
+  gap: 4px;
+  letter-spacing: 0.01em;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ Side panel */
+
+.sp-drawer { max-width: 600px; }
+.sp-drawer-title { min-width: 0; }
+.sp-drawer-title h3 { font-size: 1.1rem; line-height: 1.3; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.sp-drawer-title .sp-ticket-no span { font-weight: 600; letter-spacing: 0; }
+.sp-drawer-state { flex: 1; }
+.sp-drawer-body { gap: 22px; }
+
+.sp-section { display: grid; gap: 10px; }
+.sp-section-title {
+  align-items: center;
+  color: var(--ui-muted);
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.sp-person { align-items: flex-start; display: flex; gap: 12px; }
+.sp-person-text { display: grid; gap: 3px; min-width: 0; }
+.sp-person-name { align-items: center; color: var(--ui-ink); display: flex; flex-wrap: wrap; font-weight: 700; gap: 8px; }
+.sp-contact-line {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--ui-ink-2);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.84rem;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  padding: 0;
+  text-align: left;
+}
+.sp-contact-line:hover { color: var(--ui-berry); }
+.sp-contact-line svg:last-child { color: var(--ui-muted); }
+
+.sp-meta {
+  background: var(--ui-surface-2);
+  border-radius: var(--ui-radius-sm);
+  display: grid;
+  gap: 10px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 12px 14px;
+}
+.sp-meta dt { color: var(--ui-muted); font-size: 0.72rem; font-weight: 600; }
+.sp-meta dd { color: var(--ui-ink); font-size: 0.85rem; margin: 2px 0 0; overflow-wrap: anywhere; }
+
+.sp-controls { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sp-control-wide { grid-column: 1 / -1; }
+.sp-controls select:disabled { cursor: not-allowed; opacity: 0.7; }
+.sp-saving { align-items: center; display: flex; gap: 6px; }
+
+.sp-thread { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.sp-bubble-row { display: flex; }
+.sp-bubble-row.from-admin { justify-content: flex-end; }
+.sp-bubble {
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  border-radius: 14px 14px 14px 4px;
+  max-width: 85%;
+  padding: 10px 12px;
+}
+.sp-bubble-row.from-admin .sp-bubble {
+  background: var(--ui-berry-50);
+  border-color: var(--ui-berry-100);
+  border-radius: 14px 14px 4px 14px;
+}
+.sp-bubble-head { align-items: baseline; display: flex; flex-wrap: wrap; font-size: 0.74rem; gap: 6px; margin-bottom: 4px; }
+.sp-bubble-head strong { color: var(--ui-ink); font-size: 0.8rem; }
+.sp-bubble-head span { color: var(--ui-muted); font-weight: 600; }
+.sp-bubble-head time { color: var(--ui-muted); margin-left: auto; }
+.sp-bubble-text { color: var(--ui-ink-2); font-size: 0.88rem; line-height: 1.5; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+.sp-reply { border-top: 1px solid var(--ui-line); display: grid; gap: 8px; padding: 12px 20px 16px; }
+.sp-reply textarea {
+  background: var(--ui-surface);
+  border: 1px solid var(--line-strong, var(--ui-line));
+  border-radius: var(--ui-radius-sm);
+  box-sizing: border-box;
+  color: var(--ui-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  min-height: 88px;
+  padding: 10px 12px;
+  resize: vertical;
+  width: 100%;
+}
+.sp-reply textarea:focus { border-color: var(--ui-berry); box-shadow: var(--ui-ring); outline: none; }
+.sp-reply-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.sp-counter { color: var(--ui-muted); font-size: 0.74rem; font-variant-numeric: tabular-nums; margin-right: auto; }
+.sp-counter.is-over { color: var(--ui-red); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .sp-drawer { max-width: 100%; }
+  .sp-meta,
+  .sp-controls { grid-template-columns: 1fr; }
+  .sp-bubble { max-width: 95%; }
+  .sp-reply-actions .gy-btn { flex: 1 1 0; justify-content: center; }
+  .sp-counter { flex-basis: 100%; }
+}

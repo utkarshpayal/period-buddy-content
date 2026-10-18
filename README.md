@@ -3,7 +3,8 @@
 Web dashboard for The Nura team and partner doctors, with two portals in one app:
 
 - **Admin Workspace** (staff): content (blogs, guides, videos, Q&A, health conditions),
-  users, doctors, government schemes and applications, push notifications
+  users, help & support tickets from the app (**Support**: queue, reply, assign,
+  resolve), doctors, government schemes and applications, push notifications
   (send now, scheduled or repeating),
   subscriptions (features, plans, coupons), company files, analytics, team and
   roles, approvals and audit logs. Clinical Admins also set the commission on

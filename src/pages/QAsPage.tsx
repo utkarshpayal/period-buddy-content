@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { 
-  FileQuestion, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, CheckCircle, ShieldAlert, X
+  FileQuestion, Search, Plus, Save, Clock, Tags, PencilLine, Trash2, Loader2, AlertCircle, ShieldAlert, X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
+import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 import { uid } from "../lib/uid";
 
@@ -34,6 +35,8 @@ const emptyQA = (): ContentItem => ({
 
 export const QAsPage: React.FC = () => {
   const { items, isLoading, isSaving, createItem, updateItem, deleteItem } = useAppContext();
+  // Writers without publish rights submit for medical review instead.
+  const canPublish = useCanPublish();
   
   const [draft, setDraft] = useState<ContentItem>(() => emptyQA());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -117,10 +120,6 @@ export const QAsPage: React.FC = () => {
       setFormError("Approved Answer is required.");
       return;
     }
-    if (draft.medicallyReviewed && !draft.reviewedBy.trim()) {
-      setFormError("Clinician name is required for medically reviewed status.");
-      return;
-    }
 
     const payload: ContentItem = {
       ...draft,
@@ -129,9 +128,7 @@ export const QAsPage: React.FC = () => {
       answer,
       body: answer,
       summary: draft.summary.trim() || question.slice(0, 100),
-      reviewedBy: draft.reviewedBy.trim(),
-      updatedAt: new Date().toISOString(),
-      reviewRequired: !draft.medicallyReviewed
+      updatedAt: new Date().toISOString()
     };
 
     let success = false;
@@ -180,17 +177,8 @@ export const QAsPage: React.FC = () => {
                 value={query}
               />
             </label>
-            <select
-              onChange={(e) => setStatusFilter(e.target.value as ContentStatus | "all")}
-              value={statusFilter}
-            >
-              <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="review">Needs Medical Review</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
           </div>
+          <StatusTabs type="qa" items={qas} value={statusFilter} onChange={setStatusFilter} />
 
           <div className="entry-list">
             {isLoading ? (
@@ -217,18 +205,12 @@ export const QAsPage: React.FC = () => {
                     <div>
                       <div className="entry-title-row">
                         <h4>{qa.question || qa.title}</h4>
-                        <span className={`status-chip ${qa.status}`}>{qa.status}</span>
+                        <span className={`status-chip ${qa.status}`}>{statusLabel(qa.status)}</span>
                         <PendingBadge id={qa.id} />
+                        <ReviewChip item={qa} />
                       </div>
                       <p>{qa.answer || qa.summary}</p>
                       <div className="entry-meta">
-                        {qa.medicallyReviewed ? (
-                          <span className="badge-verified">
-                            <CheckCircle size={12} /> Verified by {qa.reviewedBy || "Medical Board"}
-                          </span>
-                        ) : (
-                          <span className="badge-review">Needs Review</span>
-                        )}
                         {qa.isSensitive && (
                           <span className="badge-sensitive">
                             <ShieldAlert size={12} /> Sensitive
@@ -242,6 +224,7 @@ export const QAsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="entry-actions">
+                    <StatusActions item={qa} />
                     <button aria-label="Edit Q&A" onClick={() => handleEdit(qa)} type="button">
                       <PencilLine size={17} />
                     </button>
@@ -306,12 +289,15 @@ export const QAsPage: React.FC = () => {
               Status
               <select
                 onChange={(e) => updateDraft("status", e.target.value as ContentStatus)}
+                disabled={draft.status === "review"}
+                title={draft.status === "review" ? "Waiting for medical review: use the row's review actions" : undefined}
                 value={draft.status}
               >
+                {draft.status === "review" && <option value="review">In medical review</option>}
                 <option value="draft">Draft</option>
-                <option value="review">Needs Medical Review</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                {(canPublish || draft.status === "published") && (
+                  <option disabled={!canPublish} value="published">Published</option>
+                )}
               </select>
             </label>
 
@@ -345,26 +331,13 @@ export const QAsPage: React.FC = () => {
               </select>
             </label>
 
-            <label>
-              Reviewed By (Clinician)
-              <input
-                onChange={(e) => updateDraft("reviewedBy", e.target.value)}
-                placeholder="Dr. Sarah Johnson, OBGYN"
-                value={draft.reviewedBy}
-              />
-            </label>
-
-            <label className="review-toggle">
-              <input
-                checked={draft.medicallyReviewed}
-                onChange={(e) => {
-                  updateDraft("medicallyReviewed", e.target.checked);
-                  updateDraft("reviewRequired", !e.target.checked);
-                }}
-                type="checkbox"
-              />
-              Medically Reviewed
-            </label>
+            <div className="review-toggle" aria-live="polite">
+              {/* Set by the server when a Content Super Admin reviews it; never typed in. */}
+              <ReviewChip item={draft} />
+              {!draft.medicallyReviewed && draft.status !== "review" && (
+                <span className="badge-review">Not medically reviewed yet</span>
+              )}
+            </div>
 
             <label className="review-toggle">
               <input
@@ -406,7 +379,8 @@ export const QAsPage: React.FC = () => {
 
           <aside className="preview-pane">
             <div className="preview-heading">
-              <span className={`status-chip ${draft.status}`}>{draft.status}</span>
+              <span className={`status-chip ${draft.status}`}>{statusLabel(draft.status)}</span>
+              <ReviewChip item={draft} />
               <span>{draft.audience} • {draft.stage}</span>
             </div>
             <h4 className="preview-question">Q: {draft.question || "User Question"}</h4>
@@ -415,7 +389,7 @@ export const QAsPage: React.FC = () => {
               <p>{draft.answer || "Clinical response will be shown here."}</p>
               {draft.medicallyReviewed && (
                 <div className="review-stamp">
-                  Verified by: {draft.reviewedBy || "Medical Specialist"}
+                  Medically reviewed{draft.review?.by || draft.reviewedBy ? ` by ${draft.review?.by || draft.reviewedBy}` : ""}
                 </div>
               )}
             </div>
