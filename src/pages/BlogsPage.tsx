@@ -454,7 +454,7 @@ export const BlogsPage: React.FC = () => {
               </span>
             </div>
             {draft.imageUrl && (
-              <img alt="" className="preview-cover-image" src={draft.imageUrl} />
+              <img loading="lazy" decoding="async" alt="" className="preview-cover-image" src={draft.imageUrl} />
             )}
             <h4>{draft.title || "Untitled Blog Post"}</h4>
             <p className="preview-summary">{draft.summary || "No summary written."}</p>

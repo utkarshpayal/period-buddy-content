@@ -137,7 +137,7 @@ export const ReelCommentsPanel: React.FC<{
             comments.map((comment) => (
               <article className={comment.isHidden ? "reel-comment hidden" : "reel-comment"} key={comment.id}>
                 {comment.author.avatar ? (
-                  <img alt="" className="reel-comment-avatar" src={comment.author.avatar} />
+                  <img loading="lazy" decoding="async" alt="" className="reel-comment-avatar" src={comment.author.avatar} />
                 ) : (
                   <span aria-hidden className="reel-comment-avatar">
                     {comment.author.name.charAt(0).toUpperCase()}

@@ -186,7 +186,18 @@ export const PeoplePage: React.FC = () => {
             </thead>
             <tbody>
               {filtered.map((m) => (
-                <tr key={m._id} className="hr-click-row" onClick={() => setOpenId(m._id)}>
+                <tr
+                  key={m._id}
+                  className="hr-click-row"
+                  tabIndex={0}
+                  onClick={() => setOpenId(m._id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setOpenId(m._id);
+                    }
+                  }}
+                >
                   <td>
                     <div className="admin-user-cell">
                       <div className="admin-avatar dept-organisation">{initials(fullName(m))}</div>

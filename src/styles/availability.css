@@ -21,7 +21,7 @@
   height: 40px;
   justify-content: center;
   padding: 0 18px;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
   white-space: nowrap;
 }
 .av-btn:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -46,7 +46,7 @@
   flex: 0 0 auto;
   height: 34px;
   justify-content: center;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--dur-fast), color var(--dur-fast);
   width: 34px;
 }
 .av-icon:hover:not(:disabled) { background: var(--line-2); color: var(--ink); }
@@ -64,7 +64,7 @@
   font-size: 0.875rem;
   height: 40px;
   padding: 0 12px;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
   width: 100%;
 }
 .av-select {
@@ -101,7 +101,7 @@
   height: 22px;
   padding: 0;
   position: relative;
-  transition: background 0.15s;
+  transition: background var(--dur-fast);
   width: 38px;
 }
 .av-switch span {
@@ -112,7 +112,7 @@
   left: 2px;
   position: absolute;
   top: 2px;
-  transition: transform 0.15s;
+  transition: transform var(--dur-fast);
   width: 18px;
 }
 .av-switch.is-on { background: var(--brand); }
@@ -153,7 +153,7 @@
   display: flex;
   gap: 12px;
   padding: 12px 14px;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 .av-option:hover { border-color: var(--ink-5); }
 .av-option input { accent-color: var(--brand); flex: 0 0 auto; height: 16px; margin: 2px 0 0; width: 16px; }
@@ -177,7 +177,7 @@
 /* ----------------------------------------------------------------- Drawer */
 
 .av-scrim {
-  animation: av-fade 0.15s ease;
+  animation: av-fade var(--dur-fast) ease;
   background: rgba(30, 24, 35, 0.4);
   display: flex;
   inset: 0;
@@ -188,7 +188,7 @@
 .av-scrim.is-center { align-items: center; justify-content: center; padding: 20px; }
 
 .av-drawer {
-  animation: av-slide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: av-slide var(--dur-base) cubic-bezier(0.2, 0.8, 0.2, 1);
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -225,11 +225,11 @@
 .av-weekly-day strong { color: var(--ink); display: block; font-size: 0.9rem; }
 .av-weekly-day small { color: var(--ink-4); display: block; font-size: 0.74rem; }
 .av-weekly li:not(.is-on) .av-weekly-day strong { color: var(--ink-4); }
-.av-weekly-off { color: var(--ink-5); font-size: 0.86rem; line-height: 40px; }
+.av-weekly-off { color: var(--ink-4); font-size: 0.86rem; line-height: 40px; }
 
 .av-menu-host { position: relative; }
 .av-menu {
-  animation: av-fade 0.12s ease;
+  animation: av-fade var(--dur-fast) ease;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -253,7 +253,7 @@
 /* ------------------------------------------------------------------ Modal */
 
 .av-modal {
-  animation: av-rise 0.18s ease;
+  animation: av-rise var(--dur-fast) ease;
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -373,7 +373,7 @@
   gap: 6px;
   height: 36px;
   padding: 0 14px;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
 }
 .av-tlm-chip:hover { background: var(--brand-tint-2); border-color: var(--brand); }
 .av-tlm-chip:active { transform: scale(0.97); }
@@ -385,7 +385,7 @@
 
 /* Exact-times popover */
 .av-pop {
-  animation: av-fade 0.12s ease;
+  animation: av-fade var(--dur-fast) ease;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -407,7 +407,7 @@
 .av-savebar {
   align-items: center;
   align-self: center;
-  animation: av-rise 0.2s ease;
+  animation: av-rise var(--dur-base) ease;
   background: var(--surface-dark);
   border-radius: var(--radius-pill);
   bottom: 20px;
@@ -446,7 +446,7 @@
   font-weight: 700;
   padding: 0;
   position: relative;
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--dur-fast), color var(--dur-fast);
 }
 .av-mm-day:hover:not(:disabled) { background: var(--line-2); }
 .av-mm-day:focus-visible { box-shadow: var(--ring); outline: none; }
@@ -489,7 +489,7 @@
   gap: 14px;
   grid-template-columns: 46px minmax(0, 1fr) auto;
   padding: 10px 10px 10px 12px;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 .av-dc-list li:hover { background: var(--surface-2); border-color: var(--line-strong); }
 .av-dc-date {
@@ -533,7 +533,7 @@
   align-items: center;
   background: var(--amber-tint);
   border-radius: var(--radius-pill);
-  color: var(--amber);
+  color: var(--amber-dark);
   display: inline-flex;
   font-size: 0.78rem;
   font-weight: 800;
@@ -573,7 +573,7 @@
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   height: 36px;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
 }
 .av-chips button small { color: var(--ink-4); font-size: 0.66rem; margin-left: 1px; }
 .av-chips button:hover:not(:disabled) { border-color: var(--ink-5); }
@@ -637,9 +637,9 @@
   .av-tlm-tools .av-icon { height: 40px; width: 40px; }
 
   /* Exact times open as a bottom sheet. */
-  .av-pop-scrim { animation: av-fade 0.15s ease; background: rgba(30, 24, 35, 0.4); inset: 0; position: fixed; z-index: 119; }
+  .av-pop-scrim { animation: av-fade var(--dur-fast) ease; background: rgba(30, 24, 35, 0.4); inset: 0; position: fixed; z-index: 119; }
   .av-pop.is-sheet {
-    animation: av-sheet 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: av-sheet var(--dur-base) cubic-bezier(0.2, 0.8, 0.2, 1);
     border: 0;
     border-radius: 20px 20px 0 0;
     bottom: 0;
@@ -694,7 +694,7 @@
   /* Dialogs become bottom sheets. */
   .av-scrim.is-center { align-items: flex-end; padding: 0; }
   .av-modal {
-    animation: av-sheet 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: av-sheet var(--dur-base) cubic-bezier(0.2, 0.8, 0.2, 1);
     border-radius: 20px 20px 0 0;
     max-height: 90vh;
     max-width: none;

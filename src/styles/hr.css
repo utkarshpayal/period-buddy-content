@@ -60,6 +60,7 @@
 .hr-sign-note { align-items: center; display: inline-flex; gap: 6px; margin: 0; }
 .hr-click-row { cursor: pointer; }
 .hr-click-row:hover td { background: var(--surface-2); }
+.hr-click-row:focus-visible { box-shadow: inset 0 0 0 2px var(--brand); outline: none; }
 
 .hr-check { align-items: flex-start; cursor: pointer; display: flex; gap: 10px; }
 .hr-check input { accent-color: var(--brand); margin-top: 3px; }
@@ -117,7 +118,7 @@
 .hr-field-key { color: var(--ink-2); display: grid; font-size: 0.86rem; font-weight: 700; }
 .hr-field-key code { color: var(--ink-4); font-size: 0.72rem; font-weight: 500; }
 .hr-field-value { color: var(--ink); font-size: 0.88rem; overflow-wrap: anywhere; }
-.hr-field-value em { color: var(--ink-5); }
+.hr-field-value em { color: var(--ink-4); }
 .hr-fields-row input { border: 1px solid var(--amber-line); border-radius: var(--radius-sm); font: inherit; min-height: 38px; padding: 6px 10px; }
 .hr-fields-table .hr-sign-note { padding: 10px 14px; border-top: 1px solid var(--line-2); }
 

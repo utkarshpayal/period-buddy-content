@@ -440,13 +440,13 @@ const PhonePreview: React.FC<{ title: string; body: string; icon: string; image:
     </div>
     <div className="pn-notif">
       <div className="pn-notif-head">
-        <img src="/images/logo.png" alt="" className="pn-notif-icon" />
+        <img loading="lazy" decoding="async" src="/images/logo.png" alt="" className="pn-notif-icon" />
         <span>THE NURA CARE</span>
         <span className="pn-notif-now">now</span>
       </div>
       <div className="pn-notif-title">{title || "Your notification title"}</div>
       <div className="pn-notif-body">{body || "Your message will appear here."}</div>
-      {image.startsWith("https://") && <img className="pn-notif-image" src={image} alt="" />}
+      {image.startsWith("https://") && <img loading="lazy" decoding="async" className="pn-notif-image" src={image} alt="" />}
     </div>
     <p className="pn-phone-label">In the app&apos;s notification list</p>
     <div className="pn-inapp">
@@ -459,7 +459,7 @@ const PhonePreview: React.FC<{ title: string; body: string; icon: string; image:
           <span>now</span>
         </div>
         <span className="pn-inapp-body">{body || "Your message will appear here."}</span>
-        {image.startsWith("https://") && <img src={image} alt="" />}
+        {image.startsWith("https://") && <img loading="lazy" decoding="async" src={image} alt="" />}
       </div>
     </div>
   </div>
@@ -1173,7 +1173,7 @@ export const NotificationsPage: React.FC = () => {
 
             {showTest ? (
               <div className="pn-test">
-                <input
+                <input aria-label="Email for the test send"
                   type="email"
                   value={testEmail}
                   placeholder="Your account email"
@@ -1397,7 +1397,7 @@ export const NotificationsPage: React.FC = () => {
               <h3 id="pn-confirm-title">
                 {editing ? "Review changes" : scheduling ? "Review before scheduling" : "Review before sending"}
               </h3>
-              <button type="button" className="gy-icon-btn" onClick={() => setConfirming(false)} disabled={sending}>
+              <button aria-label="Close" type="button" className="gy-icon-btn" onClick={() => setConfirming(false)} disabled={sending}>
                 <X size={18} />
               </button>
             </div>

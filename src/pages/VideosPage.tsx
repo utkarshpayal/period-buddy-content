@@ -454,8 +454,9 @@ export const VideosPage: React.FC = () => {
                     <div key={opt.optionId} className="poll-option-row">
                       <span className="opt-topic">{opt.topic}</span>
                       <span className="opt-votes">{opt.votes || 0} votes</span>
-                      <button 
-                        className="btn-remove-opt" 
+                      <button
+                        className="btn-remove-opt"
+                        aria-label={`Remove option ${opt.topic}`}
                         onClick={() => removePollOption(opt.optionId)}
                         type="button"
                       >
@@ -466,7 +467,7 @@ export const VideosPage: React.FC = () => {
                 </div>
 
                 <div className="add-option-row">
-                  <input
+                  <input aria-label="New poll choice"
                     onChange={(e) => setNewOptionTopic(e.target.value)}
                     placeholder="Enter poll choice..."
                     value={newOptionTopic}
@@ -486,7 +487,7 @@ export const VideosPage: React.FC = () => {
               <span>{draft.audience}</span>
             </div>
             {draft.imageUrl && (
-              <img alt="" className="preview-cover-image" src={draft.imageUrl} />
+              <img loading="lazy" decoding="async" alt="" className="preview-cover-image" src={draft.imageUrl} />
             )}
             <h4>{draft.title || "Untitled Video"}</h4>
             {draft.videoUrl ? (

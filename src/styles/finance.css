@@ -32,7 +32,7 @@
   height: 40px;
   min-width: 200px;
   padding: 0 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .cf-search:focus-within { border-color: var(--brand); box-shadow: var(--ring); }
 .cf-search svg { flex: 0 0 auto; }
@@ -122,7 +122,7 @@
   height: 40px;
   justify-content: center;
   padding: 0 14px;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
   white-space: nowrap;
 }
 .cf-btn:disabled { cursor: not-allowed; opacity: 0.55; }
@@ -289,7 +289,7 @@
   z-index: 1000;
 }
 .cf-modal {
-  animation: cf-pop 0.16s ease;
+  animation: cf-pop var(--dur-fast) ease;
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -397,7 +397,7 @@
   flex: 0 0 auto;
   height: 22px;
   position: relative;
-  transition: background 0.15s ease;
+  transition: background var(--dur-fast) ease;
   width: 38px;
 }
 .cf-switch-track::after {
@@ -409,7 +409,7 @@
   left: 2px;
   position: absolute;
   top: 2px;
-  transition: transform 0.15s ease;
+  transition: transform var(--dur-fast) ease;
   width: 18px;
 }
 .cf-switch input:checked + .cf-switch-track { background: var(--brand); }
@@ -603,7 +603,7 @@
   max-width: 18px;
   min-width: 18px;
   padding: 0;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
   width: 18px;
 }
 .gw-method-option input[type="radio"]:checked {

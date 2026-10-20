@@ -151,7 +151,7 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
       </div>
 
       {showManualUrl && (
-        <input
+        <input aria-label="Media URL"
           className="media-upload-manual-input"
           onChange={(e) => onChange(e.target.value)}
           placeholder="https://..."
@@ -168,7 +168,7 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
             ) : kind === "audio" ? (
               <audio className="media-upload-preview" controls src={value} />
             ) : (
-              <img alt="" className="media-upload-preview" src={value} />
+              <img loading="lazy" decoding="async" alt="" className="media-upload-preview" src={value} />
             )
           ) : (
             <p className="media-upload-empty">No {kind} uploaded yet.</p>
@@ -200,7 +200,7 @@ export const MediaUploadField: React.FC<MediaUploadFieldProps> = ({
               src={objectUrl}
             />
           ) : (
-            <img alt="" className="media-upload-preview" src={objectUrl} />
+            <img loading="lazy" decoding="async" alt="" className="media-upload-preview" src={objectUrl} />
           )}
 
           {kind !== "image" && duration > 0 && (

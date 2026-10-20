@@ -942,7 +942,7 @@ export const GynacBookings: React.FC = () => {
       )}
 
       {showPatient && selected && (
-        <div className="gx-overlay" onClick={() => setShowPatient(false)}>
+        <div className="gx-overlay" data-esc-close onClick={() => setShowPatient(false)}>
           <aside className="gx-drawer" onClick={(e) => e.stopPropagation()} aria-label="Patient records">
             <div className="gx-drawer-head">
               <span><UserIcon size={16} /> Patient records</span>
@@ -1043,7 +1043,7 @@ export const GynacBookings: React.FC = () => {
       )}
 
       {showCancel && selected && (
-        <div className="gx-overlay is-centered" onClick={() => !cancelling && setShowCancel(false)}>
+        <div className="gx-overlay is-centered" data-esc-close onClick={() => !cancelling && setShowCancel(false)}>
           <div className="gx-dialog" role="dialog" aria-label="Cancel consultation" onClick={(e) => e.stopPropagation()}>
             <div className="gx-drawer-head">
               <span><XCircle size={16} /> Cancel consultation with {selectedName}?</span>
@@ -1055,7 +1055,7 @@ export const GynacBookings: React.FC = () => {
               {selectedName.split(" ")[0]} will be notified straight away and refunded {formatMoney(selected.amountPaid)} in full.
               Chat and calls for this session close.
             </p>
-            <textarea
+            <textarea aria-label="Reason for cancelling"
               className="gx-textarea"
               rows={3}
               maxLength={500}

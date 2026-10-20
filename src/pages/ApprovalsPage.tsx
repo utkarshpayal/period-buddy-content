@@ -300,7 +300,7 @@ const RequestCard: React.FC<{
 
           {isPending && scope === "review" && (
             <div className="ws-decision">
-              <textarea
+              <textarea aria-label="Note for the requester"
                 rows={2}
                 placeholder="Note for the requester (required to reject)"
                 value={note}

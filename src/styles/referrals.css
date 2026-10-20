@@ -88,7 +88,7 @@
   height: 2px;
   margin: 0 6px;
   min-width: 10px;
-  transition: background 0.3s;
+  transition: background var(--dur-slow);
 }
 .rf-step.is-done:not(:last-child)::after { background: var(--ui-teal); }
 .rf-step-dot {
@@ -101,7 +101,7 @@
   flex-shrink: 0;
   height: 22px;
   justify-content: center;
-  transition: background 0.3s, border-color 0.3s;
+  transition: background var(--dur-slow), border-color var(--dur-slow);
   width: 22px;
 }
 .rf-step.is-done .rf-step-dot { background: var(--ui-teal); border-color: var(--ui-teal); }
@@ -152,7 +152,7 @@
   padding: 0;
   text-align: left;
 }
-.rf-kpi-btn > .cf-kpi { flex: 1; transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s; }
+.rf-kpi-btn > .cf-kpi { flex: 1; transition: border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast); }
 .rf-kpi-btn:hover > .cf-kpi { box-shadow: var(--ui-shadow-sm); transform: translateY(-1px); }
 .rf-kpi-btn:focus-visible { box-shadow: var(--ui-ring); outline: none; }
 .rf-kpi-btn.is-active > .cf-kpi { border-color: var(--ui-berry); box-shadow: 0 0 0 1px var(--ui-berry); }
@@ -168,13 +168,13 @@
 .rf-toolbar-actions .cf-search { flex: 1 1 220px; max-width: 320px; }
 .rf-toolbar-picker { flex: 1 1 220px; max-width: 300px; }
 
-.rf-table tbody .rf-row { cursor: pointer; transition: background 0.12s; }
+.rf-table tbody .rf-row { cursor: pointer; transition: background var(--dur-fast); }
 .rf-table tbody .rf-row:hover { background: var(--ui-surface-2); }
 .rf-table tbody .rf-row:focus-visible { box-shadow: inset 0 0 0 2px var(--ui-berry); outline: none; }
 .rf-progress-cell { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .rf-icon-danger { color: var(--ui-red); }
 .rf-icon-danger:hover { background: var(--ui-red-50); }
-.rf-is-refreshing { opacity: 0.65; transition: opacity 0.2s; }
+.rf-is-refreshing { opacity: 0.65; transition: opacity var(--dur-base); }
 
 .rf-link {
   align-items: center;
@@ -203,7 +203,7 @@
 
 /* Detail drawer */
 .rf-drawer-overlay {
-  animation: rf-fade 0.18s ease;
+  animation: rf-fade var(--dur-fast) ease;
   background: rgba(30, 24, 35, 0.32);
   display: flex;
   inset: 0;
@@ -212,7 +212,7 @@
   z-index: 60;
 }
 .rf-drawer {
-  animation: rf-slide 0.22s ease;
+  animation: rf-slide var(--dur-base) ease;
   background: var(--ui-surface);
   box-shadow: var(--ui-shadow-lg);
   display: flex;
@@ -335,7 +335,7 @@
   gap: 8px;
   margin-top: 6px;
   padding: 10px 18px;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform var(--dur-fast), box-shadow var(--dur-fast);
 }
 .rf-hero-cta:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); transform: translateY(-1px); }
 .rf-hero-cta:focus-visible { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); outline: none; }
@@ -405,7 +405,7 @@
   font-size: 0.9rem;
   min-height: 42px;
   padding: 0 12px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .rf-field textarea { line-height: 1.45; min-height: 84px; padding: 10px 12px; resize: vertical; }
 .rf-field input:focus,
@@ -417,7 +417,7 @@
 .rf-field .rf-field-error { color: var(--ui-red); font-weight: 500; }
 .rf-form-foot { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
 
-.rf-success { align-items: center; animation: rf-rise 0.3s ease; display: flex; flex-direction: column; gap: 10px; padding: 12px 4px; text-align: center; }
+.rf-success { align-items: center; animation: rf-rise var(--dur-slow) ease; display: flex; flex-direction: column; gap: 10px; padding: 12px 4px; text-align: center; }
 .rf-success-icon {
   align-items: center;
   animation: rf-pop 0.4s ease;
@@ -453,7 +453,7 @@
   gap: 6px;
   padding: 5px 12px;
   flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
 }
 .rf-chips button span { background: var(--ui-surface-2); border-radius: 999px; font-size: 0.72rem; min-width: 20px; padding: 0 6px; text-align: center; }
 .rf-chips button:hover { border-color: var(--ui-berry); }
@@ -468,7 +468,7 @@
   display: flex;
   gap: 12px;
   padding: 14px 18px;
-  transition: background 0.12s;
+  transition: background var(--dur-fast);
 }
 .rf-list > li:first-child { border-top: 0; }
 .rf-chips + .rf-scroll { border-top: 1px solid var(--ui-line); margin-top: 8px; }
@@ -505,7 +505,7 @@
   gap: 14px;
   padding: 14px 18px;
   text-decoration: none;
-  transition: box-shadow 0.15s, transform 0.15s;
+  transition: box-shadow var(--dur-fast), transform var(--dur-fast);
 }
 .rf-banner:hover { box-shadow: var(--ui-shadow-sm); transform: translateY(-1px); }
 .rf-banner:focus-visible { box-shadow: var(--ui-ring); outline: none; }

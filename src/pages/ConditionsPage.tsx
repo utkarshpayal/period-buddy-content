@@ -441,7 +441,7 @@ export const ConditionsPage: React.FC = () => {
               <span style={{ color: draft.color }}>Health issue</span>
             </div>
             {draft.imageUrl && (
-              <img alt="" className="preview-cover-image" src={draft.imageUrl} />
+              <img loading="lazy" decoding="async" alt="" className="preview-cover-image" src={draft.imageUrl} />
             )}
             <h4>{draft.title || "Untitled Condition"}</h4>
             <p className="preview-summary">{draft.summary || "No summary written."}</p>

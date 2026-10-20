@@ -671,11 +671,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* Add modal — upload a file or link to something hosted elsewhere */}
       {showAdd && (
-        <div className="modal-overlay" onClick={() => !submittingAdd && setShowAdd(false)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !submittingAdd && setShowAdd(false)}>
           <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>{addMode === "file" ? "Upload a file" : "Add a link"}</h3>
-              <button className="gy-icon-btn" onClick={() => setShowAdd(false)} type="button" disabled={submittingAdd}>
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setShowAdd(false)} type="button" disabled={submittingAdd}>
                 <X size={18} />
               </button>
             </div>
@@ -799,11 +799,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* Edit modal */}
       {editingAsset && (
-        <div className="modal-overlay" onClick={() => !savingEdit && setEditingAsset(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !savingEdit && setEditingAsset(null)}>
           <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>{editingAsset.assetType === "link" ? "Edit link" : "Edit file"}</h3>
-              <button className="gy-icon-btn" onClick={() => setEditingAsset(null)} type="button" disabled={savingEdit}>
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setEditingAsset(null)} type="button" disabled={savingEdit}>
                 <X size={18} />
               </button>
             </div>
@@ -880,7 +880,7 @@ export const CompanyFilesPage: React.FC = () => {
           opens a raw S3 link in a new tab. (Links open externally instead —
           see handleOpen — since we don't control or embed other sites.) */}
       {previewAsset && (
-        <div className="modal-overlay" onClick={() => setPreviewAsset(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => setPreviewAsset(null)}>
           <section className="gy-card file-preview-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3 title={previewAsset.title}>{previewAsset.title}</h3>
@@ -904,7 +904,7 @@ export const CompanyFilesPage: React.FC = () => {
                   )}
                   Download
                 </button>
-                <button className="gy-icon-btn" onClick={() => setPreviewAsset(null)} type="button">
+                <button aria-label="Close" className="gy-icon-btn" onClick={() => setPreviewAsset(null)} type="button">
                   <X size={18} />
                 </button>
               </div>
@@ -912,7 +912,7 @@ export const CompanyFilesPage: React.FC = () => {
 
             <div className="file-preview-body">
               {previewKind(previewAsset.mimeType) === "image" && (
-                <img src={previewAsset.fileUrl} alt={previewAsset.title} />
+                <img loading="lazy" decoding="async" src={previewAsset.fileUrl} alt={previewAsset.title} />
               )}
               {previewKind(previewAsset.mimeType) === "video" && (
                 <video src={previewAsset.fileUrl} controls autoPlay />
@@ -933,11 +933,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* Delete confirmation modal */}
       {deletingAsset && (
-        <div className="modal-overlay" onClick={() => !deleting && setDeletingAsset(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !deleting && setDeletingAsset(null)}>
           <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>{deletingAsset.assetType === "link" ? "Delete link" : "Delete file"}</h3>
-              <button className="gy-icon-btn" onClick={() => setDeletingAsset(null)} type="button" disabled={deleting}>
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setDeletingAsset(null)} type="button" disabled={deleting}>
                 <X size={18} />
               </button>
             </div>
@@ -968,11 +968,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* New Folder modal */}
       {showNewFolder && (
-        <div className="modal-overlay" onClick={() => !creatingFolder && setShowNewFolder(false)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !creatingFolder && setShowNewFolder(false)}>
           <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>New folder</h3>
-              <button className="gy-icon-btn" onClick={() => setShowNewFolder(false)} type="button" disabled={creatingFolder}>
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setShowNewFolder(false)} type="button" disabled={creatingFolder}>
                 <X size={18} />
               </button>
             </div>
@@ -1003,11 +1003,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* Rename Folder modal */}
       {renamingFolder && (
-        <div className="modal-overlay" onClick={() => !savingRename && setRenamingFolder(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !savingRename && setRenamingFolder(null)}>
           <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>Rename folder</h3>
-              <button className="gy-icon-btn" onClick={() => setRenamingFolder(null)} type="button" disabled={savingRename}>
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setRenamingFolder(null)} type="button" disabled={savingRename}>
                 <X size={18} />
               </button>
             </div>
@@ -1032,11 +1032,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* Delete Folder confirmation modal */}
       {deletingFolder && (
-        <div className="modal-overlay" onClick={() => !deletingFolderBusy && setDeletingFolder(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !deletingFolderBusy && setDeletingFolder(null)}>
           <section className="gy-card gy-form-card gy-modal-panel file-delete-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>Delete folder</h3>
-              <button
+              <button aria-label="Close"
                 className="gy-icon-btn"
                 onClick={() => setDeletingFolder(null)}
                 type="button"
@@ -1078,11 +1078,11 @@ export const CompanyFilesPage: React.FC = () => {
 
       {/* Move to folder modal — its own mini folder browser */}
       {movingAsset && (
-        <div className="modal-overlay" onClick={() => !movingBusy && setMovingAsset(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => !movingBusy && setMovingAsset(null)}>
           <section className="gy-card gy-form-card gy-modal-panel file-move-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3 title={movingAsset.title}>Move "{movingAsset.title}"</h3>
-              <button className="gy-icon-btn" onClick={() => setMovingAsset(null)} type="button" disabled={movingBusy}>
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setMovingAsset(null)} type="button" disabled={movingBusy}>
                 <X size={18} />
               </button>
             </div>
@@ -1169,7 +1169,7 @@ export const CompanyFilesPage: React.FC = () => {
       {/* Filter bar — type/visibility dropdowns on the left, search + view
           toggle grouped on the right. */}
       <div className="app-filter-bar">
-        <select
+        <select aria-label="Filter by type"
           className="app-filter-select"
           value={category}
           onChange={(e) => setCategory(e.target.value as CompanyAssetCategory | "all")}
@@ -1182,7 +1182,7 @@ export const CompanyFilesPage: React.FC = () => {
           ))}
         </select>
 
-        <select
+        <select aria-label="Filter by visibility"
           className="app-filter-select"
           value={visibility}
           onChange={(e) => setVisibility(e.target.value as VisibilityFilter)}
@@ -1340,7 +1340,19 @@ export const CompanyFilesPage: React.FC = () => {
             <tbody>
               {!isSearching &&
                 folders.map((f) => (
-                  <tr key={f._id} className="file-list-folder-row" onClick={() => enterFolder(f)}>
+                  <tr
+                    key={f._id}
+                    className="file-list-folder-row"
+                    aria-label={`Open folder ${f.name}`}
+                    tabIndex={0}
+                    onClick={() => enterFolder(f)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        enterFolder(f);
+                      }
+                    }}
+                  >
                     <td>
                       <div className="file-list-title">
                         <Folder size={17} className="file-list-icon" />

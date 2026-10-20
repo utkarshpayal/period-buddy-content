@@ -73,7 +73,7 @@ export const Avatar: React.FC<{ name: string; src?: string; size?: "sm" | "md" |
   const hue = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   return (
     <span className={`gx-avatar size-${size}`} style={{ "--gx-hue": hue } as React.CSSProperties} aria-hidden>
-      {src ? <img src={src} alt="" /> : initials}
+      {src ? <img loading="lazy" decoding="async" src={src} alt="" /> : initials}
     </span>
   );
 };

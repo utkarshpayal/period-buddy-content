@@ -151,7 +151,7 @@
   gap: 6px;
   min-height: 42px;
   padding: 5px 8px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 .pf-tags-box:focus-within { border-color: var(--ui-berry); box-shadow: var(--ui-ring); }
 .gynac-shell .gx-field .pf-tags-box input {
@@ -281,7 +281,7 @@
   gap: 2px;
   padding: 12px 14px;
   text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast), transform var(--dur-fast);
 }
 .av-preset strong { color: var(--ui-ink); font-size: 0.88rem; }
 .av-preset span { color: var(--ui-muted); font-size: 0.76rem; }

@@ -336,7 +336,7 @@ export const ImageField: React.FC<{
           {broken ? (
             <div className="pn-image-broken">This link doesn&apos;t load as an image. Check it, or upload the file instead.</div>
           ) : (
-            <img
+            <img loading="lazy" decoding="async"
               src={value}
               alt="Notification image"
               onLoad={(e) => setRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
@@ -391,7 +391,7 @@ export const ImageField: React.FC<{
       </div>
 
       {panel === "link" && (
-        <input
+        <input aria-label="Image URL"
           type="url"
           className="pn-image-url"
           value={value}
