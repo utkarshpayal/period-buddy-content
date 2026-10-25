@@ -2,7 +2,7 @@
 // shell so the window opens fast; API calls (cross-origin, or /api/*) and
 // non-GET requests are never touched, so data and sign-in always hit the network.
 
-const CACHE = "nura-admin-v1";
+const CACHE = "nura-admin-v2";
 const SHELL = "/index.html";
 
 self.addEventListener("install", (event) => {

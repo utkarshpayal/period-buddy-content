@@ -26,8 +26,8 @@ const Metric: React.FC<{
 }> = ({ icon, tone, label, value, hint }) => (
   <div className="admin-metric">
     <div className="admin-metric-top">
-      <span className={`admin-metric-icon i-${tone}`}>{icon}</span>
       <span className="admin-metric-label">{label}</span>
+      <span className={`admin-metric-icon i-${tone}`}>{icon}</span>
     </div>
     <div className="admin-metric-value">{value}</div>
     {hint && <div className="admin-metric-hint">{hint}</div>}

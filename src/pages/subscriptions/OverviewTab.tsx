@@ -18,9 +18,11 @@ const Kpi: React.FC<{ icon: React.ReactNode; tone: Tone; label: string; value: R
   hint
 }) => (
   <div className="sub-kpi">
-    <span className={`sub-kpi-icon i-${tone}`} aria-hidden="true">{icon}</span>
     <div className="sub-kpi-text">
-      <span className="sub-kpi-label">{label}</span>
+      <span className="ds-kpi-head">
+        <span className="sub-kpi-label">{label}</span>
+        <span className={`sub-kpi-icon i-${tone}`} aria-hidden="true">{icon}</span>
+      </span>
       <span className="sub-kpi-value">{value}</span>
       {hint && <span className="sub-kpi-hint">{hint}</span>}
     </div>

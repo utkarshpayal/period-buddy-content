@@ -32,13 +32,13 @@
   --ui-surface-2: var(--surface-2);
   --ui-page: var(--page);
 
-  --ui-radius: 16px;
-  --ui-radius-sm: 10px;
-  --ui-shadow-xs: 0 1px 2px rgba(30, 24, 35, 0.06);
-  --ui-shadow-sm: 0 1px 2px rgba(30, 24, 35, 0.05), 0 4px 12px rgba(30, 24, 35, 0.04);
-  --ui-shadow: 0 8px 24px rgba(30, 24, 35, 0.08), 0 2px 6px rgba(30, 24, 35, 0.04);
-  --ui-shadow-lg: 0 24px 60px rgba(30, 24, 35, 0.18);
-  --ui-ring: 0 0 0 3px rgba(194, 65, 111, 0.22);
+  --ui-radius: var(--radius-md);
+  --ui-radius-sm: var(--radius-sm);
+  --ui-shadow-xs: var(--shadow-xs);
+  --ui-shadow-sm: var(--shadow-sm);
+  --ui-shadow: var(--shadow-md);
+  --ui-shadow-lg: var(--shadow-lg);
+  --ui-ring: var(--ring);
   --ui-font: var(--font-sans);
 }
 
@@ -178,8 +178,8 @@
 }
 
 /* Department colour coding: used on role chips, avatars and home tiles. */
-.dept-organisation { --dept: var(--ui-berry); --dept-bg: var(--ui-berry-50); }
-.dept-content { --dept: var(--ui-plum); --dept-bg: var(--ui-plum-50); }
+.dept-organisation { --dept: var(--ui-plum); --dept-bg: var(--ui-plum-50); }
+.dept-content { --dept: var(--ui-berry); --dept-bg: var(--ui-berry-50); }
 .dept-app { --dept: var(--ui-blue); --dept-bg: var(--ui-blue-50); }
 .dept-clinical { --dept: var(--ui-teal); --dept-bg: var(--ui-teal-50); }
 .dept-overview { --dept: var(--ui-berry); --dept-bg: var(--ui-berry-50); }

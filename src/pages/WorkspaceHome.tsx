@@ -120,8 +120,10 @@ const Kpi: React.FC<{
   tone?: "ok" | "warn" | "alert";
 }> = ({ icon, label, value, to, hint, tone }) => (
   <Link to={to} className={`ws-kpi ${tone ? `tone-${tone}` : ""}`}>
-    <span className="ws-kpi-icon">{icon}</span>
-    <span className="ws-kpi-label">{label}</span>
+    <span className="ds-kpi-head">
+      <span className="ws-kpi-label">{label}</span>
+      <span className="ws-kpi-icon">{icon}</span>
+    </span>
     <strong className="ws-kpi-value">{value.toLocaleString()}</strong>
     {hint && <span className="ws-kpi-hint">{hint}</span>}
   </Link>

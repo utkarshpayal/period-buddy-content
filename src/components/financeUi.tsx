@@ -79,8 +79,8 @@ export const Kpi: React.FC<{ icon: React.ReactNode; tone?: KpiTone; label: strin
 }) => (
   <div className="cf-kpi">
     <div className="cf-kpi-head">
-      <span className={`cf-kpi-icon is-${tone}`} aria-hidden>{icon}</span>
       <span className="cf-kpi-label">{label}</span>
+      <span className={`cf-kpi-icon is-${tone}`} aria-hidden>{icon}</span>
     </div>
     <div className="cf-kpi-value">{value}</div>
     {hint && <div className="cf-kpi-hint">{hint}</div>}

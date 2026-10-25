@@ -3,10 +3,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext";
 import { ToastProvider } from "./components/Toast";
 import { Sidebar } from "./components/Sidebar";
-import { GynacSidebar } from "./components/GynacSidebar";
+import { GynacSidebar, GYNAC_NAV_SECTIONS } from "./components/GynacSidebar";
+import { TopBar } from "./components/TopBar";
 import { GynacIncomingCall } from "./components/GynacIncomingCall";
 import { RequireAccess } from "./components/RequireAccess";
-import { ALL_NAV_ITEMS } from "./navigation";
+import { ALL_NAV_ITEMS, visibleSections } from "./navigation";
 import { LoginPage } from "./pages/LoginPage";
 import { SetPasswordPage } from "./pages/SetPasswordPage";
 import { NoAccessPage } from "./pages/NoAccessPage";
@@ -28,10 +29,16 @@ const signRoute = (
 );
 
 function AdminApp() {
+  const { can, approvalSummary } = useAppContext();
+  const sections = React.useMemo(() => visibleSections(can), [can]);
   return (
     <div className="app-shell admin-shell">
       <Sidebar />
       <main className="workspace-main-content">
+        <TopBar
+          sections={sections}
+          bell={{ to: "/approvals", count: approvalSummary.toReview, label: "Approvals" }}
+        />
         <Routes>
           {ALL_NAV_ITEMS.map((item) => (
             <Route
@@ -55,6 +62,7 @@ function GynacApp() {
       {/* Rings on every portal page when a patient calls. */}
       <GynacIncomingCall />
       <main className="workspace-main-content">
+        <TopBar sections={GYNAC_NAV_SECTIONS} />
         <Routes>
           <Route path="/" element={<GynacDashboard />} />
           <Route path="/bookings" element={<GynacBookings />} />

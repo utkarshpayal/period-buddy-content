@@ -4,6 +4,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { visibleSections } from "../navigation";
 import { WORKSPACE_TITLE, roleLabel } from "../auth/access";
+import { BrandMark } from "./BrandMark";
 
 const initialsOf = (label: string) =>
   label
@@ -32,11 +33,11 @@ export const Sidebar: React.FC = () => {
   // The logo goes to Home, like on the marketing site.
   const brand = (
     <Link to="/" className="brand-lockup" aria-label={`${title} home`} onClick={close}>
-      <img className="sidebar-logo" src="/images/logo.png" alt="" />
-      <div>
-        <p className="eyebrow">The Nura Care</p>
-        <h1>{title}</h1>
-      </div>
+      <BrandMark />
+      <span className="brand-text">
+        <strong>The Nura Care</strong>
+        <span>{title}</span>
+      </span>
     </Link>
   );
 

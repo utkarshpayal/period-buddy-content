@@ -9,16 +9,16 @@
    not affected.
 
    The system:
-   - Surfaces: 16px radius, 1px --ui-line border, --ui-shadow-sm.
+   - Surfaces: 14px radius, 1px --ui-line border, --ui-shadow-sm.
    - Padding: 20px in content cards, 18px in stat tiles.
    - Card titles: 1rem / 800. Card subtitles: 0.82rem muted.
    - Stat tiles: 0.8rem label, 1.5rem / 800 value, 0.76rem hint.
-   - Buttons: pills, 40px (34px small), 0.875rem / 700, 16px side padding.
+   - Buttons: shape and size come from styles/design-system.css.
    ========================================================================= */
 
 .gynac-shell {
-  --pc-radius: 16px;
-  --pc-radius-inner: 12px;
+  --pc-radius: var(--radius-md);
+  --pc-radius-inner: var(--radius-sm);
   --pc-shadow: var(--ui-shadow-sm);
   --pc-pad: 20px;
   --pc-pad-stat: 18px;
@@ -92,32 +92,6 @@
 /* Stat rows: every tile in a row is the same height. */
 .gynac-shell .gx-stat-grid { align-items: stretch; gap: 14px; }
 .gynac-shell .gx-stat-grid > * { height: 100%; }
-
-/* ------------------------------------------------------------- Buttons */
-
-.gynac-shell .cf-btn,
-.gynac-shell .gx-btn,
-.gynac-shell .gy-btn,
-.gynac-shell .av-btn {
-  border-radius: 999px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  gap: 7px;
-  height: auto;
-  min-height: 40px;
-  padding: 0 16px;
-}
-.gynac-shell .cf-btn-sm,
-.gynac-shell .gx-btn-sm,
-.gynac-shell .av-btn-sm {
-  font-size: 0.8rem;
-  gap: 6px;
-  height: auto;
-  min-height: 34px;
-  padding: 0 12px;
-}
-/* Icon-only and quiet buttons keep their own shape. */
-.gynac-shell .av-btn-quiet { height: auto; min-height: 32px; padding: 0 10px; }
 
 /* Earnings & Wallet: with the free-sessions KPI there are four minis, 2×2. */
 .gynac-shell .gw-minis:has(> .cf-kpi:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

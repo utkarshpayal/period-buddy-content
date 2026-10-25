@@ -57,11 +57,11 @@
   --surface-2: #FBF8FA;
   --surface-dark: #2A1830;
 
-  /* Type: Nunito is the app's own typeface; Nunito Sans is its text
-     companion. Headings use the display face, everything else the sans. */
+  /* Type (design system v1): Nunito for display and headings, Nunito Sans
+     for UI and body, JetBrains Mono for IDs, ledger amounts and audit data. */
   --font-display: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-sans: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Widest a page's content grows on large monitors, centered beyond it,
      so tables and forms don't stretch across a 2560px screen. */
@@ -71,11 +71,14 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-pill: 999px;
-  --shadow-xs: 0 1px 2px rgba(30, 24, 35, 0.05);
-  --shadow-sm: 0 1px 2px rgba(30, 24, 35, 0.04), 0 2px 8px rgba(30, 24, 35, 0.04);
-  --shadow-md: 0 1px 2px rgba(30, 24, 35, 0.04), 0 12px 28px rgba(30, 24, 35, 0.07);
-  --shadow-lg: 0 2px 6px rgba(30, 24, 35, 0.05), 0 28px 56px rgba(30, 24, 35, 0.14);
+  /* Shadows are tinted plum. Design system v1: sh-1 resting cards (xs/sm),
+     sh-2 hover and menus (md), sh-3 dialogs, drawers and toasts (lg). */
+  --shadow-xs: 0 1px 2px rgba(42, 24, 48, 0.05);
+  --shadow-sm: 0 1px 2px rgba(42, 24, 48, 0.05);
+  --shadow-md: 0 1px 2px rgba(42, 24, 48, 0.04), 0 8px 20px -6px rgba(42, 24, 48, 0.1);
+  --shadow-lg: 0 2px 8px rgba(42, 24, 48, 0.08), 0 28px 56px -16px rgba(42, 24, 48, 0.28);
   --ring: 0 0 0 3px rgba(194, 65, 111, 0.22);
+  --scrim: rgba(30, 24, 35, 0.42);
 
   /* Motion: pick by how much moves. fast for hover/press, base for fades and
      small moves, slow for dialogs and drawers. The reduced-motion rule below
@@ -83,7 +86,8 @@
   --dur-fast: 0.15s;
   --dur-base: 0.22s;
   --dur-slow: 0.32s;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
 }
 

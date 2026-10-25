@@ -13,6 +13,29 @@ import {
   X
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { BrandMark } from "./BrandMark";
+import type { TopBarSection } from "./TopBar";
+
+/** The Clinician Portal's pages: the sidebar, the top bar and ⌘K use this. */
+export const GYNAC_NAV_SECTIONS: TopBarSection[] = [
+  {
+    label: "Overview",
+    items: [
+      { path: "/", label: "Dashboard", icon: LayoutGrid },
+      { path: "/bookings", label: "Bookings & Chat", icon: CalendarCheck }
+    ]
+  },
+  {
+    label: "Practice",
+    items: [
+      { path: "/payments", label: "Earnings & Wallet", icon: Wallet },
+      { path: "/availability", label: "Availability", icon: Clock },
+      { path: "/referrals", label: "Refer & Earn", icon: Gift }
+    ]
+  },
+  { label: "Content", items: [{ path: "/reels", label: "Reels", icon: Film }] },
+  { label: "Account", items: [{ path: "/profile", label: "My Profile", icon: UserCog }] }
+];
 
 export const GynacSidebar: React.FC = () => {
   const { authSession, logout } = useAppContext();
@@ -38,11 +61,11 @@ export const GynacSidebar: React.FC = () => {
   // The logo goes to the dashboard, like on the marketing site.
   const brand = (
     <Link to="/" className="brand-lockup" aria-label="Clinician Portal home" onClick={close}>
-      <img className="sidebar-logo" src="/images/logo.png" alt="" />
-      <div>
-        <p className="eyebrow">The Nura Care</p>
-        <h1>Clinician Portal</h1>
-      </div>
+      <BrandMark />
+      <span className="brand-text">
+        <strong>The Nura Care</strong>
+        <span>Clinician Portal</span>
+      </span>
     </Link>
   );
 
@@ -67,41 +90,17 @@ export const GynacSidebar: React.FC = () => {
       {brand}
 
       <nav className="type-nav" aria-label="Clinician navigation">
-        <p className="nav-section-label">Overview</p>
-        <NavLink to="/" end className={link} onClick={close}>
-          <LayoutGrid size={18} />
-          Dashboard
-        </NavLink>
-        <NavLink to="/bookings" className={link} onClick={close}>
-          <CalendarCheck size={18} />
-          Bookings &amp; Chat
-        </NavLink>
-
-        <p className="nav-section-label">Practice</p>
-        <NavLink to="/payments" className={link} onClick={close}>
-          <Wallet size={18} />
-          Earnings & Wallet
-        </NavLink>
-        <NavLink to="/availability" className={link} onClick={close}>
-          <Clock size={18} />
-          Availability
-        </NavLink>
-        <NavLink to="/referrals" className={link} onClick={close}>
-          <Gift size={18} />
-          Refer &amp; Earn
-        </NavLink>
-
-        <p className="nav-section-label">Content</p>
-        <NavLink to="/reels" className={link} onClick={close}>
-          <Film size={18} />
-          Reels
-        </NavLink>
-
-        <p className="nav-section-label">Account</p>
-        <NavLink to="/profile" className={link} onClick={close}>
-          <UserCog size={18} />
-          My Profile
-        </NavLink>
+        {GYNAC_NAV_SECTIONS.map((section) => (
+          <React.Fragment key={section.label}>
+            <p className="nav-section-label">{section.label}</p>
+            {section.items.map(({ path, label, icon: Icon }) => (
+              <NavLink key={path} to={path} end={path === "/"} className={link} onClick={close}>
+                <Icon size={18} />
+                {label}
+              </NavLink>
+            ))}
+          </React.Fragment>
+        ))}
       </nav>
 
       {authSession && (

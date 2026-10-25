@@ -11,6 +11,7 @@ import "./styles/availability.css";
 import "./styles/referrals.css";
 import "./styles/support.css";
 import "./styles/portal-consistency.css";
+import "./styles/design-system.css";
 
 installEscapeToClose();
 

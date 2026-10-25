@@ -30,11 +30,13 @@ export const StatCard: React.FC<{
   tone?: "berry" | "teal" | "amber" | "green" | "plum";
 }> = ({ icon, label, value, hint, tone = "berry" }) => (
   <article className={`gx-stat tone-${tone}`}>
-    <span className="gx-stat-icon" aria-hidden>
-      {icon}
-    </span>
     <div className="gx-stat-body">
-      <span className="gx-stat-label">{label}</span>
+      <span className="ds-kpi-head">
+        <span className="gx-stat-label">{label}</span>
+        <span className="gx-stat-icon" aria-hidden>
+          {icon}
+        </span>
+      </span>
       <strong className="gx-stat-value">{value}</strong>
       {hint && <span className="gx-stat-hint">{hint}</span>}
     </div>
@@ -69,10 +71,11 @@ export const Avatar: React.FC<{ name: string; src?: string; size?: "sm" | "md" |
       .slice(0, 2)
       .join("")
       .toUpperCase() || "?";
-  // Stable hue per name so the same patient always gets the same colour.
-  const hue = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  // Stable tint per name (one of the design's five) so the same patient
+  // always gets the same colour.
+  const tint = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7) % 5;
   return (
-    <span className={`gx-avatar size-${size}`} style={{ "--gx-hue": hue } as React.CSSProperties} aria-hidden>
+    <span className={`gx-avatar size-${size} tint-${tint}`} aria-hidden>
       {src ? <img loading="lazy" decoding="async" src={src} alt="" /> : initials}
     </span>
   );
