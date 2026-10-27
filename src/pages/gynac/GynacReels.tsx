@@ -254,7 +254,7 @@ export const GynacReels: React.FC = () => {
       )}
 
       {showForm && (
-        <div className="gx-overlay is-centered" onClick={closeForm}>
+        <div className="gx-overlay is-centered" data-esc-close onClick={closeForm}>
           <form className="gx-dialog is-wide" onSubmit={submit} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Publish a reel">
             <div className="gx-drawer-head">
               <span><Film size={16} /> Publish a reel</span>

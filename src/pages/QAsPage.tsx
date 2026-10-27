@@ -9,6 +9,9 @@ import { ApiBanner } from "../components/ApiBanner";
 import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 import { uid } from "../lib/uid";
+import { useUnsavedChanges, useUploadGuard } from "../lib/useEditorGuards";
+import { richTextToPlain } from "../lib/richText";
+import { RichPreview, RichTextEditor } from "../components/richText";
 
 const emptyQA = (): ContentItem => ({
   id: uid(),
@@ -81,7 +84,11 @@ export const QAsPage: React.FC = () => {
     setIsEditorOpen(true);
   };
 
+  const { uploading, report } = useUploadGuard();
+  const confirmDiscard = useUnsavedChanges(draft, isEditorOpen);
+
   const closeEditor = () => {
+    if (!confirmDiscard()) return;
     setIsEditorOpen(false);
     setEditingId(null);
     setFormError(null);
@@ -107,6 +114,10 @@ export const QAsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      setFormError("Images are still uploading. Save once they finish.");
+      return;
+    }
     setFormError(null);
 
     const question = draft.question.trim() || draft.title.trim();
@@ -209,7 +220,7 @@ export const QAsPage: React.FC = () => {
                         <PendingBadge id={qa.id} />
                         <ReviewChip item={qa} />
                       </div>
-                      <p>{qa.answer || qa.summary}</p>
+                      <p>{richTextToPlain(qa.answer) || qa.summary}</p>
                       <div className="entry-meta">
                         {qa.isSensitive && (
                           <span className="badge-sensitive">
@@ -274,16 +285,17 @@ export const QAsPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Approved Answer *
-              <textarea
-                onChange={(e) => updateDraft("answer", e.target.value)}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Approved Answer *</span>
+              <RichTextEditor
+                label="Approved answer"
+                onBusyChange={report("Approved answer")}
+                onChange={(answer) => updateDraft("answer", answer)}
                 placeholder="Write the approved scientific/clinical response..."
-                required
-                rows={6}
                 value={draft.answer}
+                variant="full"
               />
-            </label>
+            </div>
 
             <label>
               Status
@@ -384,9 +396,9 @@ export const QAsPage: React.FC = () => {
               <span>{draft.audience} • {draft.stage}</span>
             </div>
             <h4 className="preview-question">Q: {draft.question || "User Question"}</h4>
-            <div className="preview-body answer-view">
+            <div className="preview-body answer-view preview-rich">
               <strong>Answer:</strong>
-              <p>{draft.answer || "Clinical response will be shown here."}</p>
+              <RichPreview content={draft.answer} empty="Clinical response will be shown here." />
               {draft.medicallyReviewed && (
                 <div className="review-stamp">
                   Medically reviewed{draft.review?.by || draft.reviewedBy ? ` by ${draft.review?.by || draft.reviewedBy}` : ""}
@@ -399,7 +411,7 @@ export const QAsPage: React.FC = () => {
             <button className="modal-cancel" onClick={closeEditor} type="button">
               Cancel
             </button>
-            <button className="save-button" disabled={isSaving} type="submit">
+            <button className="save-button" disabled={isSaving || uploading} title={uploading ? "Waiting for images to upload" : undefined} type="submit">
               {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
               {isSaving ? "Saving" : "Save Q&A"}
             </button>

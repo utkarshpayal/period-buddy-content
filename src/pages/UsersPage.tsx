@@ -157,7 +157,7 @@ export const UsersPage: React.FC = () => {
       )}
 
       <div className="app-filter-bar">
-        <select className="app-filter-select" value={role} onChange={(e) => setRole(e.target.value)}>
+        <select aria-label="Filter by role" className="app-filter-select" value={role} onChange={(e) => setRole(e.target.value)}>
           {ROLE_FILTERS.map((r) => (
             <option key={r.value || "all"} value={r.value}>
               {r.label}
@@ -165,7 +165,7 @@ export const UsersPage: React.FC = () => {
           ))}
         </select>
 
-        <select
+        <select aria-label="Filter by status"
           className="app-filter-select"
           value={status}
           onChange={(e) => setStatus(e.target.value as "" | "active" | "suspended")}
@@ -215,7 +215,7 @@ export const UsersPage: React.FC = () => {
                   <td>
                     <div className="admin-user-cell">
                       <div className="admin-avatar">
-                        {u.profilePicture ? <img src={u.profilePicture} alt="" /> : initials(u)}
+                        {u.profilePicture ? <img loading="lazy" decoding="async" src={u.profilePicture} alt="" /> : initials(u)}
                       </div>
                       <div>
                         <div className="admin-user-name">{fullName(u)}</div>
@@ -304,19 +304,19 @@ export const UsersPage: React.FC = () => {
       )}
 
       {detail && (
-        <div className="modal-overlay" onClick={() => setDetail(null)}>
+        <div className="modal-overlay" data-esc-close onClick={() => setDetail(null)}>
           <div className="gy-card gy-modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="gy-card-head">
               <div className="admin-user-cell">
                 <div className="admin-avatar">
-                  {detail.user.profilePicture ? <img src={detail.user.profilePicture} alt="" /> : initials(detail.user)}
+                  {detail.user.profilePicture ? <img loading="lazy" decoding="async" src={detail.user.profilePicture} alt="" /> : initials(detail.user)}
                 </div>
                 <div>
                   <div className="admin-user-name">{fullName(detail.user)}</div>
                   <div className="admin-user-sub">{detail.user.email}</div>
                 </div>
               </div>
-              <button type="button" className="gy-icon-btn" onClick={() => setDetail(null)}>
+              <button aria-label="Close" type="button" className="gy-icon-btn" onClick={() => setDetail(null)}>
                 <X size={18} />
               </button>
             </div>

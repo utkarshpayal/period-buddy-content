@@ -101,7 +101,7 @@ export const ReviewChip: React.FC<{ item: ContentItem }> = ({ item }) => {
     const date = formatReviewDate(review?.at);
     return (
       <span className="badge-verified" title={review?.note ? `Reviewer's note: ${review.note}` : undefined}>
-        ✓ Medically reviewed{by ? ` by ${by}` : ""}
+        <BadgeCheck size={14} aria-hidden="true" /> Medically reviewed{by ? ` by ${by}` : ""}
         {date ? ` · ${date}` : ""}
       </span>
     );

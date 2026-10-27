@@ -126,4 +126,4 @@ https://meet.thenura.care`.
 
 ## Contributing
 
-Branch from `main` and open a PR. CI runs `npm ci` + `npm run build`. Never commit `.env*` files.
+Branch from `staging` and open a PR to `staging`; releases are `staging` → `main` PRs ([WORKFLOW.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/WORKFLOW.md)). CI runs `npm ci` + `npm run build`. Never commit `.env*` files.

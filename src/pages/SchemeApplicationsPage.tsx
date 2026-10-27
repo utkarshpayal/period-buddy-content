@@ -387,7 +387,7 @@ export const SchemeApplicationsPage: React.FC = () => {
           />
         </label>
 
-        <select
+        <select aria-label="Filter by status"
           className="app-filter-select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as SchemeApplicationStatus | "all")}
@@ -403,7 +403,7 @@ export const SchemeApplicationsPage: React.FC = () => {
           })}
         </select>
 
-        <select className="app-filter-select" value={sort} onChange={(e) => setSort(e.target.value as ApplicationSort)}>
+        <select aria-label="Sort applications" className="app-filter-select" value={sort} onChange={(e) => setSort(e.target.value as ApplicationSort)}>
           {SORT_OPTIONS.map((o) => (
             <option key={o.key} value={o.key}>
               {o.label}
@@ -540,7 +540,7 @@ export const SchemeApplicationsPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="aq-th-check">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+                    <input aria-label="Select all applications" type="checkbox" checked={allSelected} onChange={toggleAll} />
                   </th>
                   <th>Applicant</th>
                   <th>Scheme</th>
@@ -566,7 +566,7 @@ export const SchemeApplicationsPage: React.FC = () => {
                     <React.Fragment key={app._id}>
                       <tr className={`aq-row status-${app.status} ${selected.has(app._id) ? "is-selected" : ""}`}>
                         <td className="aq-td-check">
-                          <input type="checkbox" checked={selected.has(app._id)} onChange={() => toggleRow(app._id)} />
+                          <input aria-label={`Select application from ${name}`} type="checkbox" checked={selected.has(app._id)} onChange={() => toggleRow(app._id)} />
                         </td>
                         <td>
                           <div className="aq-identity">

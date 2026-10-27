@@ -227,14 +227,14 @@ export const TeamPage: React.FC = () => {
 
       <div className="app-filter-bar">
         {departments.length > 1 && (
-          <select className="app-filter-select" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+          <select aria-label="Filter by department" className="app-filter-select" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
             <option value="">All departments</option>
             {departments.map((d) => (
               <option key={d} value={d}>{DEPARTMENT_LABEL[d]}</option>
             ))}
           </select>
         )}
-        <select className="app-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select aria-label="Filter by status" className="app-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">Any status</option>
           <option value="active">Active</option>
           <option value="invited">Invite sent</option>
@@ -398,7 +398,7 @@ const InviteDialog: React.FC<{
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" data-esc-close onClick={onClose}>
       <form className="ws-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-title" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="ws-dialog-head">
           <div>

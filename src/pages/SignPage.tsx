@@ -81,7 +81,7 @@ export const SignPage: React.FC = () => {
 
   const header = (company?: string) => (
     <div className="sign-brand">
-      <img src="/images/logo.png" alt="" />
+      <img loading="lazy" decoding="async" src="/images/logo.png" alt="" />
       <span>{company ?? "The Nura Care"}</span>
     </div>
   );
@@ -241,7 +241,7 @@ const SignPageCanvas: React.FC<{
           className={`sign-box ${signature ? "has-signature" : ""}`}
           style={{ left: box.x * scale, top: box.y * scale, width: box.width * scale, height: box.height * scale }}
         >
-          {signature ? <img src={signature} alt="Your signature" /> : <span>Sign here</span>}
+          {signature ? <img loading="lazy" decoding="async" src={signature} alt="Your signature" /> : <span>Sign here</span>}
         </div>
       )}
     </div>
@@ -380,7 +380,7 @@ const SignaturePad: React.FC<{ value: string | null; onChange: (dataUrl: string 
         </>
       ) : (
         <label className="sign-upload">
-          {value ? <img src={value} alt="Your signature" /> : <span>Sign on white paper, take a photo, and choose it here.</span>}
+          {value ? <img loading="lazy" decoding="async" src={value} alt="Your signature" /> : <span>Sign on white paper, take a photo, and choose it here.</span>}
           <input type="file" accept="image/*" onChange={(e) => upload(e.target.files?.[0] ?? null)} />
         </label>
       )}

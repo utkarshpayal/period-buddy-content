@@ -209,11 +209,11 @@ export const PlansTab: React.FC = () => {
       )}
 
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+        <div className="modal-overlay" data-esc-close onClick={() => setShowForm(false)}>
           <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="gy-card-head">
               <h3>{editingId ? "Edit plan" : "Add a new plan"}</h3>
-              <button className="gy-icon-btn" onClick={() => setShowForm(false)} type="button">
+              <button aria-label="Close" className="gy-icon-btn" onClick={() => setShowForm(false)} type="button">
                 <X size={18} />
               </button>
             </div>

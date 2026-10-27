@@ -147,7 +147,7 @@ export const TwoStepSettings: React.FC = () => {
       {step.kind === "setup" && (
         <form className="twostep-panel" onSubmit={finishSetup}>
           <p>Scan this with Google Authenticator, Microsoft Authenticator or 1Password, then enter the code it shows.</p>
-          <img className="twostep-qr" src={step.qr} alt="QR code for your authenticator app" width={200} height={200} />
+          <img loading="lazy" decoding="async" className="twostep-qr" src={step.qr} alt="QR code for your authenticator app" width={200} height={200} />
           <p className="settings-muted">
             Can't scan? Enter this key: <code className="twostep-key">{step.secret.replace(/(.{4})/g, "$1 ").trim()}</code>
           </p>

@@ -14,10 +14,13 @@ import { PendingBadge } from "../components/PendingBadge";
 import { Header } from "../components/Header";
 import { ApiBanner } from "../components/ApiBanner";
 import { MediaUploadField } from "../components/MediaUploadField";
+import { RichPreview, RichTextEditor } from "../components/richText";
 import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } from "../components/ContentStatusControls";
 import { BLOG_CATEGORIES, estimateReadMinutes } from "../api/contentApi";
 import { ContentItem, ContentStatus, Audience } from "../types/content";
 import { uid } from "../lib/uid";
+import { useUnsavedChanges, useUploadGuard } from "../lib/useEditorGuards";
+import { richTextToPlain } from "../lib/richText";
 
 const emptyBlog = (): ContentItem => ({
   id: uid(),
@@ -94,7 +97,11 @@ export const BlogsPage: React.FC = () => {
     setIsEditorOpen(true);
   };
 
+  const { uploading, report } = useUploadGuard();
+  const confirmDiscard = useUnsavedChanges(draft, isEditorOpen);
+
   const closeEditor = () => {
+    if (!confirmDiscard()) return;
     setIsEditorOpen(false);
     setEditingId(null);
     setFormError(null);
@@ -120,6 +127,10 @@ export const BlogsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      setFormError("Images are still uploading. Save once they finish.");
+      return;
+    }
     setFormError(null);
 
     if (!draft.title.trim()) {
@@ -220,7 +231,7 @@ export const BlogsPage: React.FC = () => {
                         <PendingBadge id={blog.id} />
                         <ReviewChip item={blog} />
                       </div>
-                      <p>{blog.summary || blog.body}</p>
+                      <p>{blog.summary || richTextToPlain(blog.body)}</p>
                       <div className="entry-meta">
                         <span>
                           <Clock size={14} />
@@ -356,7 +367,7 @@ export const BlogsPage: React.FC = () => {
                 title="Calculated by the server from the article (about 200 words a minute)"
                 value={
                   draft.body.trim()
-                    ? `Auto · about ${estimateReadMinutes(draft.body)} min`
+                    ? `Auto · about ${estimateReadMinutes(richTextToPlain(draft.body))} min`
                     : "Auto · calculated from the content"
                 }
               />
@@ -373,16 +384,17 @@ export const BlogsPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Article Content (Markdown Supported) *
-              <textarea
-                onChange={(e) => updateDraft("body", e.target.value)}
-                placeholder="Write the full body of the blog article here..."
-                required
-                rows={10}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Article Content *</span>
+              <RichTextEditor
+                label="Article content"
+                onBusyChange={report("Article content")}
+                onChange={(body) => updateDraft("body", body)}
+                placeholder="Write the article. Use the toolbar to add headings, colors, images, tables and charts."
                 value={draft.body}
+                variant="full"
               />
-            </label>
+            </div>
 
             <label>
               Author Name
@@ -454,12 +466,12 @@ export const BlogsPage: React.FC = () => {
               </span>
             </div>
             {draft.imageUrl && (
-              <img alt="" className="preview-cover-image" src={draft.imageUrl} />
+              <img loading="lazy" decoding="async" alt="" className="preview-cover-image" src={draft.imageUrl} />
             )}
             <h4>{draft.title || "Untitled Blog Post"}</h4>
             <p className="preview-summary">{draft.summary || "No summary written."}</p>
-            <div className="preview-body">
-              {draft.body || "Start typing in the editor to see live updates."}
+            <div className="preview-body preview-rich">
+              <RichPreview content={draft.body} empty="Start writing the article to see it here." />
             </div>
           </aside>
 
@@ -467,7 +479,7 @@ export const BlogsPage: React.FC = () => {
             <button className="modal-cancel" onClick={closeEditor} type="button">
               Cancel
             </button>
-            <button className="save-button" disabled={isSaving} type="submit">
+            <button className="save-button" disabled={isSaving || uploading} title={uploading ? "Waiting for images to upload" : undefined} type="submit">
               {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
               {isSaving ? "Saving" : "Save Blog"}
             </button>

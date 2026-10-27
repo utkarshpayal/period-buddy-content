@@ -188,7 +188,7 @@ h3 {
   gap: 8px;
   min-height: 38px;
   padding: 0 14px;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
   white-space: nowrap;
 }
 
@@ -993,7 +993,7 @@ textarea {
   border-radius: 8px;
   text-decoration: none;
   color: inherit;
-  transition: all 0.2s ease;
+  transition: all var(--dur-base) ease;
 }
 
 .breakdown-item:hover {
@@ -1036,7 +1036,7 @@ textarea {
 
 .arrow-hover {
   opacity: 0.4;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform var(--dur-base) ease, opacity var(--dur-base) ease;
 }
 
 .breakdown-item:hover .arrow-hover {
@@ -1065,7 +1065,7 @@ textarea {
   font-weight: 700;
   font-size: 0.88rem;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: all var(--dur-base) ease;
 }
 
 .action-tile:hover {
@@ -1166,7 +1166,7 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background-color 0.2s;
+  transition: background-color var(--dur-base);
   width: 100%;
 }
 
@@ -1617,7 +1617,7 @@ img.media-upload-preview {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.2s;
+  transition: background-color var(--dur-base);
 }
 
 .btn-login-submit:hover {
@@ -1784,7 +1784,7 @@ img.media-upload-preview {
   font-weight: 600;
   gap: 7px;
   padding: 9px 14px;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
   white-space: nowrap;
 }
 
@@ -2050,7 +2050,7 @@ img.media-upload-preview {
   align-items: center;
   background: var(--brand-tint);
   border-radius: 50%;
-  color: var(--brand);
+  color: var(--brand-dark);
   display: inline-flex;
   flex: 0 0 auto;
   font-weight: 700;
@@ -2091,7 +2091,7 @@ img.media-upload-preview {
   width: 20px;
 }
 .gy-doc-id { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; justify-items: start; }
-.gy-doc-card { gap: 16px; padding: 20px; transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+.gy-doc-card { gap: 16px; padding: 20px; transition: box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease; }
 .gy-doc-card:hover { box-shadow: var(--shadow-md); }
 .gy-doc-card.is-deactivated { background: var(--surface-2); }
 .gy-doc-card.is-deactivated .doc-photo { filter: grayscale(1); opacity: 0.7; }
@@ -2359,7 +2359,7 @@ img.media-upload-preview {
   justify-content: center;
   color: #fff;
   background: rgba(255, 255, 255, 0.18);
-  transition: transform 0.12s ease, background 0.12s ease;
+  transition: transform var(--dur-fast) ease, background var(--dur-fast) ease;
 }
 .gy-vc-ctrl:hover { }
 .gy-vc-ctrl.danger { background: var(--brand); }
@@ -2499,7 +2499,7 @@ img.media-upload-preview {
   flex: 0 0 auto;
   height: 22px;
   position: relative;
-  transition: background 0.15s ease;
+  transition: background var(--dur-fast) ease;
   width: 40px;
 }
 .gy-switch-track::after {
@@ -2510,7 +2510,7 @@ img.media-upload-preview {
   left: 3px;
   position: absolute;
   top: 3px;
-  transition: transform 0.15s ease;
+  transition: transform var(--dur-fast) ease;
   width: 16px;
 }
 .gy-switch input:checked + .gy-switch-track { background: var(--brand); }
@@ -2658,10 +2658,10 @@ img.media-upload-preview {
   min-height: 44px;
   padding: 0 13px;
   position: relative;
-  transition: background 0.16s ease, color 0.16s ease, transform 0.1s ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
 .gynac-shell .type-button:hover { background: var(--pb-berry-soft); color: var(--pb-berry-strong); }
-.gynac-shell .type-button svg { color: var(--pb-muted); transition: color 0.16s ease; }
+.gynac-shell .type-button svg { color: var(--pb-muted); transition: color var(--dur-fast) ease; }
 .gynac-shell .type-button:hover svg { color: var(--pb-berry); }
 /* Active state: see "Workspace sidebar: active item" in styles/portal.css. */
 
@@ -2785,7 +2785,7 @@ img.media-upload-preview {
   box-shadow: var(--pb-shadow-sm);
   gap: 15px;
   padding: 20px 22px;
-  transition: transform 0.14s ease, box-shadow 0.16s ease;
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .gy-stat-card:hover { box-shadow: var(--pb-shadow); }
 .gy-stat-icon {
@@ -2821,7 +2821,7 @@ img.media-upload-preview {
   box-shadow: var(--pb-shadow-sm);
   font-weight: 700;
   padding: 8px 17px;
-  transition: all 0.14s ease;
+  transition: all var(--dur-fast) ease;
 }
 .gy-chip.active {
   background: var(--brand);
@@ -2831,7 +2831,7 @@ img.media-upload-preview {
 
 /* Tables */
 .gy-th { font-size: 0.68rem; letter-spacing: 0.08em; }
-.gy-tr:not(.gy-th) { border-radius: 10px; transition: background 0.12s ease; }
+.gy-tr:not(.gy-th) { border-radius: 10px; transition: background var(--dur-fast) ease; }
 .gy-tr:not(.gy-th):hover { background: var(--pb-berry-soft, var(--brand-tint)); }
 
 /* Forms */
@@ -2845,7 +2845,7 @@ img.media-upload-preview {
 .gy-rx-modal textarea {
   border: 1px solid var(--line);
   border-radius: 11px;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .gy-field input:focus,
 .gy-field select:focus,
@@ -2858,7 +2858,7 @@ img.media-upload-preview {
 }
 
 /* Booking list + chat */
-.gy-booking-item { border-radius: 14px; box-shadow: var(--pb-shadow-sm); transition: all 0.14s ease; }
+.gy-booking-item { border-radius: 14px; box-shadow: var(--pb-shadow-sm); transition: all var(--dur-fast) ease; }
 .gy-booking-item:hover { box-shadow: var(--pb-shadow); }
 .gy-booking-item.active {
   border-color: transparent;
@@ -2883,7 +2883,7 @@ img.media-upload-preview {
 .gy-day-card.active { border-color: var(--pb-petal, var(--brand-tint-2)); }
 
 /* Reels */
-.gy-reel-card { border-radius: 18px; box-shadow: var(--pb-shadow-sm); transition: transform 0.14s ease, box-shadow 0.16s ease; }
+.gy-reel-card { border-radius: 18px; box-shadow: var(--pb-shadow-sm); transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease; }
 .gy-reel-card:hover { box-shadow: var(--pb-shadow); }
 
 /* Empty states */
@@ -2987,7 +2987,7 @@ body {
     height: 100vh;
     width: min(84%, 320px);
     transform: translateX(-105%);
-    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--dur-base) cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
     box-shadow: 0 24px 60px rgba(30, 24, 35, 0.28);
     /* undo the earlier wrapping-nav experiment */
@@ -3044,7 +3044,7 @@ body {
   font-weight: 700;
   font-size: 0.82rem;
   text-decoration: none;
-  transition: background-color 0.18s ease, transform 0.18s ease;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
 .login-cta-btn:hover {
   background: var(--brand-dark);
@@ -3057,7 +3057,7 @@ body {
 .login-info-alert {
   background: var(--amber-tint);
   border: 1px solid var(--amber-line);
-  color: var(--amber);
+  color: var(--amber-dark);
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.82rem;
@@ -3078,7 +3078,7 @@ body {
 .gy-field input,
 .gy-field select,
 .gy-field textarea {
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .input-group input:focus,
 .input-group input:focus-visible {
@@ -3097,7 +3097,7 @@ body {
 /* ---- Primary buttons: flat brand fill, darker on hover ---- */
 .btn-login-submit,
 .gy-btn-primary {
-  transition: background-color 0.15s ease;
+  transition: background-color var(--dur-fast) ease;
 }
 .btn-login-submit:not(:disabled):hover,
 .gy-btn-primary:not(:disabled):hover {
@@ -3112,11 +3112,18 @@ button:focus-visible,
   outline-offset: 2px;
   border-radius: 6px;
 }
+/* Baseline ring for everything else a keyboard can reach. :where() keeps it
+   at zero specificity, so any screen's own focus style (or an input that
+   draws its ring on a wrapper with outline: 0) still wins. */
+:where(input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="tab"], [role="button"]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
 
 /* ---- Gynac cards: gentle hover elevation for a more polished feel ---- */
 .gy-stat-card,
 .gy-card {
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: box-shadow var(--dur-base) ease, transform var(--dur-base) ease;
 }
 .gy-stat-card:hover {
   box-shadow: var(--pb-shadow);
@@ -3187,10 +3194,10 @@ button:focus-visible,
   gap: 12px;
   min-height: 44px;
   padding: 0 13px;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .admin-shell .type-button:hover { background: var(--pb-berry-soft); color: var(--pb-berry-strong); }
-.admin-shell .type-button svg { color: var(--pb-muted); transition: color 0.16s ease; }
+.admin-shell .type-button svg { color: var(--pb-muted); transition: color var(--dur-fast) ease; }
 .admin-shell .type-button:hover svg { color: var(--pb-berry); }
 /* Active state: see "Workspace sidebar: active item" in styles/portal.css. */
 
@@ -3252,7 +3259,7 @@ button:focus-visible,
   border-radius: 18px;
   border: 1px solid var(--pb-line);
   box-shadow: var(--pb-shadow-sm);
-  transition: transform 0.14s ease, box-shadow 0.16s ease;
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .admin-shell .metric-card:hover {
   box-shadow: var(--pb-shadow);
@@ -3294,7 +3301,7 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: gy-drawer-in 0.22s ease;
+  animation: gy-drawer-in var(--dur-base) ease;
 }
 @keyframes gy-drawer-in {
   from { transform: translateX(24px); opacity: 0; }
@@ -3339,7 +3346,7 @@ button:focus-visible,
   text-transform: capitalize;
 }
 .gy-tag-symptom { background: var(--info-tint); color: var(--ink-3); }
-.gy-flow-spotting, .gy-flow-light { background: var(--brand-tint); color: var(--brand); }
+.gy-flow-spotting, .gy-flow-light { background: var(--brand-tint); color: var(--brand-dark); }
 .gy-flow-medium { background: var(--brand-tint-2); color: var(--brand-dark); }
 .gy-flow-heavy { background: var(--brand-line); color: var(--brand-darker); }
 
@@ -3425,7 +3432,7 @@ button:focus-visible,
 .admin-shell .entry-card-main,
 .admin-shell .entry-list > * {
   border-radius: 14px;
-  transition: transform 0.12s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 .admin-shell .entry-card-main:hover {
   box-shadow: var(--pb-shadow);
@@ -3438,7 +3445,7 @@ button:focus-visible,
 .admin-shell .wide-field input,
 .admin-shell .wide-field textarea {
   border-radius: 11px;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .admin-shell .search-field input:focus,
 .admin-shell .form-grid input:focus,
@@ -3452,7 +3459,7 @@ button:focus-visible,
 }
 .admin-shell .save-button,
 .admin-shell .primary-action {
-  transition: background 0.15s ease;
+  transition: background var(--dur-fast) ease;
 }
 .admin-shell .save-button:not(:disabled):hover,
 .admin-shell .primary-action:not(:disabled):hover {
@@ -3652,7 +3659,7 @@ button:focus-visible,
   position: relative;
   padding: 18px 20px 18px 24px;
   overflow: hidden;
-  transition: transform 0.14s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 .scheme-app-card:hover {
   box-shadow: var(--pb-shadow, 0 10px 26px rgba(30, 24, 35, 0.12));
@@ -3749,7 +3756,7 @@ button:focus-visible,
   background: var(--pb-surface-2, var(--surface-2));
   color: var(--pb-ink, var(--ink));
   font-size: 0.85rem;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, background var(--dur-fast) ease;
 }
 .app-filter-bar .scheme-search { flex: 1 1 260px; min-width: 200px; padding: 0 14px; display: flex; align-items: center; gap: 9px; }
 .app-filter-bar .scheme-search svg { color: var(--pb-muted, var(--ink-4)); flex: none; }
@@ -3853,7 +3860,7 @@ button:focus-visible,
   background: var(--pb-surface, #fff);
   border: 1px solid var(--pb-line, var(--line));
   box-shadow: 0 14px 34px rgba(30, 24, 35, 0.18);
-  animation: aqPopIn 0.12s ease;
+  animation: aqPopIn var(--dur-fast) ease;
 }
 @keyframes aqPopIn {
   from { opacity: 0; transform: translateY(-4px); }
@@ -3950,7 +3957,7 @@ button:focus-visible,
 .aq-th-check, .aq-td-check { width: 40px; padding-left: 18px !important; padding-right: 0 !important; }
 .aq-th-actions, .aq-td-actions { text-align: right; }
 
-.aq-row { position: relative; transition: background 0.12s ease; }
+.aq-row { position: relative; transition: background var(--dur-fast) ease; }
 .aq-row td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--pb-line, var(--line));
@@ -4029,7 +4036,7 @@ button:focus-visible,
   background: var(--pb-surface, #fff);
   color: var(--pb-muted, var(--ink-4));
   cursor: pointer;
-  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 .aq-action-btn:hover:not(:disabled) { border-color: var(--pb-petal, var(--brand-tint-2)); background: var(--pb-berry-soft, var(--brand-tint)); }
 .aq-action-btn.ok:hover:not(:disabled) { background: var(--teal-tint); border-color: var(--teal-line); color: var(--teal); }
@@ -4083,7 +4090,7 @@ button:focus-visible,
 /* Reel cards */
 .gy-reel-card {
   border: 1px solid var(--pb-line, var(--line));
-  transition: transform 0.16s ease, box-shadow 0.18s ease, border-color 0.16s ease;
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 .gy-reel-card:hover { border-color: var(--pb-petal, var(--brand-tint-2)); }
 
@@ -4195,7 +4202,7 @@ button:focus-visible,
   border: 1px solid var(--pb-line, var(--line));
   background: var(--pb-surface, #fff);
   color: var(--pb-muted, var(--ink-4));
-  transition: all 0.15s ease;
+  transition: all var(--dur-fast) ease;
   cursor: pointer;
 }
 .admin-chip:hover { border-color: var(--brand-line); color: var(--pb-berry, var(--brand)); }
@@ -4228,7 +4235,7 @@ button:focus-visible,
   white-space: nowrap;
 }
 .admin-table tbody td { padding: 13px 18px; border-top: 1px solid var(--pb-line, var(--line)); color: var(--pb-ink, var(--ink)); vertical-align: middle; }
-.admin-table tbody tr { transition: background 0.12s ease; }
+.admin-table tbody tr { transition: background var(--dur-fast) ease; }
 .admin-table tbody tr:hover { background: var(--pb-berry-soft, var(--brand-tint)); }
 .admin-table tbody tr:first-child td { border-top: none; }
 
@@ -4282,7 +4289,7 @@ button:focus-visible,
   box-shadow: var(--pb-shadow-sm);
   position: relative;
   overflow: hidden;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .admin-metric:hover { box-shadow: var(--pb-shadow); }
 .admin-metric-top { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
@@ -4524,7 +4531,7 @@ button:focus-visible,
   display: inline-flex;
   height: 38px;
   justify-content: center;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
   width: 38px;
 }
 .view-toggle button:hover { color: var(--brand-dark); }
@@ -4630,7 +4637,7 @@ button:focus-visible,
   gap: 8px;
   min-width: 0;
   padding: 10px 10px 10px 12px;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--dur-fast) ease;
 }
 .file-folder-card:hover { border-color: var(--brand-line); }
 .file-folder-main {
@@ -4669,6 +4676,7 @@ button:focus-visible,
 
 /* Folder row in list view */
 .file-list-folder-row { cursor: pointer; }
+.file-list-folder-row:focus-visible { box-shadow: inset 0 0 0 2px var(--brand); outline: none; }
 .file-list-folder-row .file-list-icon { color: var(--brand); }
 
 /* Move-to-folder modal */
@@ -4743,7 +4751,7 @@ button:focus-visible,
   display: grid; grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 2px;
   text-align: left; padding: 12px 14px; cursor: pointer;
   background: #fff; border: 1.5px solid var(--pn-line); border-radius: 12px;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .pn-mode:hover { border-color: var(--brand-line); }
 .pn-mode.is-active { border-color: var(--pn-berry); background: var(--pb-berry-soft, var(--brand-tint)); box-shadow: 0 0 0 3px rgba(194, 65, 111, 0.1); }
@@ -4765,7 +4773,7 @@ button:focus-visible,
   display: flex; align-items: center; gap: 8px;
   background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 0 12px;
   color: var(--pb-muted, var(--ink-4));
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .pn-search:focus-within { border-color: var(--pn-berry); box-shadow: 0 0 0 3px rgba(194, 65, 111, 0.14); }
 .pn-search input { flex: 1; border: none; outline: none; background: transparent; padding: 11px 0; font-size: 0.9rem; color: var(--pb-ink, var(--ink)); }
@@ -4823,7 +4831,7 @@ button:focus-visible,
   font: inherit; font-size: 0.92rem;
   background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px;
   color: var(--pb-ink, var(--ink)); resize: vertical;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .pn-field input:focus, .pn-field textarea:focus, .pn-field select:focus, .pn-test input:focus {
   border-color: var(--pn-berry); box-shadow: 0 0 0 3px rgba(194, 65, 111, 0.14); outline: none;
@@ -4944,7 +4952,7 @@ button:focus-visible,
 .pn-drop {
   max-width: 420px; width: 100%; display: grid; justify-items: center; gap: 4px; padding: 22px 16px; cursor: pointer; text-align: center;
   border: 1.5px dashed var(--line-strong); border-radius: 14px; background: var(--surface-2, #fbf8fa); color: var(--ink-2);
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 .pn-drop:hover, .pn-drop.is-over { border-color: var(--brand); background: var(--brand-tint, #fcedf3); }
 .pn-drop strong { font-size: 0.86rem; }
@@ -5074,7 +5082,7 @@ button:focus-visible,
   font-size: 0.88rem;
   font-weight: 600;
   line-height: 1.4;
-  animation: toast-in 0.22s ease-out;
+  animation: toast-in var(--dur-base) ease-out;
 }
 .toast-success { --toast-accent: var(--teal); }
 .toast-error { --toast-accent: var(--danger); }
@@ -5264,3 +5272,43 @@ button:focus-visible,
   font-size: 12px;
   text-align: right;
 }
+
+/* ---- Press feedback: buttons shrink a touch while held (no layout shift). ---- */
+.gy-btn,
+.cf-btn,
+.gx-btn,
+.av-btn,
+.primary-action,
+.save-button,
+.modal-cancel,
+.gy-icon-btn,
+.cf-icon-btn,
+.gx-icon-btn {
+  transition-property: background, background-color, border-color, color, box-shadow, opacity, transform;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out);
+}
+.gy-btn:active:not(:disabled),
+.cf-btn:active:not(:disabled),
+.gx-btn:active:not(:disabled),
+.av-btn:active:not(:disabled),
+.primary-action:active:not(:disabled),
+.save-button:active:not(:disabled),
+.modal-cancel:active:not(:disabled),
+.gy-icon-btn:active:not(:disabled),
+.cf-icon-btn:active:not(:disabled),
+.gx-icon-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ---- Dialogs: the backdrop fades in and the panel rises into place. ---- */
+.modal-overlay,
+.gx-overlay {
+  animation: overlay-in var(--dur-base) var(--ease-out);
+}
+.modal-overlay > *,
+.ws-invite-dialog {
+  animation: dialog-in var(--dur-slow) var(--ease-out);
+}
+@keyframes overlay-in { from { opacity: 0; } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(10px) scale(0.985); } }

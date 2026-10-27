@@ -23,7 +23,7 @@ the root and covers setup, scripts, project structure and deployment.
 
 | Repo | What | Its docs |
 |---|---|---|
-| [period-buddy](https://github.com/utkarshpayal/period-buddy) (`The-Nura-App`) | Mobile app | [docs/](https://github.com/utkarshpayal/period-buddy/tree/main/docs), including the system [ARCHITECTURE.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/ARCHITECTURE.md) |
+| [period-buddy](https://github.com/utkarshpayal/period-buddy) (`The-Nura-App`) | Mobile app | [docs/](https://github.com/utkarshpayal/period-buddy/tree/main/docs), including the system [ARCHITECTURE.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/ARCHITECTURE.md) and [WORKFLOW.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/WORKFLOW.md) |
 | [period-buddy-be](https://github.com/utkarshpayal/period-buddy-be) (`The-Nura-Backend`) | API | [docs/](https://github.com/utkarshpayal/period-buddy-be/tree/main/docs), including [SECURITY.md](https://github.com/utkarshpayal/period-buddy-be/blob/main/docs/SECURITY.md) and [INFRASTRUCTURE.md](https://github.com/utkarshpayal/period-buddy-be/blob/main/docs/INFRASTRUCTURE.md) |
 | [period-buddy-content](https://github.com/utkarshpayal/period-buddy-content) (`The-Nura-Admin-Website`) | Admin Workspace, clinician portal | this folder |
 | [the-nura-care-cms](https://github.com/utkarshpayal/the-nura-care-cms) (`The-Nura-CMS`) | App CMS | [docs/](https://github.com/utkarshpayal/the-nura-care-cms/tree/main/docs) |

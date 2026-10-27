@@ -375,11 +375,11 @@ export const DoctorsPage: React.FC = () => {
       )}
 
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+        <div className="modal-overlay" data-esc-close onClick={() => setShowForm(false)}>
         <section className="gy-card gy-form-card gy-modal-panel" onClick={(e) => e.stopPropagation()}>
           <div className="gy-card-head">
             <h3>Invite a new gynecologist</h3>
-            <button className="gy-icon-btn" onClick={() => setShowForm(false)} type="button">
+            <button aria-label="Close" className="gy-icon-btn" onClick={() => setShowForm(false)} type="button">
               <X size={18} />
             </button>
           </div>
@@ -546,7 +546,7 @@ export const DoctorsPage: React.FC = () => {
       )}
 
       {deleteTarget && (
-        <div className="modal-overlay" onClick={closeDelete}>
+        <div className="modal-overlay" data-esc-close onClick={closeDelete}>
           <section
             className="gy-card gy-modal-panel gy-delete-panel"
             role="alertdialog"

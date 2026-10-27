@@ -105,7 +105,7 @@ export const SettingsTab: React.FC = () => {
         <div className="settings-details">
           <div className="detail-row">
             <span className="detail-label">Currency</span>
-            <select
+            <select aria-label="Currency"
               className="gy-inline-select"
               value={settings.currency}
               disabled={saving}
@@ -132,7 +132,7 @@ export const SettingsTab: React.FC = () => {
 
           <div className="detail-row">
             <span className="detail-label">Grace period after expiry (days)</span>
-            <input
+            <input aria-label="Grace period after expiry, in days"
               type="number"
               min={0}
               className="gy-inline-input"

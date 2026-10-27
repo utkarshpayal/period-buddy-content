@@ -391,7 +391,7 @@
   display: flex;
   gap: 12px;
   padding: 12px 14px;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
 }
 
 .ws-role-option:hover {
@@ -506,7 +506,7 @@
   border-radius: 14px;
   box-shadow: var(--ui-shadow-xs);
   overflow: hidden;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: box-shadow var(--dur-fast), border-color var(--dur-fast);
 }
 
 .ws-request.is-open {
@@ -552,7 +552,7 @@
 .ws-chevron {
   color: var(--ui-muted);
   flex: 0 0 auto;
-  transition: transform 0.2s;
+  transition: transform var(--dur-base);
 }
 
 .ws-request.is-open .ws-chevron {
@@ -949,7 +949,7 @@
   background: var(--brand);
   border-radius: var(--radius-pill);
   color: #fff;
-  transition: background 0.15s ease;
+  transition: background var(--dur-fast) ease;
   display: inline-flex;
   font-weight: 700;
   gap: 8px;
@@ -978,7 +978,7 @@
   gap: 4px;
   padding: 16px 18px;
   text-decoration: none;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform var(--dur-fast), box-shadow var(--dur-fast);
 }
 
 .ws-kpi:hover {
@@ -1043,7 +1043,7 @@
   gap: 12px;
   padding: 14px;
   text-decoration: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
 }
 
 .ws-shortcut:hover {
@@ -1082,7 +1082,7 @@
 
 .ws-shortcut-arrow {
   color: var(--ui-line-strong);
-  transition: color 0.15s, transform 0.15s;
+  transition: color var(--dur-fast), transform var(--dur-fast);
 }
 
 .ws-shortcut:hover .ws-shortcut-arrow {
@@ -1231,7 +1231,7 @@
   color: var(--ui-ink);
   font: inherit;
   padding: 12px 14px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
   width: 100%;
 }
 
@@ -1283,7 +1283,7 @@
   justify-content: center;
   margin-top: 4px;
   padding: 13px 16px;
-  transition: background 0.15s;
+  transition: background var(--dur-fast);
 }
 
 .auth-submit:hover:not(:disabled) {
@@ -1487,7 +1487,7 @@
   justify-content: center;
   min-height: 40px;
   padding: 0 15px;
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
+  transition: background var(--dur-fast), border-color var(--dur-fast), box-shadow var(--dur-fast), color var(--dur-fast);
   white-space: nowrap;
 }
 
@@ -1717,7 +1717,7 @@
   width: 6px;
 }
 
-.gx-badge.status-paid { background: var(--ui-berry-50); color: var(--ui-berry); }
+.gx-badge.status-paid { background: var(--ui-berry-50); color: var(--brand-dark); }
 .gx-badge.status-active { background: var(--ui-blue-50); color: var(--ui-blue); }
 .gx-badge.status-completed { background: var(--ui-green-50); color: var(--ui-green); }
 .gx-badge.status-cancelled { background: var(--line-2); color: var(--ink-4); }
@@ -1876,7 +1876,7 @@
   flex: 0 0 auto;
   height: 24px;
   position: relative;
-  transition: background 0.2s;
+  transition: background var(--dur-base);
   width: 42px;
 }
 
@@ -1888,7 +1888,7 @@
   left: 3px;
   position: absolute;
   top: 3px;
-  transition: transform 0.2s;
+  transition: transform var(--dur-base);
   width: 18px;
 }
 
@@ -2078,7 +2078,7 @@
   gap: 12px;
   padding: 10px 20px;
   text-decoration: none;
-  transition: background 0.12s;
+  transition: background var(--dur-fast);
 }
 
 .gx-queue-row:hover {
@@ -2513,7 +2513,7 @@
 }
 
 .gx-drawer {
-  animation: gx-slide-in 0.22s ease;
+  animation: gx-slide-in var(--dur-base) ease;
   background: var(--ui-surface);
   box-shadow: var(--ui-shadow-lg);
   display: flex;
@@ -2661,7 +2661,7 @@
 }
 
 .gx-dialog {
-  animation: gx-pop 0.18s ease;
+  animation: gx-pop var(--dur-fast) ease;
   background: var(--ui-surface);
   border-radius: 18px;
   box-shadow: var(--ui-shadow-lg);
@@ -2980,7 +2980,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform var(--dur-fast), box-shadow var(--dur-fast);
 }
 
 .gx-reel:hover {
@@ -3015,7 +3015,7 @@
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  transition: opacity 0.15s;
+  transition: opacity var(--dur-fast);
   z-index: 1;
 }
 
@@ -3529,7 +3529,7 @@
   font-weight: 600;
   gap: 6px;
   padding: 7px 12px;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .plan-feature-chip:hover {

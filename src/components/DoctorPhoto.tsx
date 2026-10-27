@@ -29,7 +29,7 @@ export const DoctorAvatar: React.FC<{ name: string; url?: string | null; classNa
   return (
     <span className={`doc-photo ${className}`} aria-hidden="true">
       {url && !broken ? (
-        <img src={url} alt="" onError={() => setBroken(true)} />
+        <img loading="lazy" decoding="async" src={url} alt="" onError={() => setBroken(true)} />
       ) : (
         <span className="doc-photo-initials">{initials(name)}</span>
       )}
