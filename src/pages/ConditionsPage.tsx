@@ -10,6 +10,9 @@ import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } fro
 import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage } from "../types/content";
 import { uid } from "../lib/uid";
+import { useUnsavedChanges, useUploadGuard } from "../lib/useEditorGuards";
+import { richTextToPlain } from "../lib/richText";
+import { RichTextEditor } from "../components/richText";
 
 const emptyCondition = (): ContentItem => ({
   id: uid(),
@@ -96,7 +99,11 @@ export const ConditionsPage: React.FC = () => {
     setIsEditorOpen(true);
   };
 
+  const { uploading, report } = useUploadGuard();
+  const confirmDiscard = useUnsavedChanges(draft, isEditorOpen);
+
   const closeEditor = () => {
+    if (!confirmDiscard()) return;
     setIsEditorOpen(false);
     setEditingId(null);
     setFormError(null);
@@ -122,6 +129,10 @@ export const ConditionsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      setFormError("Images are still uploading. Save once they finish.");
+      return;
+    }
     setFormError(null);
 
     if (!draft.title.trim()) {
@@ -372,66 +383,77 @@ export const ConditionsPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Full Guide / Overview *
-              <textarea
-                onChange={(e) => updateDraft("body", e.target.value)}
-                placeholder="Detailed medical overview of the condition..."
-                required
-                rows={5}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Full Guide / Overview (one step per line) *</span>
+              <RichTextEditor
+                label="Guide steps"
+                onBusyChange={report("Guide steps")}
+                onChange={(v) => updateDraft("body", v)}
+                placeholder="Track how bad the pain is, during and between periods…"
                 value={draft.body}
+                variant="points"
               />
-            </label>
+            </div>
 
-            <label className="wide-field">
-              Symptoms (one per line)
-              <textarea
-                onChange={(e) => updateDraft("symptoms", e.target.value.split("\n").filter(Boolean))}
-                placeholder="Irregular or missed periods&#10;Excess body hair (hirsutism)&#10;Severe pelvic cramps"
-                rows={3}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Symptoms (one per line)</span>
+              <RichTextEditor
+                label="Symptoms"
+                onBusyChange={report("Symptoms")}
+                onChange={(v) => updateDraft("symptoms", v.split("\n").filter(Boolean))}
+                placeholder="Irregular or missed periods…"
                 value={(draft.symptoms || []).join("\n")}
+                variant="points"
               />
-            </label>
+            </div>
 
-            <label className="wide-field">
-              Potential Causes (one per line)
-              <textarea
-                onChange={(e) => updateDraft("causes", e.target.value.split("\n").filter(Boolean))}
-                placeholder="Hormonal imbalances&#10;Insulin resistance&#10;Genetics and family history"
-                rows={3}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Potential Causes (one per line)</span>
+              <RichTextEditor
+                label="Potential causes"
+                onBusyChange={report("Potential causes")}
+                onChange={(v) => updateDraft("causes", v.split("\n").filter(Boolean))}
+                placeholder="Hormonal imbalances…"
                 value={(draft.causes || []).join("\n")}
+                variant="points"
               />
-            </label>
+            </div>
 
-            <label className="wide-field">
-              Treatment Options
-              <textarea
-                onChange={(e) => updateDraft("treatment", e.target.value)}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Treatment Options</span>
+              <RichTextEditor
+                label="Treatment options"
+                onBusyChange={report("Treatment options")}
+                onChange={(v) => updateDraft("treatment", v)}
                 placeholder="Describe common medical treatments, lifestyle changes, and medications..."
-                rows={4}
                 value={draft.treatment || ""}
+                variant="full"
               />
-            </label>
+            </div>
 
-            <label className="wide-field">
-              Prevention Tips
-              <textarea
-                onChange={(e) => updateDraft("prevention", e.target.value)}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Prevention Tips</span>
+              <RichTextEditor
+                label="Prevention tips"
+                onBusyChange={report("Prevention tips")}
+                onChange={(v) => updateDraft("prevention", v)}
                 placeholder="Provide tips for reducing risk factors or managing symptom severity..."
-                rows={3}
                 value={draft.prevention || ""}
+                variant="full"
               />
-            </label>
+            </div>
 
-            <label className="wide-field">
-              When to Consult a Doctor
-              <textarea
-                onChange={(e) => updateDraft("whenToSeeDoctor", e.target.value)}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">When to Consult a Doctor</span>
+              <RichTextEditor
+                label="When to consult a doctor"
+                onBusyChange={report("When to consult a doctor")}
+                onChange={(v) => updateDraft("whenToSeeDoctor", v)}
                 placeholder="Urgent warning triggers or symptoms requiring professional medical care..."
-                rows={3}
                 value={draft.whenToSeeDoctor || ""}
+                variant="compact"
               />
-            </label>
+            </div>
           </div>
 
           <aside className="preview-pane" style={{ borderLeft: `5px solid ${draft.color}` }}>
@@ -449,7 +471,7 @@ export const ConditionsPage: React.FC = () => {
             {draft.body && (
               <div className="preview-overview">
                 <strong>Overview:</strong>
-                <p>{draft.body}</p>
+                <p>{richTextToPlain(draft.body)}</p>
               </div>
             )}
 
@@ -458,7 +480,7 @@ export const ConditionsPage: React.FC = () => {
                 <strong>Key Symptoms:</strong>
                 <ul>
                   {draft.symptoms.map((s, idx) => (
-                    <li key={idx}>{s}</li>
+                    <li key={idx}>{richTextToPlain(s)}</li>
                   ))}
                 </ul>
               </div>
@@ -469,7 +491,7 @@ export const ConditionsPage: React.FC = () => {
             <button className="modal-cancel" onClick={closeEditor} type="button">
               Cancel
             </button>
-            <button className="save-button" disabled={isSaving} type="submit">
+            <button className="save-button" disabled={isSaving || uploading} title={uploading ? "Waiting for images to upload" : undefined} type="submit">
               {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
               {isSaving ? "Saving" : "Save Condition"}
             </button>

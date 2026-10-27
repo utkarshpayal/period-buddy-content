@@ -10,6 +10,7 @@ import "./styles/finance.css";
 import "./styles/availability.css";
 import "./styles/referrals.css";
 import "./styles/support.css";
+import "./styles/richText.css";
 import "./styles/portal-consistency.css";
 
 installEscapeToClose();

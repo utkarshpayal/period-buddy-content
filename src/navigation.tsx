@@ -2,6 +2,7 @@ import React from "react";
 import {
   BarChart3,
   Bell,
+  BellRing,
   BookOpen,
   ClipboardCheck,
   CreditCard,
@@ -40,6 +41,7 @@ import { SchemesPage } from "./pages/SchemesPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { AutoNotificationsPage } from "./pages/AutoNotificationsPage";
 import { SubscriptionsPage } from "./pages/subscriptions/SubscriptionsPage";
 import { SchemeApplicationsPage } from "./pages/SchemeApplicationsPage";
 import { SupportTicketsPage } from "./pages/SupportTicketsPage";
@@ -108,6 +110,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { path: "/analytics", label: "Analytics", icon: BarChart3, element: <AnalyticsPage />, permissions: [P.ANALYTICS_READ], description: "Platform usage and revenue" },
       { path: "/users", label: "Users", icon: Users, element: <UsersPage />, permissions: [P.USERS_READ], description: "App accounts and their activity" },
       { path: "/notifications", label: "Push Notifications", icon: Bell, element: <NotificationsPage />, permissions: [P.PUSH_READ], description: "Broadcasts and direct pushes" },
+      { path: "/auto-notifications", label: "Automatic Notifications", icon: BellRing, element: <AutoNotificationsPage />, permissions: [P.PUSH_READ], description: "Cycle reminders the app sends on its own" },
       { path: "/subscriptions", label: "Subscriptions", icon: CreditCard, element: <SubscriptionsPage />, permissions: [P.SUBSCRIPTIONS_READ], description: "Plans, paywall features and coupons" },
       { path: "/scheme-applications", label: "Scheme Applications", icon: ClipboardCheck, element: <SchemeApplicationsPage />, permissions: [P.SCHEME_APPLICATIONS_READ], description: "Review users' benefit applications" },
       {

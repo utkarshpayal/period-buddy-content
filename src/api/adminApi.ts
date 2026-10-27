@@ -316,6 +316,42 @@ export async function retryBroadcast(id: string): Promise<{ broadcast: PushBroad
   return adminRequest(`/api/admin/notifications/broadcasts/${id}/retry`, { method: "POST" });
 }
 
+/* ------------------ Automatic cycle notifications ------------------ */
+
+export type AutoNotificationCategory = {
+  key: string;
+  label: string;
+  description: string;
+  /** On for a new user unless they change it. */
+  defaultOn: boolean;
+  /** false = turned off for everyone here. */
+  enabled: boolean;
+  /** People with cycle tracking who have it switched on. */
+  usersOn: number;
+  /** Sent in the last `statsDays` days, and how many were opened in the app. */
+  sent: number;
+  read: number;
+};
+
+export type AutoNotificationsOverview = {
+  users: number;
+  pregnancyMode: number;
+  statsDays: number;
+  updatedAt: string | null;
+  categories: AutoNotificationCategory[];
+};
+
+export async function getAutoNotifications(): Promise<AutoNotificationsOverview> {
+  return adminRequest(`/api/admin/notifications/automatic`);
+}
+
+export async function setAutoNotification(key: string, enabled: boolean): Promise<AutoNotificationsOverview> {
+  return adminRequest(`/api/admin/notifications/automatic`, {
+    method: "PUT",
+    body: JSON.stringify({ key, enabled })
+  });
+}
+
 /* ------------------ Scheduled / repeating push notifications ------------------ */
 
 export type ScheduleRepeat = "none" | "daily" | "weekly" | "monthly";
