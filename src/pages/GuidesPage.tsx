@@ -12,6 +12,9 @@ import { ReviewChip, StatusActions, StatusTabs, statusLabel, useCanPublish } fro
 import { MediaUploadField } from "../components/MediaUploadField";
 import { ContentItem, ContentStatus, Audience, CycleStage, ContentType } from "../types/content";
 import { uid } from "../lib/uid";
+import { useUnsavedChanges, useUploadGuard } from "../lib/useEditorGuards";
+import { richTextToPlain } from "../lib/richText";
+import { RichTextEditor } from "../components/richText";
 
 const emptyGuide = (): ContentItem => ({
   id: uid(),
@@ -63,7 +66,7 @@ const PREVIEW_ICONS: Record<string, LucideIcon> = {
 const WellbeingAppPreview: React.FC<{ draft: ContentItem }> = ({ draft }) => {
   const Icon = PREVIEW_ICONS[draft.icon || ""] ?? BookOpen;
   const color = /^#[0-9a-f]{6}$/i.test(draft.color || "") ? draft.color! : "#d946a6";
-  const points = draft.body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const points = draft.body.split("\n").map((l) => richTextToPlain(l)).filter(Boolean);
   const guidePoints = points.length > 0 ? points : draft.summary ? [draft.summary] : [];
   const meta = [
     draft.estimatedReadTime ? `${draft.estimatedReadTime} min read` : null,
@@ -167,7 +170,11 @@ export const GuidesPage: React.FC = () => {
     setIsEditorOpen(true);
   };
 
+  const { uploading, report } = useUploadGuard();
+  const confirmDiscard = useUnsavedChanges(draft, isEditorOpen);
+
   const closeEditor = () => {
+    if (!confirmDiscard()) return;
     setIsEditorOpen(false);
     setEditingId(null);
     setFormError(null);
@@ -193,6 +200,10 @@ export const GuidesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      setFormError("Images are still uploading. Save once they finish.");
+      return;
+    }
     setFormError(null);
 
     if (!draft.title.trim()) {
@@ -434,16 +445,17 @@ export const GuidesPage: React.FC = () => {
               />
             </label>
 
-            <label className="wide-field">
-              Extended Guide Points (One point per line) *
-              <textarea
-                onChange={(e) => updateDraft("body", e.target.value)}
-                placeholder="Discuss comfort levels before touching...&#10;Endorphins act as natural painkillers...&#10;Place a towel down to avoid stains..."
-                required
-                rows={6}
+            <div className="wide-field rte-field">
+              <span className="rte-field-label">Extended Guide Points (one per line) *</span>
+              <RichTextEditor
+                label="Extended guide points"
+                onBusyChange={report("Extended guide points")}
+                onChange={(v) => updateDraft("body", v)}
+                placeholder="Discuss comfort levels before touching…"
                 value={draft.body}
+                variant="points"
               />
-            </label>
+            </div>
 
             <label className="wide-field">
               Target Audience
@@ -509,7 +521,7 @@ export const GuidesPage: React.FC = () => {
                 <strong>Extended Guide:</strong>
                 <ul>
                   {draft.body.split("\n").filter(Boolean).map((line, idx) => (
-                    <li key={idx}>{line}</li>
+                    <li key={idx}>{richTextToPlain(line)}</li>
                   ))}
                 </ul>
               </div>
@@ -520,7 +532,7 @@ export const GuidesPage: React.FC = () => {
             <button className="modal-cancel" onClick={closeEditor} type="button">
               Cancel
             </button>
-            <button className="save-button" disabled={isSaving} type="submit">
+            <button className="save-button" disabled={isSaving || uploading} title={uploading ? "Waiting for images to upload" : undefined} type="submit">
               {isSaving ? <Loader2 className="spin-icon" size={17} /> : <Save size={17} />}
               {isSaving ? "Saving" : "Save Guide"}
             </button>
