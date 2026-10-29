@@ -811,3 +811,80 @@ export const browserTimeZone = (): string => {
 /** A fresh key for one withdrawal attempt (see requestWithdrawal). */
 export const newIdempotencyKey = () =>
   (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`).replace(/[^A-Za-z0-9_-]/g, "");
+
+/* --------------------------- Community answers -------------------------- */
+
+/** Which posts the Community page lists: still waiting for a gynecologist, answered by you, or everything. */
+export type CommunityView = "unanswered" | "mine" | "all";
+
+export type CommunityAttachment = { url: string; type: "image" | "video" | "audio" };
+
+/** How an answer is shown in the app: always "Medically verified", the name only when shown. */
+export type CommunityExpert = {
+  verified: true;
+  showName: boolean;
+  name: string | null;
+  specialty: string | null;
+  avatarUrl: string | null;
+};
+
+export type CommunityComment = {
+  id: string;
+  content: string;
+  attachments: CommunityAttachment[];
+  createdAt: string;
+  /** "Community member", or the gynecologist as the app shows them. */
+  author: string;
+  expert: CommunityExpert | null;
+  isMine: boolean;
+};
+
+/** A community post as the portal sees it. Authors are never sent. */
+export type CommunityPost = {
+  id: string;
+  title: string;
+  content: string;
+  category?: string;
+  tags: string[];
+  attachments: CommunityAttachment[];
+  poll?: { question?: string; options: { topic: string; votes: number }[] };
+  likeCount: number;
+  commentCount: number;
+  expertAnswerCount: number;
+  answeredByMe: boolean;
+  createdAt: string;
+  /** Only on getCommunityPost and after answering. */
+  comments?: CommunityComment[];
+};
+
+export const getCommunityPosts = async (params: {
+  view: CommunityView;
+  page: number;
+  category?: string;
+  search?: string;
+  limit?: number;
+}) => {
+  const query = new URLSearchParams({
+    view: params.view,
+    page: String(params.page),
+    limit: String(params.limit ?? 20)
+  });
+  if (params.search?.trim()) query.set("search", params.search.trim());
+  if (params.category && params.category !== "all") query.set("category", params.category);
+  const body = await requestEnvelope<{ posts: CommunityPost[]; pagination: PageInfo }>(`/api/doctor/community?${query}`);
+  return { posts: body.data?.posts ?? [], pagination: body.data?.pagination ?? null };
+};
+
+export const getCommunityPost = (id: string) => request<CommunityPost>(`/api/doctor/community/${encodeURIComponent(id)}`);
+
+export const answerCommunityPost = (id: string, content: string, showName: boolean) =>
+  request<{ post: CommunityPost }>(`/api/doctor/community/${encodeURIComponent(id)}/answers`, {
+    method: "POST",
+    body: JSON.stringify({ content, showName })
+  });
+
+export const deleteCommunityAnswer = (id: string, commentId: string) =>
+  request<{ post: CommunityPost }>(
+    `/api/doctor/community/${encodeURIComponent(id)}/answers/${encodeURIComponent(commentId)}`,
+    { method: "DELETE" }
+  );
