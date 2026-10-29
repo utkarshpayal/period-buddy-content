@@ -10,7 +10,8 @@ import {
   UserCog,
   LogOut,
   Menu,
-  X
+  X,
+  MessagesSquare
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 
@@ -92,6 +93,10 @@ export const GynacSidebar: React.FC = () => {
         </NavLink>
 
         <p className="nav-section-label">Content</p>
+        <NavLink to="/community" className={link} onClick={close}>
+          <MessagesSquare size={18} />
+          Community
+        </NavLink>
         <NavLink to="/reels" className={link} onClick={close}>
           <Film size={18} />
           Reels
