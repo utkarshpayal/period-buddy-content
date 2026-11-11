@@ -13,11 +13,16 @@ Web dashboard for The Nura team and partner doctors, with two portals in one app
 - **People & Letters** (Super Admin): your hires and interns, plus offer letters,
   completion letters and certificates filled from Canva PDFs, emailed with an
   online signing link. See [docs/hr-documents.md](docs/hr-documents.md).
+- **Clinician portal** (doctors): dashboard, bookings, availability, video
+  consultations, prescriptions, payments, earnings & wallet (withdraw to UPI or
+  bank), referring colleagues, profile, reels.
+
+Gynac referrals (doctors refer colleagues and earn commission-free sessions; admins
+manage referrals, credits and settings) are described in
+[docs/gynac-referrals-plan.md](docs/gynac-referrals-plan.md).
 
 All docs: [docs/README.md](docs/README.md). How this fits with the app, API and
 CMS: the system [ARCHITECTURE.md](https://github.com/utkarshpayal/period-buddy/blob/main/docs/ARCHITECTURE.md).
-- **Clinician portal** (doctors): dashboard, bookings, availability, video
-  consultations, earnings & wallet (withdraw to UPI or bank), profile, reels.
 
 What each staff member sees depends on their role's **permissions**, sent by the
 backend at login (`src/auth/access.ts`). Roles: Super Admin, Content (super) admin,
@@ -27,8 +32,8 @@ through **approval** by a higher tier.
 Public pages (no login): `/set-password` (invites) and `/sign/:token` (signing a
 letter sent from People & Letters).
 
-React 18 · TypeScript · Vite 6 · React Router 7 · pdf.js (template editor and signing page,
-loaded on demand). Backend:
+React 18 · TypeScript · Vite 6 · React Router 7 · TipTap rich-text editor (content
+pages) · pdf.js (template editor and signing page, loaded on demand) · lucide-react icons. Backend:
 [period-buddy-be](https://github.com/utkarshpayal/period-buddy-be) (`/api/admin/*`, `/api/doctor/*`).
 
 ---
@@ -60,9 +65,11 @@ Staff accounts are invited from **Team** and set their password via the emailed
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Vite dev server |
+| `npm run dev` | Vite dev server (`--host 0.0.0.0`) |
 | `npm run build` | Type-check (`tsc --noEmit`) + production build into `dist/`, also run in CI |
 | `npm run preview` | Serve the built `dist/` locally |
+
+There is no test or lint script; CI runs `npm run build`.
 
 ---
 
@@ -70,14 +77,18 @@ Staff accounts are invited from **Team** and set their password via the emailed
 
 ```
 index.html
-public/images/       Static files served as-is (logo/favicon: /images/logo.png)
+public/              Static files served as-is: images/logo.png (logo/favicon),
+                     icons/, manifest.webmanifest and sw.js (PWA)
 src/
 ├── main.tsx, App.tsx    Entry + app shell
 ├── pages/               One file per workspace page
 │   ├── subscriptions/   Features / plans / coupons / settings tabs
 │   ├── hr/              People & Letters, Letter Templates (field editor), send dialog
+│   ├── clinicalFinance/ Commission & Payouts (overview, doctors, ledger, payouts, refunds, settings)
+│   ├── referrals/       Gynac referrals admin (referrals, credits, settings)
+│   ├── notifications/, support/
 │   └── gynac/           Clinician portal pages
-├── components/          Sidebars, shared UI
+├── components/          Sidebars, shared UI, richText/ (TipTap editor with images and charts)
 ├── api/                 Backend clients (auth, admin, content, company files…)
 ├── auth/                Roles + permission keys (mirrors backend config/permissions.js)
 ├── context/, data/, lib/, types/
